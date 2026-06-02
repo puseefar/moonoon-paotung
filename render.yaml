@@ -1,0 +1,56 @@
+services:
+  - type: web
+    name: poatung-server
+    runtime: node
+    region: singapore          # ใกล้ไทยที่สุด
+    plan: free
+
+    buildCommand: npm install && npm run build
+    startCommand: node dist/index.js
+
+    healthCheckPath: /health
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        fromService:
+          type: web
+          name: poatung-server
+          property: port
+
+      # ── Secrets — ใส่ผ่าน Render Dashboard เท่านั้น ห้าม commit ──
+      - key: DATABASE_URL
+        sync: false            # กรอกใน Render dashboard
+      - key: JWT_SECRET
+        sync: false
+      - key: THUNDER_API_KEY
+        sync: false
+      - key: THUNDER_API_URL
+        value: https://api.thunder.in.th/v2/verify/bank
+      - key: PROMPTPAY_ID
+        sync: false
+      - key: LINE_CHANNEL_SECRET
+        sync: false
+      - key: LINE_CHANNEL_ACCESS_TOKEN
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: EMAIL_HOST
+        value: smtp.gmail.com
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_APP_PASSWORD
+        sync: false
+      - key: PAYMENT_QR_EXPIRY_HOURS
+        value: "24"
+      - key: PAYMENT_AUTO_CONFIRM
+        value: "true"
+      - key: JWT_EXPIRES_IN
+        value: "30d"
