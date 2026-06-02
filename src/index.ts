@@ -8,6 +8,7 @@ import { authRouter } from './routes/auth.js';
 import { pkg15Router } from './routes/pkg15.js';
 import { pkg13Router } from './routes/pkg13.js';
 import { pkg05Router } from './routes/pkg05.js';
+import { webhookRouter } from './routes/webhooks.js';
 
 // Initialize DB
 initDb();
@@ -34,7 +35,8 @@ const healthResponse = (c: any) => c.json({
 app.get('/', healthResponse);
 app.get('/health', healthResponse);
 
-// Routes
+// Routes — webhook ต้องขึ้นก่อน (ไม่มี auth middleware)
+app.route('/webhook', webhookRouter);   // POST /webhook/line ← LINE Developers Console
 app.route('/auth', authRouter);
 app.route('/pkg15', pkg15Router);
 app.route('/pkg13', pkg13Router);
