@@ -31,7 +31,9 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
+.env.staging
 
 # typescript
 *.tsbuildinfo
@@ -39,3 +41,15 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Android/Gradle cache (Windows symlink folders)
+.gradle-user/
+.android-user/
+.expo-export-test/
+
+# Large plan/doc files (keep in project but exclude from git)
+DEPLOY_PLAN_staging.md
+moonoon-paotung-pro-package-memory.md
+moonoon-paotung-pro-package-plan.md
+PKG14-Smart-PreTrip-Planner-Development-Plan.md
+Moonoon-paotung-pro-pkg-15-13-5-plan.md

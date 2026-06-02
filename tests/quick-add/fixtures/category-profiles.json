@@ -1,0 +1,62 @@
+{
+  "default": [
+    { "id": "default-expense-food", "name": "อาหาร/เครื่องดื่ม", "type": "expense" },
+    { "id": "default-expense-travel", "name": "เดินทาง/น้ำมัน", "type": "expense" },
+    { "id": "default-expense-home", "name": "ที่อยู่อาศัย/ค่าเช่า", "type": "expense" },
+    { "id": "default-expense-utility", "name": "ค่าน้ำ/ค่าไฟ", "type": "expense" },
+    { "id": "default-expense-phone", "name": "ค่าโทรศัพท์/อินเทอร์เน็ต", "type": "expense" },
+    { "id": "default-expense-shopping", "name": "ช้อปปิ้ง", "type": "expense" },
+    { "id": "default-expense-health", "name": "สุขภาพ/ยา", "type": "expense" },
+    { "id": "default-expense-education", "name": "การศึกษา", "type": "expense" },
+    { "id": "default-expense-entertainment", "name": "บันเทิง", "type": "expense" },
+    { "id": "default-expense-clothes", "name": "เสื้อผ้า", "type": "expense" },
+    { "id": "default-expense-other", "name": "อื่นๆ", "type": "expense" },
+    { "id": "default-income-salary", "name": "เงินเดือน", "type": "income" },
+    { "id": "default-income-side", "name": "รายได้เสริม/ฟรีแลนซ์", "type": "income" },
+    { "id": "default-income-interest", "name": "ดอกเบี้ย", "type": "income" },
+    { "id": "default-income-gift", "name": "ของขวัญ/โบนัส", "type": "income" },
+    { "id": "default-income-other", "name": "อื่นๆ", "type": "income" }
+  ],
+  "freelancer": [
+    { "id": "freelancer-expense-tools", "name": "ค่าเครื่องมือทำงาน", "type": "expense" },
+    { "id": "freelancer-expense-software", "name": "ซอฟต์แวร์/Subscription", "type": "expense" },
+    { "id": "freelancer-expense-travel", "name": "เดินทางพบลูกค้า", "type": "expense" },
+    { "id": "freelancer-expense-tax", "name": "ภาษีหัก ณ ที่จ่าย", "type": "expense" },
+    { "id": "freelancer-income-project", "name": "รายได้โปรเจกต์", "type": "income" },
+    { "id": "freelancer-income-deposit", "name": "มัดจำงาน", "type": "income" }
+  ],
+  "merchant": [
+    { "id": "merchant-expense-stock", "name": "ต้นทุนสินค้า", "type": "expense" },
+    { "id": "merchant-expense-shipping", "name": "ค่าส่งพัสดุ", "type": "expense" },
+    { "id": "merchant-expense-packaging", "name": "อุปกรณ์แพ็กของ", "type": "expense" },
+    { "id": "merchant-expense-ads", "name": "ค่าโฆษณา", "type": "expense" },
+    { "id": "merchant-expense-business", "name": "ค่าใช้จ่ายธุรกิจ", "type": "expense" },
+    { "id": "merchant-income-sales", "name": "ยอดขายออนไลน์", "type": "income" }
+  ],
+  "businessOwner": [
+    { "id": "owner-expense-materials", "name": "ค่าวัตถุดิบธุรกิจ", "type": "expense" },
+    { "id": "owner-expense-wages", "name": "ค่าแรงพนักงาน", "type": "expense" },
+    { "id": "owner-expense-rent", "name": "ค่าเช่าร้าน/สำนักงาน", "type": "expense" },
+    { "id": "owner-expense-utilities", "name": "ค่าน้ำ/ค่าไฟธุรกิจ", "type": "expense" },
+    { "id": "owner-expense-tax", "name": "ภาษีธุรกิจ", "type": "expense" },
+    { "id": "owner-expense-business", "name": "ค่าใช้จ่ายธุรกิจ", "type": "expense" },
+    { "id": "owner-income-business", "name": "รายได้จากธุรกิจ", "type": "income" }
+  ],
+  "farmer": [
+    { "id": "farmer-expense-seedling", "name": "เมล็ดพันธุ์/ต้นกล้า", "type": "expense" },
+    { "id": "farmer-expense-fertilizer", "name": "ปุ๋ย/ยาเกษตร", "type": "expense" },
+    { "id": "farmer-expense-labor", "name": "ค่าแรงเกษตร", "type": "expense" },
+    { "id": "farmer-expense-fuel", "name": "ค่าน้ำมันเครื่องจักร", "type": "expense" },
+    { "id": "farmer-expense-operations", "name": "ค่าใช้จ่ายการเกษตร", "type": "expense" },
+    { "id": "farmer-income-harvest", "name": "เกษตรกร/ขายผลผลิต", "type": "income" },
+    { "id": "farmer-income-produce", "name": "เกษตรกร/ขายผัก/ผลไม้", "type": "income" }
+  ],
+  "salaried": [
+    { "id": "salaried-expense-lunch", "name": "อาหารกลางวัน", "type": "expense" },
+    { "id": "salaried-expense-commute", "name": "เดินทางทำงาน", "type": "expense" },
+    { "id": "salaried-expense-health", "name": "ประกัน/สุขภาพ", "type": "expense" },
+    { "id": "salaried-expense-tax", "name": "กองทุน/ลดหย่อนภาษี", "type": "expense" },
+    { "id": "salaried-income-salary", "name": "เงินเดือนประจำ", "type": "income" },
+    { "id": "salaried-income-bonus", "name": "โบนัส/ค่าคอมมิชชั่น", "type": "income" }
+  ]
+}
