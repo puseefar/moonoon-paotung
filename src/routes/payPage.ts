@@ -45,7 +45,7 @@ payPageRouter.get('/:id', async (c) => {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
   <title>ชำระเงิน ฿${amount} — หมูนุ่น+เป๋าตุง</title>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" crossorigin="anonymous"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #F0F4F8; min-height:100vh; }
@@ -170,82 +170,89 @@ payPageRouter.get('/:id', async (c) => {
 <script>
 const QR_PAYLOAD = ${JSON.stringify(req.qrPayload)};
 
-QRCode.toCanvas(document.createElement('canvas'), QR_PAYLOAD, {
-  width: 240, margin: 2, color: { dark: '#000000', light: '#FFFFFF' },
+// ใช้ toDataURL + img แทน toCanvas — reliable กว่าบน mobile browser
+QRCode.toDataURL(QR_PAYLOAD, {
+  width: 260, margin: 2,
+  color: { dark: '#000000', light: '#FFFFFF' },
   errorCorrectionLevel: 'M'
-}, function(err, canvas) {
+}, function(err, dataUrl) {
   if (!err) {
-    canvas.style.borderRadius = '12px';
-    document.getElementById('qrcode').appendChild(canvas);
+    const img = document.createElement('img');
+    img.src = dataUrl;
+    img.width = 240;
+    img.height = 240;
+    img.style.cssText = 'border-radius:12px;border:2px solid #E5E7EB;display:block;';
+    document.getElementById('qrcode').appendChild(img);
+    // เก็บ dataUrl สำหรับ save image
+    window._qrDataUrl = dataUrl;
   }
 });
 
 function saveImage() {
-  const canv = document.querySelector('#qrcode canvas');
-  if (!canv) return;
+  if (!window._qrDataUrl) { alert('QR ยังโหลดไม่เสร็จ กรุณารอสักครู่'); return; }
+  const canv = document.createElement('canvas');
   // สร้าง card ที่มีข้อมูลครบ
-  const out = document.createElement('canvas');
-  out.width = 400; out.height = 560;
-  const ctx = out.getContext('2d');
+  const qrImg = new Image();
+  qrImg.onload = function() {
+    const out = document.createElement('canvas');
+    out.width = 400; out.height = 560;
+    const ctx = out.getContext('2d');
 
-  // Background
-  ctx.fillStyle = '#fff';
-  ctx.roundRect(0, 0, 400, 560, 16);
-  ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, 400, 560);
 
-  // Header
-  const grad = ctx.createLinearGradient(0, 0, 400, 80);
-  grad.addColorStop(0, '#1a1a6e');
-  grad.addColorStop(0.5, '#003087');
-  grad.addColorStop(1, '#0066cc');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 400, 80);
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 22px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('หมูนุ่น+เป๋าตุง', 200, 35);
-  ctx.font = '14px sans-serif';
-  ctx.fillStyle = 'rgba(255,255,255,.8)';
-  ctx.fillText('Thai QR Payment · PromptPay', 200, 58);
+    // Header
+    const grad = ctx.createLinearGradient(0, 0, 400, 80);
+    grad.addColorStop(0, '#1a1a6e');
+    grad.addColorStop(0.5, '#003087');
+    grad.addColorStop(1, '#0066cc');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 400, 80);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('หมูนุ่น+เป๋าตุง', 200, 38);
+    ctx.font = '13px sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,.8)';
+    ctx.fillText('Thai QR Payment · PromptPay', 200, 60);
 
-  // Info
-  ctx.fillStyle = '#111';
-  ctx.textAlign = 'left';
-  ctx.font = '13px sans-serif';
-  ctx.fillStyle = '#6B7280';
-  ctx.fillText('รายการ', 24, 108);
-  ctx.fillStyle = '#111';
-  ctx.font = 'bold 14px sans-serif';
-  ctx.fillText('${req.description}', 24, 126);
+    // Info
+    ctx.textAlign = 'left';
+    ctx.font = '13px sans-serif';
+    ctx.fillStyle = '#6B7280';
+    ctx.fillText('รายการ', 24, 110);
+    ctx.fillStyle = '#111';
+    ctx.font = 'bold 15px sans-serif';
+    ctx.fillText('${req.description}', 24, 130);
+    ctx.fillStyle = '#6B7280';
+    ctx.font = '13px sans-serif';
+    ctx.fillText('จำนวนเงิน', 24, 158);
+    ctx.fillStyle = '#047857';
+    ctx.font = 'bold 34px sans-serif';
+    ctx.fillText('\\u0e3f${amount}', 24, 194);
+    ctx.fillStyle = '#6B7280';
+    ctx.font = '12px sans-serif';
+    ctx.fillText('อ้างอิง: ${shortRef}', 24, 214);
 
-  ctx.fillStyle = '#6B7280';
-  ctx.font = '13px sans-serif';
-  ctx.fillText('จำนวนเงิน', 24, 152);
-  ctx.fillStyle = '#047857';
-  ctx.font = 'bold 32px sans-serif';
-  ctx.fillText('฿${amount}', 24, 184);
+    // QR
+    ctx.drawImage(qrImg, 80, 222, 240, 240);
 
-  ctx.fillStyle = '#6B7280';
-  ctx.font = '11px sans-serif';
-  ctx.fillText('เลขอ้างอิง: ${shortRef}', 24, 204);
+    // Footer
+    ctx.fillStyle = '#9CA3AF';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('PromptPay: ${config.promptpay.id}', 200, 490);
+    ctx.fillText('ชำระก่อน: ${expiryDt}', 200, 508);
+    ctx.fillStyle = '#047857';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillText('หมูนุ่น+เป๋าตุง · SEVENDOG DEV', 200, 538);
 
-  // QR
-  ctx.drawImage(canv, 80, 216, 240, 240);
-
-  // Footer
-  ctx.fillStyle = '#9CA3AF';
-  ctx.font = '11px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('PromptPay: ${config.promptpay.id}', 200, 488);
-  ctx.fillText('กรุณาชำระก่อน ${expiryDt}', 200, 508);
-  ctx.fillStyle = '#047857';
-  ctx.font = 'bold 12px sans-serif';
-  ctx.fillText('หมูนุ่น+เป๋าตุง · SEVENDOG DEV', 200, 536);
-
-  const link = document.createElement('a');
-  link.download = 'payment-qr-${shortRef}.png';
-  link.href = out.toDataURL('image/png');
-  link.click();
+    const link = document.createElement('a');
+    link.download = 'payment-qr-${shortRef}.png';
+    link.href = out.toDataURL('image/png');
+    link.click();
+  };
+  qrImg.src = window._qrDataUrl;
 }
 </script>
 </body>
