@@ -47,8 +47,66 @@ pkg13Router.get('/connect-url', async (c) => {
   return c.json({ ok: true, data: { connectUrl: url, state } });
 });
 
-// GET /pkg13/callback (LINE OAuth callback)
-pkg13Router.get('/callback', async (c) => {
+// NOTE: GET /pkg13/callback ถูกย้ายไปลงทะเบียนที่ index.ts โดยตรง
+// เพราะเป็น public endpoint (LINE redirect มาโดยไม่มี JWT)
+// ดู lineCallbackHandler ใน pkg13.ts ด้านล่าง
+
+// DELETE /pkg13/connection
+pkg13Router.delete('/connection', async (c) => {
+  const userId = c.get('userId') as string;
+  await db.delete(lineConnections).where(eq(lineConnections.userId, userId));
+  return c.json({ ok: true, data: { success: true } });
+});
+
+// PUT /pkg13/notifications
+pkg13Router.put('/notifications', async (c) => {
+  const userId = c.get('userId') as string;
+  const body = await c.req.json<{
+    enabled?: boolean; paymentAlerts?: boolean; orderAlerts?: boolean; dailyDigest?: boolean;
+  }>();
+
+  const now = new Date();
+  const conn = await db.query.lineConnections.findFirst({ where: eq(lineConnections.userId, userId) });
+  if (!conn) return c.json({ ok: false, code: 'NOT_CONNECTED', message: 'ยังไม่ได้ผูก LINE' }, 404);
+
+  const updates = {
+    ...(body.enabled !== undefined && { notificationsEnabled: body.enabled }),
+    ...(body.paymentAlerts !== undefined && { paymentAlerts: body.paymentAlerts }),
+    ...(body.orderAlerts !== undefined && { orderAlerts: body.orderAlerts }),
+    ...(body.dailyDigest !== undefined && { dailyDigest: body.dailyDigest }),
+    updatedAt: now,
+  };
+  await db.update(lineConnections).set(updates).where(eq(lineConnections.userId, userId));
+
+  return c.json({ ok: true, data: { ...conn, ...updates, connectedAt: (conn.connectedAt as Date).toISOString() } });
+});
+
+// ── Internal helper — ส่ง LINE message ──────────────────────────────────────
+export async function sendLineMessage(lineUserId: string, text: string): Promise<boolean> {
+  if (!config.line.channelAccessToken) {
+    console.warn('[DEV] LINE token not set — skipping message');
+    return false;
+  }
+  try {
+    const res = await fetch(`${config.line.apiBase}/message/push`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.line.channelAccessToken}`,
+      },
+      body: JSON.stringify({ to: lineUserId, messages: [{ type: 'text', text }] }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+// ── Public LINE OAuth Callback (no JWT required) ──────────────────────────────
+// ลงทะเบียนใน index.ts โดยตรง เพราะ LINE redirect มาโดยไม่มี Authorization header
+import type { Context } from 'hono';
+
+export async function lineCallbackHandler(c: Context) {
   const code = c.req.query('code');
   const state = c.req.query('state');
   const error = c.req.query('error');
@@ -72,7 +130,7 @@ pkg13Router.get('/callback', async (c) => {
   }
 
   try {
-    // 2. Exchange code → access token (ใช้ LINE Login credentials ไม่ใช่ Messaging API)
+    // 2. Exchange code → access token (LINE Login channel)
     const tokenRes = await fetch('https://api.line.me/oauth2/v2.1/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -137,57 +195,6 @@ pkg13Router.get('/callback', async (c) => {
   } catch (err) {
     console.error('[LINE Callback] Unexpected error:', err);
     return c.redirect(`poatung://line-callback?success=0&error=server_error`);
-  }
-});
-
-// DELETE /pkg13/connection
-pkg13Router.delete('/connection', async (c) => {
-  const userId = c.get('userId') as string;
-  await db.delete(lineConnections).where(eq(lineConnections.userId, userId));
-  return c.json({ ok: true, data: { success: true } });
-});
-
-// PUT /pkg13/notifications
-pkg13Router.put('/notifications', async (c) => {
-  const userId = c.get('userId') as string;
-  const body = await c.req.json<{
-    enabled?: boolean; paymentAlerts?: boolean; orderAlerts?: boolean; dailyDigest?: boolean;
-  }>();
-
-  const now = new Date();
-  const conn = await db.query.lineConnections.findFirst({ where: eq(lineConnections.userId, userId) });
-  if (!conn) return c.json({ ok: false, code: 'NOT_CONNECTED', message: 'ยังไม่ได้ผูก LINE' }, 404);
-
-  const updates = {
-    ...(body.enabled !== undefined && { notificationsEnabled: body.enabled }),
-    ...(body.paymentAlerts !== undefined && { paymentAlerts: body.paymentAlerts }),
-    ...(body.orderAlerts !== undefined && { orderAlerts: body.orderAlerts }),
-    ...(body.dailyDigest !== undefined && { dailyDigest: body.dailyDigest }),
-    updatedAt: now,
-  };
-  await db.update(lineConnections).set(updates).where(eq(lineConnections.userId, userId));
-
-  return c.json({ ok: true, data: { ...conn, ...updates, connectedAt: (conn.connectedAt as Date).toISOString() } });
-});
-
-// ── Internal helper — ส่ง LINE message ──────────────────────────────────────
-export async function sendLineMessage(lineUserId: string, text: string): Promise<boolean> {
-  if (!config.line.channelAccessToken) {
-    console.warn('[DEV] LINE token not set — skipping message');
-    return false;
-  }
-  try {
-    const res = await fetch(`${config.line.apiBase}/message/push`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.line.channelAccessToken}`,
-      },
-      body: JSON.stringify({ to: lineUserId, messages: [{ type: 'text', text }] }),
-    });
-    return res.ok;
-  } catch {
-    return false;
   }
 }
 

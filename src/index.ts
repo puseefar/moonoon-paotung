@@ -6,7 +6,7 @@ import { initDb } from './db/client.js';
 import { config } from './config.js';
 import { authRouter } from './routes/auth.js';
 import { pkg15Router } from './routes/pkg15.js';
-import { pkg13Router } from './routes/pkg13.js';
+import { pkg13Router, lineCallbackHandler } from './routes/pkg13.js';
 import { pkg05Router } from './routes/pkg05.js';
 import { webhookRouter } from './routes/webhooks.js';
 import { payPageRouter } from './routes/payPage.js';
@@ -40,6 +40,9 @@ app.get('/health', healthResponse);
 app.route('/pay', payPageRouter);         // GET /pay/:id → หน้าชำระเงิน HTML
 app.route('/webhook', webhookRouter);   // POST /webhook/line ← LINE Developers Console
 app.route('/auth', authRouter);
+// LINE OAuth callback — public (LINE redirect โดยไม่มี JWT)
+app.get('/pkg13/callback', lineCallbackHandler);
+// Protected PKG routes (ต้องการ JWT + tier)
 app.route('/pkg15', pkg15Router);
 app.route('/pkg13', pkg13Router);
 app.route('/pkg05', pkg05Router);
