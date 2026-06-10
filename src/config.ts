@@ -26,12 +26,18 @@ export const config = {
   },
 
   line: {
-    channelId: process.env.LINE_CHANNEL_ID ?? '',
+    // ── Messaging API (moonoon-paotung) — ใช้สำหรับ Webhook + Push message ──
+    messagingChannelId: process.env.LINE_MESSAGING_CHANNEL_ID ?? process.env.LINE_CHANNEL_ID ?? '',
     channelSecret: process.env.LINE_CHANNEL_SECRET ?? '',
     channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN ?? '',
+    // ── LINE Login (moonoon-login) — ใช้สำหรับ OAuth2 / connect-url / callback ──
+    loginChannelId: process.env.LINE_LOGIN_CHANNEL_ID ?? '',
+    loginChannelSecret: process.env.LINE_LOGIN_CHANNEL_SECRET ?? '',
+    callbackUrl: process.env.LINE_CALLBACK_URL ?? 'https://api.poatung.app/pkg13/callback',
     apiBase: 'https://api.line.me/v2/bot',
     isReady: !!(process.env.LINE_CHANNEL_SECRET && process.env.LINE_CHANNEL_ACCESS_TOKEN
       && !process.env.LINE_CHANNEL_SECRET.startsWith('FILL_IN')),
+    isLoginReady: !!(process.env.LINE_LOGIN_CHANNEL_ID && process.env.LINE_LOGIN_CHANNEL_SECRET),
   },
 
   promptpay: {

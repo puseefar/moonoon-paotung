@@ -33,13 +33,16 @@ pkg13Router.get('/connection', async (c) => {
 });
 
 // GET /pkg13/connect-url
-// คืน URL สำหรับให้ user ผูก LINE OA
+// คืน URL สำหรับให้ user ผูก LINE Login (ต้องใช้ LINE Login Channel ID ไม่ใช่ Messaging API)
 pkg13Router.get('/connect-url', async (c) => {
+  if (!config.line.isLoginReady) {
+    return c.json({ ok: false, code: 'LINE_LOGIN_NOT_CONFIGURED', message: 'LINE Login ยังไม่ได้ตั้งค่า LINE_LOGIN_CHANNEL_ID' }, 503);
+  }
   const userId = c.get('userId') as string;
   const state = Buffer.from(JSON.stringify({ userId, ts: Date.now() })).toString('base64url');
   const url = `https://access.line.me/oauth2/v2.1/authorize?response_type=code`
-    + `&client_id=${config.line.channelId}`
-    + `&redirect_uri=https://api.poatung.app/pkg13/callback`
+    + `&client_id=${config.line.loginChannelId}`
+    + `&redirect_uri=${encodeURIComponent(config.line.callbackUrl)}`
     + `&state=${state}&scope=profile`;
   return c.json({ ok: true, data: { connectUrl: url, state } });
 });
@@ -69,16 +72,16 @@ pkg13Router.get('/callback', async (c) => {
   }
 
   try {
-    // 2. Exchange code → access token
+    // 2. Exchange code → access token (ใช้ LINE Login credentials ไม่ใช่ Messaging API)
     const tokenRes = await fetch('https://api.line.me/oauth2/v2.1/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         grant_type: 'authorization_code',
         code,
-        redirect_uri: 'https://api.poatung.app/pkg13/callback',
-        client_id: config.line.channelId,
-        client_secret: config.line.channelSecret,
+        redirect_uri: config.line.callbackUrl,
+        client_id: config.line.loginChannelId,
+        client_secret: config.line.loginChannelSecret,
       }),
     });
 

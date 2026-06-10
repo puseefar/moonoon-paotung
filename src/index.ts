@@ -65,6 +65,7 @@ serve({ fetch: app.fetch, port: config.port }, (info) => {
 ║  PromptPay : ${config.promptpay.id.padEnd(22)}║
 ║  Thunder   : ${(config.thunder.isReady ? '✅ Ready' : '⚠️  URL missing').padEnd(22)}║
 ║  LINE OA   : ${(config.line.isReady ? '✅ Ready' : '❌ Token missing').padEnd(22)}║
+║  LINE Login: ${(config.line.isLoginReady ? '✅ Ready' : '⚠️  Set LOGIN_ID').padEnd(22)}║
 ║  Cloudinary: ${(config.cloudinary.isReady ? '✅ Ready' : '❌ Not set').padEnd(22)}║
 ║  Email     : ${(config.email.isReady ? '✅ Ready' : '❌ Not set').padEnd(22)}║
 ╚══════════════════════════════════════╝
