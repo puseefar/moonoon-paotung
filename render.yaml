@@ -41,7 +41,7 @@ services:
       - key: LINE_LOGIN_CHANNEL_SECRET
         sync: false
       - key: LINE_CALLBACK_URL
-        value: "https://api.poatung.app/pkg13/callback"
+        value: "https://moonoon-paotung.onrender.com/pkg13/callback"
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY

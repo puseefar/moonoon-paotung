@@ -33,7 +33,7 @@ export const config = {
     // ── LINE Login (moonoon-login) — ใช้สำหรับ OAuth2 / connect-url / callback ──
     loginChannelId: process.env.LINE_LOGIN_CHANNEL_ID ?? '',
     loginChannelSecret: process.env.LINE_LOGIN_CHANNEL_SECRET ?? '',
-    callbackUrl: process.env.LINE_CALLBACK_URL ?? 'https://api.poatung.app/pkg13/callback',
+    callbackUrl: process.env.LINE_CALLBACK_URL ?? 'https://moonoon-paotung.onrender.com/pkg13/callback',
     apiBase: 'https://api.line.me/v2/bot',
     isReady: !!(process.env.LINE_CHANNEL_SECRET && process.env.LINE_CHANNEL_ACCESS_TOKEN
       && !process.env.LINE_CHANNEL_SECRET.startsWith('FILL_IN')),
