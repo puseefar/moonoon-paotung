@@ -26,6 +26,7 @@ export const config = {
   },
 
   line: {
+    channelId: process.env.LINE_CHANNEL_ID ?? '',
     channelSecret: process.env.LINE_CHANNEL_SECRET ?? '',
     channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN ?? '',
     apiBase: 'https://api.line.me/v2/bot',

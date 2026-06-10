@@ -30,6 +30,8 @@ services:
         value: https://api.thunder.in.th/v2/verify/bank
       - key: PROMPTPAY_ID
         sync: false
+      - key: LINE_CHANNEL_ID
+        value: "2010259708"
       - key: LINE_CHANNEL_SECRET
         sync: false
       - key: LINE_CHANNEL_ACCESS_TOKEN

@@ -38,7 +38,7 @@ pkg13Router.get('/connect-url', async (c) => {
   const userId = c.get('userId') as string;
   const state = Buffer.from(JSON.stringify({ userId, ts: Date.now() })).toString('base64url');
   const url = `https://access.line.me/oauth2/v2.1/authorize?response_type=code`
-    + `&client_id=YOUR_LINE_CHANNEL_ID`
+    + `&client_id=${config.line.channelId}`
     + `&redirect_uri=https://api.poatung.app/pkg13/callback`
     + `&state=${state}&scope=profile`;
   return c.json({ ok: true, data: { connectUrl: url, state } });
@@ -48,11 +48,93 @@ pkg13Router.get('/connect-url', async (c) => {
 pkg13Router.get('/callback', async (c) => {
   const code = c.req.query('code');
   const state = c.req.query('state');
-  if (!code || !state) return c.text('Invalid callback', 400);
+  const error = c.req.query('error');
 
-  // TODO: exchange code → access token → get user profile → save lineConnections
-  // ตอนนี้ redirect กลับแอปพร้อม success flag
-  return c.redirect(`poatung://line-callback?success=1&state=${state}`);
+  if (error) {
+    console.error('[LINE Callback] OAuth error:', error, c.req.query('error_description'));
+    return c.redirect(`poatung://line-callback?success=0&error=${encodeURIComponent(error)}`);
+  }
+  if (!code || !state) {
+    return c.redirect(`poatung://line-callback?success=0&error=invalid_params`);
+  }
+
+  // 1. Decode state → userId
+  let userId: string;
+  try {
+    const decoded = JSON.parse(Buffer.from(state, 'base64url').toString('utf-8'));
+    userId = decoded.userId as string;
+    if (!userId) throw new Error('No userId in state');
+  } catch {
+    return c.redirect(`poatung://line-callback?success=0&error=invalid_state`);
+  }
+
+  try {
+    // 2. Exchange code → access token
+    const tokenRes = await fetch('https://api.line.me/oauth2/v2.1/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: 'https://api.poatung.app/pkg13/callback',
+        client_id: config.line.channelId,
+        client_secret: config.line.channelSecret,
+      }),
+    });
+
+    if (!tokenRes.ok) {
+      const errBody = await tokenRes.text();
+      console.error('[LINE Callback] Token exchange failed:', errBody);
+      return c.redirect(`poatung://line-callback?success=0&error=token_exchange_failed`);
+    }
+    const tokenData = await tokenRes.json() as { access_token: string };
+
+    // 3. Get LINE user profile
+    const profileRes = await fetch('https://api.line.me/v2/profile', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    });
+
+    if (!profileRes.ok) {
+      console.error('[LINE Callback] Profile fetch failed:', profileRes.status);
+      return c.redirect(`poatung://line-callback?success=0&error=profile_failed`);
+    }
+    const profile = await profileRes.json() as {
+      userId: string;
+      displayName: string;
+      pictureUrl?: string;
+    };
+
+    // 4. Upsert lineConnections
+    const now = new Date();
+    const existing = await db.query.lineConnections.findFirst({
+      where: eq(lineConnections.userId, userId),
+    });
+
+    if (existing) {
+      await db.update(lineConnections)
+        .set({ lineUserId: profile.userId, displayName: profile.displayName, notificationsEnabled: true, updatedAt: now })
+        .where(eq(lineConnections.userId, userId));
+    } else {
+      await db.insert(lineConnections).values({
+        userId,
+        lineUserId: profile.userId,
+        displayName: profile.displayName,
+        notificationsEnabled: true,
+        paymentAlerts: true,
+        orderAlerts: true,
+        dailyDigest: false,
+        connectedAt: now,
+        updatedAt: now,
+      });
+    }
+
+    console.log(`[LINE Callback] Connected userId=${userId} → lineUserId=${profile.userId}`);
+    return c.redirect(`poatung://line-callback?success=1&displayName=${encodeURIComponent(profile.displayName)}`);
+
+  } catch (err) {
+    console.error('[LINE Callback] Unexpected error:', err);
+    return c.redirect(`poatung://line-callback?success=0&error=server_error`);
+  }
 });
 
 // DELETE /pkg13/connection
