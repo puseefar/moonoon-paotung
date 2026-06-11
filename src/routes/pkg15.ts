@@ -8,6 +8,7 @@ import { genId } from '../lib/id.js';
 import { generatePromptPayQR } from '../lib/promptpay.js';
 import { authMiddleware, requireTier } from '../middleware/auth.js';
 import { config } from '../config.js';
+import { notifyPaymentPaid } from './pkg13.js';
 
 export const pkg15Router = new Hono<{ Variables: AppVariables }>();
 pkg15Router.use('*', authMiddleware);
@@ -158,6 +159,9 @@ pkg15Router.post('/verify-slip', async (c) => {
   await db.insert(slipUsed).values({ refHash, requestId: req.id, usedAt: now });
   // Update payment status
   await db.update(paymentRequests).set({ status: 'paid', refId: refId!, refHash, paidAt: now }).where(eq(paymentRequests.id, req.id));
+
+  // Fire-and-forget LINE push (ไม่ block response ถ้า LINE API ช้า)
+  notifyPaymentPaid(userId, req.amount, refId!).catch(() => {});
 
   // log
   await db.insert(actionLog).values({
