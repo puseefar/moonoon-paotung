@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { AppVariables } from '../types.js';
 import { eq, and } from 'drizzle-orm';
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import { db } from '../db/client.js';
 import { paymentRequests, slipUsed, actionLog } from '../db/schema.js';
 import { genId } from '../lib/id.js';
@@ -31,11 +31,13 @@ pkg15Router.post('/payment', async (c) => {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + config.payment.qrExpiryHours * 60 * 60 * 1000);
   const qrPayload = generatePromptPayQR(config.promptpay.id, body.amount);
+  const uploadToken = randomBytes(32).toString('base64url');
 
   await db.insert(paymentRequests).values({
     id, userId, amount: body.amount,
     description: body.description ?? 'ชำระเงิน',
     qrPayload, status: 'pending',
+    uploadToken,
     expiresAt, createdAt: now,
   });
 
@@ -47,6 +49,8 @@ pkg15Router.post('/payment', async (c) => {
     createdAt: now,
   });
 
+  const uploadSlipUrl = `${config.serverUrl}/pay/${id}?t=${uploadToken}`;
+
   return c.json({
     ok: true,
     data: {
@@ -56,6 +60,7 @@ pkg15Router.post('/payment', async (c) => {
       qrPayload,
       promptPayId: config.promptpay.id,
       status: 'pending',
+      uploadSlipUrl,
       expiresAt: expiresAt.toISOString(),
       createdAt: now.toISOString(),
     },

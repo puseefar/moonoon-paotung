@@ -137,4 +137,26 @@ export async function initDb() {
     )
   `;
   await client`CREATE INDEX IF NOT EXISTS idx_log_user ON action_log(user_id)`;
+
+  // ── PKG-15 migrations (idempotent) ───────────────────────────────────────────
+  await client`ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS upload_token text`;
+  await client`CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_upload_token ON payment_requests(upload_token) WHERE upload_token IS NOT NULL`;
+
+  await client`
+    CREATE TABLE IF NOT EXISTS payment_slips (
+      id text PRIMARY KEY NOT NULL,
+      payment_request_id text NOT NULL REFERENCES payment_requests(id),
+      image_data text NOT NULL,
+      file_hash text NOT NULL,
+      trans_ref text,
+      detected_amount double precision,
+      verification_status text NOT NULL DEFAULT 'pending',
+      verify_raw_response text,
+      reject_reason text,
+      created_at timestamptz NOT NULL,
+      UNIQUE(payment_request_id, file_hash)
+    )
+  `;
+  await client`CREATE UNIQUE INDEX IF NOT EXISTS idx_slips_trans_ref ON payment_slips(trans_ref) WHERE trans_ref IS NOT NULL`;
+  await client`CREATE INDEX IF NOT EXISTS idx_slips_payment ON payment_slips(payment_request_id)`;
 }

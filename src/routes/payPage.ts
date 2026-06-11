@@ -1,17 +1,245 @@
-// ── Public Payment Page — QR generated server-side (no CDN dependency) ────────
+// ── Public Payment Page + Slip Upload + Polling ──────────────────────────────
 // เหตุผล: in-app browser (LINE/Facebook) block CDN scripts → QR ไม่แสดง
-// แก้: สร้าง QR เป็น base64 บน server → embed ตรงใน HTML → ทำงานทุก browser
+// แก้: สร้าง QR เป็น base64 บน server → embed ตรงใน HTML
 import { Hono } from 'hono';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
+import { createHash } from 'crypto';
 import QRCode from 'qrcode';
 import { db } from '../db/client.js';
-import { paymentRequests } from '../db/schema.js';
+import { paymentRequests, paymentSlips, slipUsed, actionLog } from '../db/schema.js';
 import { config } from '../config.js';
+import { genId } from '../lib/id.js';
+import { notifyPaymentPaid } from './pkg13.js';
 
 export const payPageRouter = new Hono();
 
+// ── Rate limiter (in-memory, per-IP) ─────────────────────────────────────────
+const uploadRateLimit = new Map<string, { count: number; resetAt: number }>();
+function checkRateLimit(ip: string, max = 20): boolean {
+  const now = Date.now();
+  const entry = uploadRateLimit.get(ip);
+  if (!entry || entry.resetAt < now) {
+    uploadRateLimit.set(ip, { count: 1, resetAt: now + 3_600_000 });
+    return true;
+  }
+  if (entry.count >= max) return false;
+  entry.count++;
+  return true;
+}
+
+// ── Magic bytes validation ────────────────────────────────────────────────────
+function isImageBuffer(buf: Uint8Array): boolean {
+  const isJpeg = buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF;
+  const isPng  = buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47;
+  return isJpeg || isPng;
+}
+
+// ── Async slip verification (Thunder API) ────────────────────────────────────
+async function runSlipVerification(
+  slipId: string,
+  paymentReqId: string,
+  imageData: string,
+  expectedAmount: number,
+  userId: string,
+) {
+  // Mark as verifying (optimistic — ถ้า status ไม่ใช่ pending แสดงว่า race ให้ skip)
+  const updated = await db.update(paymentRequests)
+    .set({ status: 'verifying' })
+    .where(and(eq(paymentRequests.id, paymentReqId), eq(paymentRequests.status, 'pending')))
+    .returning({ id: paymentRequests.id });
+  if (!updated.length) return; // อีก slip ชนะ race แล้ว
+
+  const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
+
+  let transRef: string | undefined;
+  let detectedAmount: number | undefined;
+  let rawResponse: string | null = null;
+  let passed = false;
+
+  if (config.thunder.isReady) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const imageBuffer = Buffer.from(base64Data, 'base64');
+        const fd = new FormData();
+        fd.append('file', new Blob([imageBuffer], { type: 'image/jpeg' }), 'slip.jpg');
+        const res = await fetch(config.thunder.apiUrl, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${config.thunder.apiKey}` },
+          body: fd,
+          signal: AbortSignal.timeout(15_000),
+        });
+        const json = await res.json() as any;
+        rawResponse = JSON.stringify(json);
+        if (json.success === true) {
+          passed = true;
+          transRef = json.data?.transRef ?? json.data?.ref_id ?? `THUNDER-${Date.now()}`;
+          detectedAmount = parseFloat(String(json.data?.amount ?? expectedAmount));
+          break;
+        }
+        break; // Thunder ตอบ success=false → ไม่ retry
+      } catch {
+        if (attempt === 2) {
+          // timeout 3 ครั้ง → NEED_REVIEW
+          await db.update(paymentSlips)
+            .set({ verificationStatus: 'unreadable', rejectReason: 'THUNDER_TIMEOUT' })
+            .where(eq(paymentSlips.id, slipId));
+          await db.update(paymentRequests)
+            .set({ status: 'need_review' })
+            .where(eq(paymentRequests.id, paymentReqId));
+          return;
+        }
+      }
+    }
+  } else {
+    // Dev mock
+    passed = true;
+    transRef = `REF-DEV-${Date.now()}`;
+    detectedAmount = expectedAmount;
+  }
+
+  if (!passed) {
+    await db.update(paymentSlips)
+      .set({ verificationStatus: 'failed', rejectReason: 'INVALID_SLIP', verifyRawResponse: rawResponse })
+      .where(eq(paymentSlips.id, slipId));
+    await db.update(paymentRequests)
+      .set({ status: 'rejected' })
+      .where(eq(paymentRequests.id, paymentReqId));
+    return;
+  }
+
+  // Global transRef dedup
+  const refHash = createHash('sha256').update(transRef!).digest('hex');
+  const existing = await db.query.slipUsed.findFirst({ where: eq(slipUsed.refHash, refHash) });
+  if (existing) {
+    await db.update(paymentSlips)
+      .set({ verificationStatus: 'failed', rejectReason: 'DUPLICATE_SLIP', transRef: transRef!, verifyRawResponse: rawResponse })
+      .where(eq(paymentSlips.id, slipId));
+    await db.update(paymentRequests)
+      .set({ status: 'rejected' })
+      .where(eq(paymentRequests.id, paymentReqId));
+    return;
+  }
+
+  // Amount check
+  if (Math.abs((detectedAmount ?? 0) - expectedAmount) > 0.01) {
+    await db.update(paymentSlips)
+      .set({ verificationStatus: 'failed', rejectReason: 'AMOUNT_MISMATCH',
+             detectedAmount, transRef: transRef!, verifyRawResponse: rawResponse })
+      .where(eq(paymentSlips.id, slipId));
+    await db.update(paymentRequests)
+      .set({ status: 'rejected' })
+      .where(eq(paymentRequests.id, paymentReqId));
+    return;
+  }
+
+  // All checks passed → PAID
+  const now = new Date();
+  await db.insert(slipUsed).values({ refHash, requestId: paymentReqId, usedAt: now });
+  await db.update(paymentSlips)
+    .set({ verificationStatus: 'passed', detectedAmount, transRef: transRef!, verifyRawResponse: rawResponse })
+    .where(eq(paymentSlips.id, slipId));
+  await db.update(paymentRequests)
+    .set({ status: 'paid', refId: transRef!, refHash, paidAt: now })
+    .where(eq(paymentRequests.id, paymentReqId));
+
+  await db.insert(actionLog).values({
+    id: genId(), userId, action: 'slip.verify.success',
+    meta: JSON.stringify({ paymentReqId, transRef, detectedAmount }),
+    ip: 'public', createdAt: now,
+  });
+
+  notifyPaymentPaid(userId, expectedAmount, transRef!).catch(() => {});
+}
+
+// ── GET /pay/:id/status  (polling endpoint) ───────────────────────────────────
+payPageRouter.get('/:id/status', async (c) => {
+  const id = c.req.param('id');
+  const token = c.req.query('t');
+
+  const req = await db.query.paymentRequests.findFirst({ where: eq(paymentRequests.id, id) });
+  if (!req) return c.json({ ok: false }, 404);
+  if (req.uploadToken && req.uploadToken !== token) return c.json({ ok: false }, 403);
+
+  // Lazy expire
+  if (req.status === 'pending' && req.expiresAt < new Date()) {
+    await db.update(paymentRequests).set({ status: 'expired' }).where(eq(paymentRequests.id, id));
+    return c.json({ ok: true, status: 'expired' });
+  }
+
+  return c.json({ ok: true, status: req.status, paidAt: req.paidAt ?? null, refId: req.refId ?? null });
+});
+
+// ── POST /pay/:id/slip  (public upload — token required) ─────────────────────
+payPageRouter.post('/:id/slip', async (c) => {
+  const id = c.req.param('id');
+  const token = c.req.query('t');
+  const ip = c.req.header('x-forwarded-for') ?? 'unknown';
+
+  // Rate limit per IP
+  if (!checkRateLimit(ip)) return c.json({ ok: false, message: 'ส่งสลิปเยอะเกินไป กรุณารอสักครู่' }, 429);
+
+  const req = await db.query.paymentRequests.findFirst({ where: eq(paymentRequests.id, id) });
+  if (!req) return c.json({ ok: false, message: 'ไม่พบรายการ' }, 404);
+
+  // Token check
+  if (!req.uploadToken || req.uploadToken !== token) return c.json({ ok: false, message: 'ลิงก์ไม่ถูกต้อง' }, 403);
+
+  // State checks
+  if (req.status === 'paid') return c.json({ ok: false, message: 'ชำระเงินเรียบร้อยแล้ว' }, 409);
+  if (req.status === 'expired' || req.expiresAt < new Date()) {
+    await db.update(paymentRequests).set({ status: 'expired' }).where(eq(paymentRequests.id, id));
+    return c.json({ ok: false, message: 'รายการหมดอายุแล้ว' }, 410);
+  }
+  if (req.status === 'verifying') return c.json({ ok: false, message: 'กำลังตรวจสอบสลิปที่ส่งไปแล้ว' }, 409);
+
+  // Parse multipart
+  let fileBuffer: ArrayBuffer;
+  let fileType: string;
+  try {
+    const body = await c.req.parseBody();
+    const file = body['slip'] as File;
+    if (!file || !file.size) return c.json({ ok: false, message: 'ไม่พบไฟล์สลิป' }, 400);
+    if (file.size > 5 * 1024 * 1024) return c.json({ ok: false, message: 'ไฟล์ใหญ่เกิน 5 MB' }, 413);
+    fileBuffer = await file.arrayBuffer();
+    fileType = file.type;
+  } catch {
+    return c.json({ ok: false, message: 'อ่านไฟล์ไม่ได้' }, 400);
+  }
+
+  // Magic bytes check (JPG/PNG เท่านั้น)
+  if (!isImageBuffer(new Uint8Array(fileBuffer))) {
+    return c.json({ ok: false, message: 'ต้องเป็นไฟล์ภาพ JPG หรือ PNG เท่านั้น' }, 400);
+  }
+
+  const base64 = Buffer.from(fileBuffer).toString('base64');
+  const mime = (fileType === 'image/png') ? 'image/png' : 'image/jpeg';
+  const imageData = `data:${mime};base64,${base64}`;
+  const fileHash = createHash('sha256').update(Buffer.from(fileBuffer)).digest('hex');
+
+  // File dedup ภายในรายการ
+  const dupFile = await db.query.paymentSlips.findFirst({
+    where: and(eq(paymentSlips.paymentRequestId, id), eq(paymentSlips.fileHash, fileHash)),
+  });
+  if (dupFile) return c.json({ ok: false, message: 'สลิปนี้เคยส่งแล้ว', code: 'DUPLICATE_FILE' }, 409);
+
+  // บันทึก slip record
+  const slipId = genId();
+  await db.insert(paymentSlips).values({
+    id: slipId, paymentRequestId: id, imageData, fileHash,
+    verificationStatus: 'pending', createdAt: new Date(),
+  });
+
+  // Fire-and-forget verification (ไม่ block response)
+  runSlipVerification(slipId, id, imageData, req.amount, req.userId).catch(console.error);
+
+  return c.json({ ok: true, message: 'รับสลิปแล้ว กำลังตรวจสอบ' }, 202);
+});
+
+// ── GET /pay/:id  (HTML หน้าชำระเงิน + อัปโหลดสลิป) ─────────────────────────
 payPageRouter.get('/:id', async (c) => {
   const id = c.req.param('id');
+  const token = c.req.query('t') ?? '';
+
   const req = await db.query.paymentRequests.findFirst({ where: eq(paymentRequests.id, id) });
 
   if (!req) {
@@ -24,19 +252,20 @@ payPageRouter.get('/:id', async (c) => {
     </body></html>`, 404);
   }
 
-  const isExpired = req.expiresAt < new Date();
-  const isPaid = req.status === 'paid';
-  const amount = Number(req.amount).toLocaleString('th-TH', { minimumFractionDigits: 2 });
-  const shortRef = id.slice(0, 8).toUpperCase();
-  const expiryDt = (req.expiresAt as Date).toLocaleDateString('th-TH', {
+  const isExpired = req.status === 'expired' || req.expiresAt < new Date();
+  const isPaid    = req.status === 'paid';
+  const hasToken  = !!req.uploadToken && req.uploadToken === token;
+
+  const amount    = Number(req.amount).toLocaleString('th-TH', { minimumFractionDigits: 2 });
+  const shortRef  = id.slice(0, 8).toUpperCase();
+  const expiryDt  = (req.expiresAt as Date).toLocaleDateString('th-TH', {
     day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour: '2-digit', minute: '2-digit',
   });
-  const msLeft = Math.max(0, (req.expiresAt as Date).getTime() - Date.now());
-  const minLeft = Math.floor(msLeft / 60000);
+  const msLeft    = Math.max(0, (req.expiresAt as Date).getTime() - Date.now());
+  const minLeft   = Math.floor(msLeft / 60000);
   const expiryLabel = minLeft >= 60 ? `${Math.round(minLeft / 60)} ชั่วโมง` : `${minLeft} นาที`;
 
-  // ── สร้าง QR บน server → base64 PNG ────────────────────────────────────────
   let qrDataUrl = '';
   try {
     qrDataUrl = await QRCode.toDataURL(req.qrPayload, {
@@ -53,6 +282,8 @@ payPageRouter.get('/:id', async (c) => {
     : isExpired
     ? `<div class="status expired">❌ QR Code หมดอายุแล้ว</div>`
     : `<div class="status pending">⏳ กรุณาชำระภายใน ${expiryLabel}</div>`;
+
+  const canUpload = hasToken && !isPaid && !isExpired;
 
   return c.html(`<!DOCTYPE html>
 <html lang="th">
@@ -90,20 +321,38 @@ payPageRouter.get('/:id', async (c) => {
     .ref-code { font-size:22px; font-weight:900; color:#047857; letter-spacing:4px; }
     .status { margin:16px; border-radius:12px; padding:12px 16px;
       text-align:center; font-size:14px; font-weight:800; }
-    .pending { background:#FFF9C4; color:#92400E; border:1.5px solid #FDE68A; }
-    .paid    { background:#ECFDF5; color:#065F46; border:1.5px solid #6EE7B7; }
-    .expired { background:#FEF2F2; color:#7F1D1D; border:1.5px solid #FCA5A5; }
+    .pending     { background:#FFF9C4; color:#92400E; border:1.5px solid #FDE68A; }
+    .paid        { background:#ECFDF5; color:#065F46; border:1.5px solid #6EE7B7; }
+    .expired     { background:#FEF2F2; color:#7F1D1D; border:1.5px solid #FCA5A5; }
+    .verifying   { background:#EFF6FF; color:#1D4ED8; border:1.5px solid #BFDBFE; }
+    .need-review { background:#FFFBEB; color:#92400E; border:1.5px solid #FDE68A; }
+    .rejected    { background:#FEF2F2; color:#7F1D1D; border:1.5px solid #FCA5A5; }
     .deadline { text-align:center; margin:0 16px 4px; font-size:13px; color:#EF4444; font-weight:600; }
     .btn { display:block; border:none; border-radius:14px; padding:14px;
       width:calc(100% - 32px); margin:10px 16px 4px; font-size:15px;
       font-weight:800; cursor:pointer; text-align:center; }
-    .btn-save { background:#047857; color:#fff; }
-    .btn-save:active { opacity:.8; }
-    .slip-box { margin:12px 16px; background:#EFF6FF; border-radius:14px;
-      padding:18px; border:1px solid #BFDBFE; }
-    .slip-t { font-size:14px; font-weight:800; color:#1D4ED8; margin-bottom:6px; }
-    .slip-d { font-size:13px; color:#3B82F6; line-height:1.6; }
+    .btn-save   { background:#047857; color:#fff; }
+    .btn-upload { background:#7C3AED; color:#fff; }
+    .btn-upload:disabled { opacity:.5; cursor:not-allowed; }
+    .btn-save:active, .btn-upload:active { opacity:.8; }
+    .upload-section { margin:12px 16px; background:#F5F3FF; border-radius:14px;
+      padding:18px; border:1px solid #DDD6FE; }
+    .upload-title { font-size:15px; font-weight:800; color:#5B21B6; margin-bottom:8px; }
+    .upload-desc  { font-size:13px; color:#7C3AED; line-height:1.6; margin-bottom:12px; }
+    .file-input   { display:none; }
+    .file-label   { display:block; border:2px dashed #A78BFA; border-radius:10px;
+      padding:20px; text-align:center; cursor:pointer; color:#7C3AED;
+      font-size:13px; font-weight:600; transition:.2s; }
+    .file-label:hover, .file-label.dragover { background:#EDE9FE; }
+    .file-preview { max-width:100%; border-radius:8px; margin-top:10px; display:none; }
+    .spinner { display:inline-block; width:20px; height:20px; border:3px solid rgba(255,255,255,.3);
+      border-top:3px solid #fff; border-radius:50%; animation:spin .8s linear infinite; vertical-align:middle; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .section-verifying, .section-paid, .section-rejected, .section-needreview { display:none; }
     .footer { text-align:center; color:#9CA3AF; font-size:11px; padding:20px; }
+    .thank-icon { font-size:64px; text-align:center; margin:24px 0 8px; }
+    .thank-title { font-size:22px; font-weight:900; color:#065F46; text-align:center; }
+    .thank-sub   { font-size:14px; color:#6B7280; text-align:center; margin-top:6px; line-height:1.6; }
   </style>
 </head>
 <body>
@@ -118,7 +367,8 @@ payPageRouter.get('/:id', async (c) => {
 
   ${statusBanner}
 
-  <div class="card">
+  <!-- ── QR Card ── -->
+  <div class="card" id="qr-card">
     <div class="card-body">
       <div class="row">
         <span class="rlabel">ผู้รับเงิน</span>
@@ -137,7 +387,6 @@ payPageRouter.get('/:id', async (c) => {
         <span class="rval" style="font-family:monospace;letter-spacing:1px">${shortRef}</span>
       </div>
     </div>
-
     <div class="qr-area">
       <div class="qr-tip">สแกน QR ด้วยแอปธนาคาร<br>หรือ แอป PromptPay</div>
       ${qrDataUrl
@@ -151,12 +400,47 @@ payPageRouter.get('/:id', async (c) => {
   </div>
 
   ${!isExpired && !isPaid ? `<div class="deadline">⏰ กรุณาชำระก่อน ${expiryDt}</div>` : ''}
-
   ${qrDataUrl ? `<button class="btn btn-save" onclick="saveCard()">💾 บันทึก QR เป็นรูปภาพ</button>` : ''}
 
-  <div class="slip-box">
-    <div class="slip-t">📬 หลังชำระแล้ว</div>
-    <div class="slip-d">กรุณาส่งสลิปให้เจ้าของร้านยืนยันการรับชำระเงิน<br>ผ่านช่องทาง LINE หรือที่ตกลงกันไว้</div>
+  <!-- ── Upload section (แสดงเมื่อมี token ถูกต้อง) ── -->
+  ${canUpload ? `
+  <div class="upload-section" id="section-upload">
+    <div class="upload-title">📤 ชำระแล้ว? ส่งสลิปที่นี่เลย</div>
+    <div class="upload-desc">อัปโหลดสลิปการโอนเงินเพื่อยืนยันการชำระเงิน<br>รองรับ JPG/PNG ขนาดไม่เกิน 5 MB</div>
+    <input type="file" id="fileInput" class="file-input" accept="image/jpeg,image/png" onchange="onFileSelected(this)">
+    <label for="fileInput" class="file-label" id="fileLabel">
+      📷 แตะเพื่อเลือกรูปสลิป
+    </label>
+    <img id="filePreview" class="file-preview" alt="preview">
+    <button class="btn btn-upload" id="btnUpload" onclick="uploadSlip()" disabled>
+      ส่งสลิป
+    </button>
+  </div>
+  <div class="status verifying section-verifying" id="section-verifying" style="display:none">
+    <span class="spinner"></span>&nbsp; กำลังตรวจสอบสลิป... (อาจใช้เวลาสักครู่)
+  </div>
+  <div class="status need-review section-needreview" id="section-needreview" style="display:none">
+    📋 ได้รับสลิปแล้ว — ร้านค้ากำลังตรวจสอบ จะแจ้งผลเร็วๆ นี้
+  </div>
+  <div class="status rejected section-rejected" id="section-rejected" style="display:none">
+    ❌ <span id="rejectMsg">สลิปไม่ผ่านการตรวจสอบ</span> — <a href="#" onclick="resetUpload();return false" style="color:inherit">ส่งสลิปใหม่</a>
+  </div>
+  ` : `
+  <div class="upload-section">
+    <div class="upload-title">📬 หลังชำระแล้ว</div>
+    <div class="upload-desc">กรุณาส่งสลิปให้เจ้าของร้านยืนยันการรับชำระเงิน<br>ผ่านช่องทาง LINE หรือที่ตกลงกันไว้</div>
+  </div>
+  `}
+
+  <!-- ── Thank you page ── -->
+  <div id="section-paid" style="display:${isPaid ? 'block' : 'none'}">
+    <div class="thank-icon">✅</div>
+    <div class="thank-title">ขอบคุณสำหรับการชำระเงิน</div>
+    <div class="thank-sub">ยอด ฿${amount}<br>อ้างอิง: ${shortRef}<br>ชำระเรียบร้อยแล้ว</div>
+    <div class="upload-section" style="background:#ECFDF5;border-color:#6EE7B7;margin-top:16px">
+      <div class="upload-title" style="color:#065F46">🔒 บันทึกหน้าจอนี้เป็นหลักฐาน</div>
+      <div class="upload-desc" style="color:#047857">Screenshot หน้านี้ไว้เป็นหลักฐานการชำระเงินครับ</div>
+    </div>
   </div>
 
   <div class="footer">
@@ -166,14 +450,134 @@ payPageRouter.get('/:id', async (c) => {
 </div>
 
 <script>
-// QR ถูก embed เป็น base64 แล้ว ไม่ต้องโหลด CDN
+const PAYMENT_ID = ${JSON.stringify(id)};
+const UPLOAD_TOKEN = ${JSON.stringify(token)};
 const QR_DATA_URL = ${JSON.stringify(qrDataUrl)};
-const SHORT_REF = '${shortRef}';
-const AMOUNT = '${amount}';
-const DESC = '${req.description}';
-const EXPIRY = '${expiryDt}';
-const PROMPTPAY = '${config.promptpay.id}';
+const SHORT_REF = ${JSON.stringify(shortRef)};
+const AMOUNT = ${JSON.stringify(amount)};
+const DESC = ${JSON.stringify(req.description)};
+const EXPIRY = ${JSON.stringify(expiryDt)};
+const PROMPTPAY = ${JSON.stringify(config.promptpay.id)};
+const INITIAL_STATUS = ${JSON.stringify(req.status)};
 
+let selectedFile = null;
+let pollTimer = null;
+
+function onFileSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  selectedFile = file;
+  const label = document.getElementById('fileLabel');
+  label.textContent = '✅ ' + file.name;
+  const preview = document.getElementById('filePreview');
+  preview.src = URL.createObjectURL(file);
+  preview.style.display = 'block';
+  document.getElementById('btnUpload').disabled = false;
+}
+
+async function uploadSlip() {
+  if (!selectedFile) return;
+  const btn = document.getElementById('btnUpload');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> กำลังส่ง...';
+
+  const fd = new FormData();
+  fd.append('slip', selectedFile);
+
+  try {
+    const res = await fetch('/pay/' + PAYMENT_ID + '/slip?t=' + encodeURIComponent(UPLOAD_TOKEN), {
+      method: 'POST', body: fd,
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showVerifying();
+      startPolling();
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = 'ส่งสลิป';
+      alert(data.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่');
+    }
+  } catch {
+    btn.disabled = false;
+    btn.innerHTML = 'ส่งสลิป';
+    alert('ไม่สามารถส่งสลิปได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่');
+  }
+}
+
+function showVerifying() {
+  document.getElementById('section-upload').style.display = 'none';
+  document.getElementById('section-verifying').style.display = 'block';
+}
+
+function showPaid() {
+  clearPoll();
+  document.getElementById('section-verifying').style.display = 'none';
+  document.getElementById('section-paid').style.display = 'block';
+  document.getElementById('qr-card').style.display = 'none';
+}
+
+function showRejected(msg) {
+  clearPoll();
+  document.getElementById('section-verifying').style.display = 'none';
+  document.getElementById('rejectMsg').textContent = msg || 'สลิปไม่ผ่านการตรวจสอบ';
+  document.getElementById('section-rejected').style.display = 'block';
+}
+
+function showNeedReview() {
+  clearPoll();
+  document.getElementById('section-verifying').style.display = 'none';
+  document.getElementById('section-needreview').style.display = 'block';
+}
+
+function resetUpload() {
+  selectedFile = null;
+  document.getElementById('fileInput').value = '';
+  document.getElementById('fileLabel').textContent = '📷 แตะเพื่อเลือกรูปสลิป';
+  document.getElementById('filePreview').style.display = 'none';
+  document.getElementById('filePreview').src = '';
+  document.getElementById('btnUpload').disabled = true;
+  document.getElementById('btnUpload').innerHTML = 'ส่งสลิป';
+  document.getElementById('section-rejected').style.display = 'none';
+  document.getElementById('section-upload').style.display = 'block';
+}
+
+function clearPoll() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
+
+function startPolling() {
+  clearPoll();
+  let timeoutId = setTimeout(() => {
+    clearPoll();
+    document.getElementById('section-verifying').innerHTML =
+      '⏳ กำลังรอผล — ระบบอาจใช้เวลาสักครู่ กรุณาอย่าปิดหน้าต่างนี้';
+  }, 180_000);
+
+  pollTimer = setInterval(async () => {
+    try {
+      const res = await fetch('/pay/' + PAYMENT_ID + '/status?t=' + encodeURIComponent(UPLOAD_TOKEN));
+      const { status } = await res.json();
+      if (status === 'paid') {
+        clearTimeout(timeoutId);
+        showPaid();
+      } else if (status === 'rejected') {
+        clearTimeout(timeoutId);
+        showRejected();
+      } else if (status === 'need_review') {
+        clearTimeout(timeoutId);
+        showNeedReview();
+      }
+    } catch {}
+  }, 2500);
+}
+
+// Auto-start polling ถ้ากำลัง verifying อยู่แล้ว (reload หน้า)
+if (INITIAL_STATUS === 'verifying' && UPLOAD_TOKEN) {
+  showVerifying();
+  startPolling();
+}
+
+// ── Save QR card as image ──────────────────────────────────────────────────
 function saveCard() {
   if (!QR_DATA_URL) return;
   const qrImg = new Image();
@@ -181,41 +585,29 @@ function saveCard() {
     const out = document.createElement('canvas');
     out.width = 400; out.height = 560;
     const ctx = out.getContext('2d');
-
-    // Background
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, 400, 560);
-
-    // Header gradient
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 400, 560);
     const g = ctx.createLinearGradient(0, 0, 400, 80);
     g.addColorStop(0, '#1a1a6e'); g.addColorStop(.5, '#003087'); g.addColorStop(1, '#0066cc');
     ctx.fillStyle = g; ctx.fillRect(0, 0, 400, 80);
     ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
-    ctx.font = 'bold 22px sans-serif'; ctx.fillText('🐷 หมูนุ่น+เป๋าตุง', 200, 36);
+    ctx.font = 'bold 22px sans-serif'; ctx.fillText('\\u{1F417} \\u0e2b\\u0e21\\u0e39\\u0e19\\u0e38\\u0e48\\u0e19+\\u0e40\\u0e1b\\u0e4b\\u0e32\\u0e15\\u0e38\\u0e07', 200, 36);
     ctx.font = '13px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.8)';
     ctx.fillText('Thai QR Payment · PromptPay', 200, 58);
-
-    // Info
     ctx.textAlign = 'left'; ctx.fillStyle = '#6B7280'; ctx.font = '13px sans-serif';
-    ctx.fillText('รายการ', 24, 108);
+    ctx.fillText('\\u0e23\\u0e32\\u0e22\\u0e01\\u0e32\\u0e23', 24, 108);
     ctx.fillStyle = '#111'; ctx.font = 'bold 15px sans-serif';
     ctx.fillText(DESC.length > 30 ? DESC.substring(0,30)+'...' : DESC, 24, 128);
-    ctx.fillStyle = '#6B7280'; ctx.font = '13px sans-serif'; ctx.fillText('จำนวนเงิน', 24, 156);
+    ctx.fillStyle = '#6B7280'; ctx.font = '13px sans-serif'; ctx.fillText('\\u0e08\\u0e33\\u0e19\\u0e27\\u0e19\\u0e40\\u0e07\\u0e34\\u0e19', 24, 156);
     ctx.fillStyle = '#047857'; ctx.font = 'bold 34px sans-serif';
     ctx.fillText('\\u0e3f' + AMOUNT, 24, 192);
     ctx.fillStyle = '#6B7280'; ctx.font = '12px sans-serif';
-    ctx.fillText('อ้างอิง: ' + SHORT_REF, 24, 212);
-
-    // QR image
+    ctx.fillText('\\u0e2d\\u0e49\\u0e32\\u0e07\\u0e2d\\u0e34\\u0e07: ' + SHORT_REF, 24, 212);
     ctx.drawImage(qrImg, 80, 222, 240, 240);
-
-    // Footer
     ctx.fillStyle = '#9CA3AF'; ctx.textAlign = 'center'; ctx.font = '11px sans-serif';
     ctx.fillText('PromptPay: ' + PROMPTPAY, 200, 490);
-    ctx.fillText('ชำระก่อน: ' + EXPIRY, 200, 508);
+    ctx.fillText('\\u0e0a\\u0e33\\u0e23\\u0e30\\u0e01\\u0e48\\u0e2d\\u0e19: ' + EXPIRY, 200, 508);
     ctx.fillStyle = '#047857'; ctx.font = 'bold 12px sans-serif';
-    ctx.fillText('หมูนุ่น+เป๋าตุง · SEVENDOG DEV', 200, 538);
-
+    ctx.fillText('\\u0e2b\\u0e21\\u0e39\\u0e19\\u0e38\\u0e48\\u0e19+\\u0e40\\u0e1b\\u0e4b\\u0e32\\u0e15\\u0e38\\u0e07 · SEVENDOG DEV', 200, 538);
     const a = document.createElement('a');
     a.download = 'payment-qr-' + SHORT_REF + '.png';
     a.href = out.toDataURL('image/png');

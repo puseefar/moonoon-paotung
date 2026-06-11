@@ -60,4 +60,6 @@ export const config = {
   db: {
     url: process.env.DATABASE_URL ?? '',  // Neon PostgreSQL connection string
   },
+
+  serverUrl: process.env.SERVER_URL ?? 'https://moonoon-paotung.onrender.com',
 } as const;

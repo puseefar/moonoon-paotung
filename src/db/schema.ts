@@ -16,7 +16,10 @@ export const paymentRequests = pgTable('payment_requests', {
   amount: doublePrecision('amount').notNull(),
   description: text('description').notNull(),
   qrPayload: text('qr_payload').notNull(),
-  status: text('status').$type<'pending'|'paid'|'expired'>().default('pending').notNull(),
+  status: text('status')
+    .$type<'pending'|'verifying'|'paid'|'need_review'|'rejected'|'expired'>()
+    .default('pending').notNull(),
+  uploadToken: text('upload_token').unique(),
   refId: text('ref_id'),
   refHash: text('ref_hash'),
   expiresAt: timestamp('expires_at').notNull(),
@@ -33,6 +36,23 @@ export const slipUsed = pgTable('slip_used', {
   requestId: text('request_id').notNull(),
   usedAt: timestamp('used_at').notNull(),
 });
+
+export const paymentSlips = pgTable('payment_slips', {
+  id: text('id').primaryKey(),
+  paymentRequestId: text('payment_request_id').references(() => paymentRequests.id).notNull(),
+  imageData: text('image_data').notNull(),       // base64 data URL
+  fileHash: text('file_hash').notNull(),          // SHA-256 ของไฟล์ (dedup ในรายการ)
+  transRef: text('trans_ref'),                    // transRef จาก Thunder (global dedup)
+  detectedAmount: doublePrecision('detected_amount'),
+  verificationStatus: text('verification_status')
+    .$type<'pending'|'passed'|'failed'|'unreadable'>()
+    .default('pending').notNull(),
+  verifyRawResponse: text('verify_raw_response'), // Thunder response เก็บไว้ debug
+  rejectReason: text('reject_reason'),
+  createdAt: timestamp('created_at').notNull(),
+}, (t) => [
+  index('idx_slips_payment').on(t.paymentRequestId),
+]);
 
 // ── PKG-13 ── LINE ────────────────────────────────────────────────────────────
 export const lineConnections = pgTable('line_connections', {
