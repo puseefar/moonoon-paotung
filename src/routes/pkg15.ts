@@ -85,13 +85,22 @@ pkg15Router.get('/payment/:id', async (c) => {
 });
 
 // POST /pkg15/verify-slip
+// รับ multipart/form-data: file (image) + requestId (text)
 // ⚠️ CRITICAL: Slip dedupe — ref_hash ต้องไม่ซ้ำ
 pkg15Router.post('/verify-slip', async (c) => {
   const userId = c.get('userId') as string;
-  const body = await c.req.json<{ requestId: string; slipImageBase64: string }>();
+
+  // รับ multipart (ตรงกับที่ client ส่งมา)
+  const formBody = await c.req.parseBody();
+  const requestId = formBody['requestId'] as string;
+  const slipFile = formBody['file'] as File | undefined;
+
+  if (!requestId || !slipFile) {
+    return c.json({ ok: false, code: 'BAD_REQUEST', message: 'ต้องส่ง requestId และ file' }, 400);
+  }
 
   const req = await db.query.paymentRequests.findFirst({
-    where: and(eq(paymentRequests.id, body.requestId), eq(paymentRequests.userId, userId)),
+    where: and(eq(paymentRequests.id, requestId), eq(paymentRequests.userId, userId)),
   });
   if (!req) {
     return c.json({ ok: false, code: 'NOT_FOUND', message: 'Payment request not found' }, 404);
@@ -104,26 +113,20 @@ pkg15Router.post('/verify-slip', async (c) => {
     return c.json({ ok: true, data: { verified: false, errorCode: 'EXPIRED', errorMessage: 'QR หมดอายุแล้ว' } });
   }
 
-  // ── ส่งสลิปไป SlipOK API ──
+  // ── ส่งสลิปไป Thunder API ──
   let verified = false;
   let refId: string | undefined;
   let amount: number | undefined;
 
   if (config.thunder.isReady) {
-    // ── Thunder Slip Verify API — multipart/form-data (confirmed format) ──
     try {
-      const imageBuffer = Buffer.from(body.slipImageBase64, 'base64');
-      const formData = new FormData();
-      formData.append(
-        'file',
-        new Blob([imageBuffer], { type: 'image/jpeg' }),
-        'slip.jpg',
-      );
+      // ส่ง file ต่อตรงไป Thunder (ไม่ต้องแปลง base64 แล้ว)
+      const thunderForm = new FormData();
+      thunderForm.append('file', slipFile, 'slip.jpg');
       const res = await fetch(config.thunder.apiUrl, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${config.thunder.apiKey}` },
-        // ไม่ใส่ Content-Type — ให้ fetch set boundary ของ multipart เอง
-        body: formData,
+        body: thunderForm,
       });
       const json = await res.json() as any;
       console.log('[Thunder] response:', JSON.stringify(json));
@@ -136,7 +139,7 @@ pkg15Router.post('/verify-slip', async (c) => {
       console.error('[Thunder] API error:', e);
     }
   } else {
-    // Dev mode — mock verification (ใช้จนกว่าจะใส่ THUNDER_API_URL)
+    // Dev mode — mock verification
     console.warn('[DEV] Thunder API URL not set — using mock verification');
     verified = true;
     refId = `REF-DEV-${Date.now()}`;
