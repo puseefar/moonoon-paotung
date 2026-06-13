@@ -190,5 +190,6 @@ function toPaymentResponse(req: typeof paymentRequests.$inferSelect) {
     expiresAt: (req.expiresAt as Date).toISOString(),
     paidAt: req.paidAt ? (req.paidAt as Date).toISOString() : undefined,
     createdAt: (req.createdAt as Date).toISOString(),
+    uploadSlipUrl: req.uploadToken ? `${config.serverUrl}/pay/${req.id}?t=${req.uploadToken}` : undefined,
   };
 }

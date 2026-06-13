@@ -2,7 +2,7 @@
 // เหตุผล: in-app browser (LINE/Facebook) block CDN scripts → QR ไม่แสดง
 // แก้: สร้าง QR เป็น base64 บน server → embed ตรงใน HTML
 import { Hono } from 'hono';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { createHash } from 'crypto';
 import QRCode from 'qrcode';
 import { db } from '../db/client.js';
@@ -166,7 +166,17 @@ payPageRouter.get('/:id/status', async (c) => {
     return c.json({ ok: true, status: 'expired' });
   }
 
-  return c.json({ ok: true, status: req.status, paidAt: req.paidAt ?? null, refId: req.refId ?? null });
+  let rejectReason: string | null = null;
+  if (req.status === 'rejected') {
+    const slip = await db.select({ rejectReason: paymentSlips.rejectReason })
+      .from(paymentSlips)
+      .where(eq(paymentSlips.paymentRequestId, id))
+      .orderBy(desc(paymentSlips.createdAt))
+      .limit(1);
+    rejectReason = slip[0]?.rejectReason ?? null;
+  }
+
+  return c.json({ ok: true, status: req.status, paidAt: req.paidAt ?? null, refId: req.refId ?? null, rejectReason });
 });
 
 // ── POST /pay/:id/slip  (public upload — token required) ─────────────────────
@@ -460,6 +470,13 @@ const EXPIRY = ${JSON.stringify(expiryDt)};
 const PROMPTPAY = ${JSON.stringify(config.promptpay.id)};
 const INITIAL_STATUS = ${JSON.stringify(req.status)};
 
+const REJECT_MESSAGES = {
+  INVALID_SLIP:    'สลิปไม่ถูกต้องหรืออ่านไม่ได้ — กรุณาส่งภาพสลิปที่ชัดกว่านี้',
+  AMOUNT_MISMATCH: 'ยอดเงินในสลิปไม่ตรงกับยอดที่ต้องชำระ',
+  DUPLICATE_SLIP:  'สลิปนี้เคยใช้ยืนยันการชำระแล้ว',
+  THUNDER_TIMEOUT: 'ระบบตรวจสอบขัดข้อง — กรุณาลองส่งสลิปใหม่อีกครั้ง',
+};
+
 let selectedFile = null;
 let pollTimer = null;
 
@@ -556,13 +573,13 @@ function startPolling() {
   pollTimer = setInterval(async () => {
     try {
       const res = await fetch('/pay/' + PAYMENT_ID + '/status?t=' + encodeURIComponent(UPLOAD_TOKEN));
-      const { status } = await res.json();
+      const { status, rejectReason } = await res.json();
       if (status === 'paid') {
         clearTimeout(timeoutId);
         showPaid();
       } else if (status === 'rejected') {
         clearTimeout(timeoutId);
-        showRejected();
+        showRejected(REJECT_MESSAGES[rejectReason] || 'สลิปไม่ผ่านการตรวจสอบ');
       } else if (status === 'need_review') {
         clearTimeout(timeoutId);
         showNeedReview();
