@@ -53,7 +53,7 @@ export const config = {
   },
 
   payment: {
-    qrExpiryHours: Number(process.env.PAYMENT_QR_EXPIRY_HOURS) || 0.25, // default 15 min
+    qrExpiryHours: Number(process.env.PAYMENT_QR_EXPIRY_HOURS) || 0.5, // default 30 min
     autoConfirm: process.env.PAYMENT_AUTO_CONFIRM === 'true',
   },
 
