@@ -151,6 +151,22 @@ async function runSlipVerification(
   notifyPaymentPaid(userId, expectedAmount, transRef!).catch(() => {});
 }
 
+// ── GET /pay/:id/qr.png  (serve QR as real PNG — for OG image + mobile save) ──
+payPageRouter.get('/:id/qr.png', async (c) => {
+  const id = c.req.param('id');
+  const req = await db.query.paymentRequests.findFirst({ where: eq(paymentRequests.id, id) });
+  if (!req) return c.notFound();
+  const buf = await QRCode.toBuffer(req.qrPayload, {
+    type: 'png', width: 400, margin: 2,
+    errorCorrectionLevel: 'M',
+    color: { dark: '#000000', light: '#FFFFFF' },
+  });
+  return c.body(new Uint8Array(buf), 200, {
+    'Content-Type': 'image/png',
+    'Cache-Control': 'public, max-age=86400',
+  });
+});
+
 // ── GET /pay/:id/status  (polling endpoint) ───────────────────────────────────
 payPageRouter.get('/:id/status', async (c) => {
   const id = c.req.param('id');
@@ -301,6 +317,12 @@ payPageRouter.get('/:id', async (c) => {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
   <title>ชำระเงิน ฿${amount} — หมูนุ่น+เป๋าตุง</title>
+  <meta property="og:title" content="ชำระเงิน ฿${amount} — หมูนุ่น+เป๋าตุง">
+  <meta property="og:description" content="${req.description} · รหัส ${shortRef}">
+  <meta property="og:image" content="${config.serverUrl}/pay/${id}/qr.png">
+  <meta property="og:image:width" content="400">
+  <meta property="og:image:height" content="400">
+  <meta name="twitter:card" content="summary_large_image">
   <style>
     * { box-sizing:border-box; margin:0; padding:0; }
     body { font-family:-apple-system,Tahoma,sans-serif; background:#F0F4F8; min-height:100vh; }
@@ -594,69 +616,34 @@ if (INITIAL_STATUS === 'verifying' && UPLOAD_TOKEN) {
   startPolling();
 }
 
-// ── Save / Share QR card ──────────────────────────────────────────────────────
-// Strategy: navigator.share (mobile) → open in new tab (in-app WebView fallback) → <a download> (desktop)
+// ── Save / Share QR image ────────────────────────────────────────────────────
+// Uses server-side /qr.png endpoint (no canvas) — reliable on all browsers/WebViews
 async function saveCard() {
-  if (!QR_DATA_URL) return;
-  const qrImg = new Image();
-  qrImg.onload = async function() {
-    const out = document.createElement('canvas');
-    out.width = 400; out.height = 560;
-    const ctx = out.getContext('2d');
-    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 400, 560);
-    const g = ctx.createLinearGradient(0, 0, 400, 80);
-    g.addColorStop(0, '#1a1a6e'); g.addColorStop(.5, '#003087'); g.addColorStop(1, '#0066cc');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, 400, 80);
-    ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
-    ctx.font = 'bold 22px sans-serif'; ctx.fillText('\\u{1F417} \\u0e2b\\u0e21\\u0e39\\u0e19\\u0e38\\u0e48\\u0e19+\\u0e40\\u0e1b\\u0e4b\\u0e32\\u0e15\\u0e38\\u0e07', 200, 36);
-    ctx.font = '13px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.8)';
-    ctx.fillText('Thai QR Payment · PromptPay', 200, 58);
-    ctx.textAlign = 'left'; ctx.fillStyle = '#6B7280'; ctx.font = '13px sans-serif';
-    ctx.fillText('\\u0e23\\u0e32\\u0e22\\u0e01\\u0e32\\u0e23', 24, 108);
-    ctx.fillStyle = '#111'; ctx.font = 'bold 15px sans-serif';
-    ctx.fillText(DESC.length > 30 ? DESC.substring(0,30)+'...' : DESC, 24, 128);
-    ctx.fillStyle = '#6B7280'; ctx.font = '13px sans-serif'; ctx.fillText('\\u0e08\\u0e33\\u0e19\\u0e27\\u0e19\\u0e40\\u0e07\\u0e34\\u0e19', 24, 156);
-    ctx.fillStyle = '#047857'; ctx.font = 'bold 34px sans-serif';
-    ctx.fillText('\\u0e3f' + AMOUNT, 24, 192);
-    ctx.fillStyle = '#6B7280'; ctx.font = '12px sans-serif';
-    ctx.fillText('\\u0e2d\\u0e49\\u0e32\\u0e07\\u0e2d\\u0e34\\u0e07: ' + SHORT_REF, 24, 212);
-    ctx.drawImage(qrImg, 80, 222, 240, 240);
-    ctx.fillStyle = '#9CA3AF'; ctx.textAlign = 'center'; ctx.font = '11px sans-serif';
-    ctx.fillText('PromptPay: ' + PROMPTPAY, 200, 490);
-    ctx.fillText('\\u0e0a\\u0e33\\u0e23\\u0e30\\u0e01\\u0e48\\u0e2d\\u0e19: ' + EXPIRY, 200, 508);
-    ctx.fillStyle = '#047857'; ctx.font = 'bold 12px sans-serif';
-    ctx.fillText('\\u0e2b\\u0e21\\u0e39\\u0e19\\u0e38\\u0e48\\u0e19+\\u0e40\\u0e1b\\u0e4b\\u0e32\\u0e15\\u0e38\\u0e07 · SEVENDOG DEV', 200, 538);
+  const qrUrl = '/pay/' + PAYMENT_ID + '/qr.png';
+  const filename = 'payment-qr-' + SHORT_REF + '.png';
 
-    const dataUrl = out.toDataURL('image/png');
-    const filename = 'payment-qr-' + SHORT_REF + '.png';
+  // 1) navigator.share with file — mobile Chrome/Safari
+  if (navigator.canShare) {
+    try {
+      const res = await fetch(qrUrl);
+      const blob = await res.blob();
+      const file = new File([blob], filename, { type: 'image/png' });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: filename });
+        return;
+      }
+    } catch(e) { /* cancelled or unsupported → fallthrough */ }
+  }
 
-    // 1) navigator.share with file — works on mobile Chrome/Safari
-    if (navigator.canShare) {
-      try {
-        const blob = await (await fetch(dataUrl)).blob();
-        const file = new File([blob], filename, { type: 'image/png' });
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: filename });
-          return;
-        }
-      } catch(e) { /* user cancelled or not supported → fall through */ }
-    }
+  // 2) Open QR image in new tab — long-press to save (FB/LINE WebView)
+  const w = window.open(qrUrl, '_blank');
+  if (w) return;
 
-    // 2) Open image in new tab — user can long-press to save (works in FB/LINE WebView)
-    const w = window.open('', '_blank');
-    if (w) {
-      w.document.write('<img src="' + dataUrl + '" style="max-width:100%;display:block;margin:auto">');
-      w.document.title = filename;
-      return;
-    }
-
-    // 3) Desktop <a download> fallback
-    const a = document.createElement('a');
-    a.download = filename;
-    a.href = dataUrl;
-    a.click();
-  };
-  qrImg.src = QR_DATA_URL;
+  // 3) Desktop <a download>
+  const a = document.createElement('a');
+  a.href = qrUrl;
+  a.download = filename;
+  a.click();
 }
 </script>
 </body>
