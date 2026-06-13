@@ -291,24 +291,49 @@ export default function PaymentQrScreen() {
               </Pressable>
             </View>
 
+          ) : isExpired ? (
+            /* ── EXPIRED Screen ── */
+            <View>
+              <View style={{ backgroundColor: '#FEF2F2', borderRadius: 24, padding: 28,
+                alignItems: 'center', marginBottom: 16,
+                borderWidth: 2, borderColor: '#FCA5A5' }}>
+                <Text style={{ fontSize: 56, marginBottom: 8 }}>⏰</Text>
+                <Text style={{ fontSize: 20, fontWeight: '900', color: '#7F1D1D', marginBottom: 4 }}>
+                  QR หมดอายุแล้ว
+                </Text>
+                <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', lineHeight: 20 }}>
+                  {request.description}{'\n'}
+                  ยอด ฿{formatCurrency(request.amount)} · รหัส {shortRef}
+                </Text>
+                <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 12, textAlign: 'center' }}>
+                  สร้าง QR ใหม่เพื่อรับชำระในรอบถัดไป
+                </Text>
+              </View>
+
+              <Pressable onPress={handleNewQR}
+                style={{ backgroundColor: '#059669', borderRadius: 16, paddingVertical: 15,
+                  alignItems: 'center', marginBottom: 8 }}>
+                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>📱 สร้าง QR ใหม่</Text>
+              </Pressable>
+              <Pressable onPress={() => router.back()}
+                style={{ paddingVertical: 12, alignItems: 'center' }}>
+                <Text style={{ color: '#9CA3AF', fontSize: 13 }}>กลับหน้าหลัก</Text>
+              </Pressable>
+            </View>
+
           ) : (
-            /* ── QR Screen (PENDING / EXPIRED) ── */
+            /* ── PENDING QR Screen ── */
             <View>
               {/* Status Badge */}
               <View style={{ borderRadius: 14, paddingVertical: 10, paddingHorizontal: 16,
                 marginBottom: 14, alignItems: 'center',
-                backgroundColor: isExpired ? '#FEF2F2' : '#FFF9C4',
-                borderWidth: 1.5,
-                borderColor: isExpired ? '#FCA5A5' : '#FDE68A' }}>
-                <Text style={{ fontSize: 15, fontWeight: '800',
-                  color: isExpired ? '#7F1D1D' : '#92400E' }}>
-                  {isExpired ? '❌ หมดอายุแล้ว' : `⏳ รอชำระ · หมดอายุใน ${expiryLabel}`}
+                backgroundColor: '#FFF9C4', borderWidth: 1.5, borderColor: '#FDE68A' }}>
+                <Text style={{ fontSize: 15, fontWeight: '800', color: '#92400E' }}>
+                  {`⏳ รอชำระ · หมดอายุใน ${expiryLabel}`}
                 </Text>
-                {!isExpired && (
-                  <Text style={{ fontSize: 11, color: '#92400E', marginTop: 2 }}>
-                    ระบบตรวจสอบอัตโนมัติ — ไม่ต้องกดรอ
-                  </Text>
-                )}
+                <Text style={{ fontSize: 11, color: '#92400E', marginTop: 2 }}>
+                  ระบบตรวจสอบอัตโนมัติ — ไม่ต้องกดรอ
+                </Text>
               </View>
 
               {/* QR Card */}
@@ -397,17 +422,15 @@ export default function PaymentQrScreen() {
               </View>
 
               {/* Fallback: ตรวจสอบสถานะด้วยตนเอง */}
-              {!isExpired && (
-                <Pressable onPress={handleCheckStatus} disabled={checking}
-                  style={{ backgroundColor: 'transparent', borderRadius: 14, paddingVertical: 12,
-                    alignItems: 'center', marginBottom: 8,
-                    borderWidth: 1, borderColor: '#D1D5DB' }}>
-                  {checking ? <ActivityIndicator color="#6B7280" />
-                    : <Text style={{ color: '#6B7280', fontWeight: '600', fontSize: 13 }}>
-                        🔄 ตรวจสอบสถานะด้วยตนเอง
-                      </Text>}
-                </Pressable>
-              )}
+              <Pressable onPress={handleCheckStatus} disabled={checking}
+                style={{ backgroundColor: 'transparent', borderRadius: 14, paddingVertical: 12,
+                  alignItems: 'center', marginBottom: 8,
+                  borderWidth: 1, borderColor: '#D1D5DB' }}>
+                {checking ? <ActivityIndicator color="#6B7280" />
+                  : <Text style={{ color: '#6B7280', fontWeight: '600', fontSize: 13 }}>
+                      🔄 ตรวจสอบสถานะด้วยตนเอง
+                    </Text>}
+              </Pressable>
 
               <Pressable onPress={handleNewQR}
                 style={{ paddingVertical: 12, alignItems: 'center' }}>
