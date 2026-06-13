@@ -96,6 +96,9 @@ export default function PaymentQrScreen() {
   // ── Countdown 5 วิ เมื่อ paid → กลับหน้าหลัก ────────────────────────────────
   useEffect(() => {
     if (request?.status !== 'paid') { setCountdown(null); return; }
+    // ลบ saved request ออกจาก SQLite ทันทีที่จ่ายเสร็จ
+    appSettingsService.remove(LAST_REQUEST_KEY).catch(() => {});
+    setSavedRequest(null);
     setCountdown(20);
     const interval = setInterval(() => {
       setCountdown(prev => {
