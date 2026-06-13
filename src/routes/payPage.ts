@@ -59,13 +59,13 @@ async function runSlipVerification(
   if (config.thunder.isReady) {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const imageBuffer = Buffer.from(base64Data, 'base64');
-        const fd = new FormData();
-        fd.append('file', new Blob([imageBuffer], { type: 'image/jpeg' }), 'slip.jpg');
         const res = await fetch(config.thunder.apiUrl, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${config.thunder.apiKey}` },
-          body: fd,
+          headers: {
+            Authorization: `Bearer ${config.thunder.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ base64: base64Data }),
           signal: AbortSignal.timeout(15_000),
         });
         const json = await res.json() as any;
