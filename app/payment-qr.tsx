@@ -13,6 +13,9 @@ import { api } from '@/lib/api/client';
 import type { PaymentRequest } from '@/lib/api/contract';
 import { formatCurrency } from '@/lib/format';
 import { useSnackbar } from '@/components/ui/SnackbarProvider';
+import { appSettingsService } from '@/services/appSettingsService';
+
+const LAST_REQUEST_KEY = 'last_payment_request';
 
 const QR_SIZE = Math.min(Dimensions.get('window').width - 96, 220);
 const BACKEND_URL = 'https://moonoon-paotung.onrender.com';
@@ -48,6 +51,18 @@ export default function PaymentQrScreen() {
   const [request, setRequest] = useState<PaymentRequest | null>(null);
   const [checking, setChecking] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [savedRequest, setSavedRequest] = useState<PaymentRequest | null>(null);
+
+  // ── โหลด last active request จาก SQLite เมื่อ mount (#2) ────────────────────
+  useEffect(() => {
+    appSettingsService.getJson<PaymentRequest>(LAST_REQUEST_KEY).then(saved => {
+      if (saved && new Date(saved.expiresAt) > new Date() && saved.status === 'pending') {
+        setSavedRequest(saved);
+      } else if (saved) {
+        appSettingsService.remove(LAST_REQUEST_KEY).catch(() => {});
+      }
+    }).catch(() => {});
+  }, []);
 
   // ── Auto-polling: ทุก 6 วิ ขณะ pending (หยุดเองใน 3 นาที) ──────────────────
   useEffect(() => {
@@ -81,7 +96,7 @@ export default function PaymentQrScreen() {
   // ── Countdown 5 วิ เมื่อ paid → กลับหน้าหลัก ────────────────────────────────
   useEffect(() => {
     if (request?.status !== 'paid') { setCountdown(null); return; }
-    setCountdown(5);
+    setCountdown(20);
     const interval = setInterval(() => {
       setCountdown(prev => {
         if (prev === null || prev <= 1) {
@@ -106,6 +121,8 @@ export default function PaymentQrScreen() {
       const result = await api.createPaymentRequest({ amount, description: description.trim() || 'ชำระเงิน' });
       if (!result.ok) { showSnackbar({ message: result.message, variant: 'error' }); return; }
       setRequest(result.data);
+      setSavedRequest(null);
+      appSettingsService.setJson(LAST_REQUEST_KEY, result.data).catch(() => {});
     } finally {
       setLoading(false);
     }
@@ -164,8 +181,10 @@ export default function PaymentQrScreen() {
 
   function handleNewQR() {
     setRequest(null);
+    setSavedRequest(null);
     setAmountText('');
     setDescription('');
+    appSettingsService.remove(LAST_REQUEST_KEY).catch(() => {});
   }
 
   const isExpired = request ? new Date(request.expiresAt) < new Date() : false;
@@ -183,7 +202,24 @@ export default function PaymentQrScreen() {
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
         style={{ paddingTop: insets.top + 8, paddingBottom: 20, paddingHorizontal: 20 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Pressable onPress={() => router.back()} style={{ padding: 6, marginRight: 8 }}>
+          <Pressable
+            onPress={() => {
+              const isActive = request && request.status === 'pending'
+                && new Date(request.expiresAt) > new Date();
+              if (isActive) {
+                Alert.alert(
+                  'ออกจากรายการนี้?',
+                  'รายการยังสามารถชำระได้จนหมดเวลา ระบบจะจำรายการไว้ให้',
+                  [
+                    { text: 'ทำรายการต่อ', style: 'cancel' },
+                    { text: 'ออก', style: 'destructive', onPress: () => router.back() },
+                  ],
+                );
+              } else {
+                router.back();
+              }
+            }}
+            style={{ padding: 6, marginRight: 8 }}>
             <Text style={{ fontSize: 20, color: '#fff' }}>←</Text>
           </Pressable>
           <View style={{ flex: 1 }}>
@@ -204,6 +240,36 @@ export default function PaymentQrScreen() {
           {!request ? (
             /* ── ฟอร์มสร้าง QR ── */
             <View>
+              {/* Resume banner: แสดงเมื่อมีรายการค้างอยู่ */}
+              {savedRequest && (
+                <View style={{ backgroundColor: '#FFF9C4', borderRadius: 14, padding: 14,
+                  marginBottom: 14, borderWidth: 1.5, borderColor: '#FDE68A' }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#92400E', marginBottom: 6 }}>
+                    ⚡ มีรายการค้างอยู่
+                  </Text>
+                  <Text style={{ fontSize: 13, color: '#78350F', marginBottom: 10 }}>
+                    ฿{formatCurrency(savedRequest.amount)} · {savedRequest.description}{'\n'}
+                    รหัส {savedRequest.requestId.slice(0, 8).toUpperCase()}
+                  </Text>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <Pressable
+                      onPress={() => { setRequest(savedRequest); setSavedRequest(null); }}
+                      style={{ flex: 1, backgroundColor: '#059669', borderRadius: 10,
+                        paddingVertical: 10, alignItems: 'center' }}>
+                      <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>ทำรายการต่อ</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => {
+                        setSavedRequest(null);
+                        appSettingsService.remove(LAST_REQUEST_KEY).catch(() => {});
+                      }}
+                      style={{ flex: 1, backgroundColor: '#F9FAFB', borderRadius: 10,
+                        paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: '#D1D5DB' }}>
+                      <Text style={{ color: '#6B7280', fontWeight: '700', fontSize: 13 }}>สร้างใหม่</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              )}
               <View style={{ backgroundColor: '#fff', borderRadius: 18, padding: 20,
                 elevation: 1, shadowColor: '#059669', shadowOpacity: 0.1, shadowRadius: 8, marginBottom: 16 }}>
                 <Text style={{ fontSize: 13, fontWeight: '700', color: '#6B7280', marginBottom: 8 }}>จำนวนเงิน (บาท)</Text>
@@ -257,9 +323,9 @@ export default function PaymentQrScreen() {
                       ฿{formatCurrency(request.amount)}
                     </Text>
                   </View>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Text style={{ fontSize: 13, color: '#6B7280', fontWeight: '600' }}>รหัสอ้างอิง</Text>
-                    <Text style={{ fontSize: 13, color: '#047857', fontWeight: '800', letterSpacing: 2 }}>
+                    <Text style={{ fontSize: 18, color: '#047857', fontWeight: '900', letterSpacing: 3, fontVariant: ['tabular-nums'] }}>
                       {shortRef}
                     </Text>
                   </View>
@@ -274,9 +340,16 @@ export default function PaymentQrScreen() {
                 </View>
 
                 {countdown !== null && (
-                  <Text style={{ marginTop: 16, fontSize: 13, color: '#6B7280' }}>
-                    กลับหน้าหลักใน {countdown} วินาที...
-                  </Text>
+                  <View style={{ marginTop: 16, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 13, color: '#6B7280' }}>
+                      กลับหน้าหลักอัตโนมัติใน {countdown} วินาที
+                    </Text>
+                    <Pressable onPress={() => router.back()}
+                      style={{ marginTop: 8, paddingHorizontal: 20, paddingVertical: 8,
+                        backgroundColor: '#059669', borderRadius: 20 }}>
+                      <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>กลับทันที</Text>
+                    </Pressable>
+                  </View>
                 )}
               </View>
 
