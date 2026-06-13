@@ -304,10 +304,10 @@ payPageRouter.get('/:id', async (c) => {
   }
 
   const statusBanner = isPaid
-    ? `<div class="status paid">✅ ชำระเงินสำเร็จแล้ว</div>`
+    ? `<div class="status paid" id="status-banner">✅ ชำระเงินสำเร็จแล้ว</div>`
     : isExpired
-    ? `<div class="status expired">❌ QR Code หมดอายุแล้ว</div>`
-    : `<div class="status pending">⏳ กรุณาชำระภายใน ${expiryLabel}</div>`;
+    ? `<div class="status expired" id="status-banner">❌ QR Code หมดอายุแล้ว</div>`
+    : `<div class="status pending" id="status-banner">⏳ <span id="countdown-txt">กำลังนับเวลา...</span></div>`;
 
   const canUpload = hasToken && !isPaid && !isExpired;
 
@@ -400,7 +400,7 @@ payPageRouter.get('/:id', async (c) => {
   ${statusBanner}
 
   <!-- ── QR Card ── -->
-  <div class="card" id="qr-card">
+  <div class="card" id="qr-card" style="display:${isPaid ? 'none' : 'block'}">
     <div class="card-body">
       <div class="row">
         <span class="rlabel">ผู้รับเงิน</span>
@@ -422,7 +422,7 @@ payPageRouter.get('/:id', async (c) => {
     <div class="qr-area">
       <div class="qr-tip">สแกน QR ด้วยแอปธนาคาร<br>หรือ แอป PromptPay</div>
       ${qrDataUrl
-        ? `<img src="${qrDataUrl}" width="240" height="240" class="qr-img" alt="QR PromptPay">`
+        ? `<img src="${qrDataUrl}" width="240" height="240" class="qr-img" alt="QR PromptPay" style="touch-action:manipulation"><div style="font-size:11px;color:#9CA3AF;margin-top:8px;text-align:center">📌 กดค้างที่รูป QR เพื่อบันทึกลงเครื่อง</div>`
         : `<div style="width:240px;height:240px;border-radius:12px;border:2px dashed #E5E7EB;display:flex;align-items:center;justify-content:center;color:#9CA3AF;font-size:13px">ไม่สามารถสร้าง QR ได้</div>`}
       <div class="ref-box">
         <div class="ref-lbl">Invoice / Reference</div>
@@ -431,8 +431,8 @@ payPageRouter.get('/:id', async (c) => {
     </div>
   </div>
 
-  ${!isExpired && !isPaid ? `<div class="deadline">⏰ กรุณาชำระก่อน ${expiryDt}</div>` : ''}
-  ${qrDataUrl ? `<button class="btn btn-save" onclick="saveCard()">💾 บันทึก QR เป็นรูปภาพ</button>` : ''}
+  ${!isExpired && !isPaid ? `<div class="deadline" id="deadline-div">⏰ <span id="deadline-txt">กำลังโหลด...</span></div>` : ''}
+  ${qrDataUrl && !isPaid ? `<button class="btn btn-save" id="btn-save-qr" onclick="saveCard()">💾 บันทึก QR เป็นรูปภาพ</button>` : ''}
 
   <!-- ── Upload section (แสดงเมื่อมี token ถูกต้อง) ── -->
   ${canUpload ? `
@@ -468,7 +468,11 @@ payPageRouter.get('/:id', async (c) => {
   <div id="section-paid" style="display:${isPaid ? 'block' : 'none'}">
     <div class="thank-icon">✅</div>
     <div class="thank-title">ขอบคุณสำหรับการชำระเงิน</div>
-    <div class="thank-sub">ยอด ฿${amount}<br>อ้างอิง: ${shortRef}<br>ชำระเรียบร้อยแล้ว</div>
+    <div class="thank-sub">ยอด ฿${amount}<br>ชำระเรียบร้อยแล้ว</div>
+    <div style="text-align:center;margin:8px 16px 0">
+      <div style="font-size:10px;color:#6B7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">รหัสอ้างอิง</div>
+      <div style="font-size:22px;font-weight:900;color:#047857;letter-spacing:4px;font-family:monospace">${shortRef}</div>
+    </div>
     <div class="upload-section" style="background:#ECFDF5;border-color:#6EE7B7;margin-top:16px">
       <div class="upload-title" style="color:#065F46">🔒 บันทึกหน้าจอนี้เป็นหลักฐาน</div>
       <div class="upload-desc" style="color:#047857">Screenshot หน้านี้ไว้เป็นหลักฐานการชำระเงินครับ</div>
@@ -488,9 +492,38 @@ const QR_DATA_URL = ${JSON.stringify(qrDataUrl)};
 const SHORT_REF = ${JSON.stringify(shortRef)};
 const AMOUNT = ${JSON.stringify(amount)};
 const DESC = ${JSON.stringify(req.description)};
-const EXPIRY = ${JSON.stringify(expiryDt)};
+const EXPIRY_TS = ${(req.expiresAt as Date).getTime()};
 const PROMPTPAY = ${JSON.stringify(config.promptpay.id)};
 const INITIAL_STATUS = ${JSON.stringify(req.status)};
+
+// ── Live countdown timer (#4 timezone fix) ────────────────────────────────────
+(function startCountdown() {
+  if (INITIAL_STATUS !== 'pending') return;
+  function tick() {
+    const msLeft = Math.max(0, EXPIRY_TS - Date.now());
+    const totalSec = Math.floor(msLeft / 1000);
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    const txt = m > 0
+      ? m + ' นาที ' + String(s).padStart(2,'0') + ' วินาที'
+      : totalSec + ' วินาที';
+    const cd = document.getElementById('countdown-txt');
+    if (cd) cd.textContent = 'เหลือเวลา ' + txt;
+    const dl = document.getElementById('deadline-txt');
+    if (dl) dl.textContent = 'กรุณาชำระก่อนหมดเวลา — เหลือ ' + txt;
+    if (msLeft <= 0) {
+      const banner = document.getElementById('status-banner');
+      if (banner) { banner.className = 'status expired'; banner.textContent = '❌ QR Code หมดอายุแล้ว'; }
+      const deadlineDiv = document.getElementById('deadline-div');
+      if (deadlineDiv) deadlineDiv.style.display = 'none';
+      const upload = document.getElementById('section-upload');
+      if (upload) upload.style.display = 'none';
+      return; // หยุด tick
+    }
+    setTimeout(tick, 1000);
+  }
+  tick();
+})();
 
 const REJECT_MESSAGES = {
   INVALID_SLIP:    'สลิปไม่ถูกต้องหรืออ่านไม่ได้ — กรุณาส่งภาพสลิปที่ชัดกว่านี้',
@@ -550,9 +583,21 @@ function showVerifying() {
 
 function showPaid() {
   clearPoll();
-  document.getElementById('section-verifying').style.display = 'none';
+  // ซ่อน pending elements ทั้งหมด
+  ['section-verifying','section-upload','section-rejected','section-needreview'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  const qrCard = document.getElementById('qr-card');
+  if (qrCard) qrCard.style.display = 'none';
+  const banner = document.getElementById('status-banner');
+  if (banner) { banner.className = 'status paid'; banner.textContent = '✅ ชำระเงินสำเร็จแล้ว'; }
+  const deadlineDiv = document.getElementById('deadline-div');
+  if (deadlineDiv) deadlineDiv.style.display = 'none';
+  const saveBtn = document.getElementById('btn-save-qr');
+  if (saveBtn) saveBtn.style.display = 'none';
+  // แสดง success
   document.getElementById('section-paid').style.display = 'block';
-  document.getElementById('qr-card').style.display = 'none';
 }
 
 function showRejected(msg) {
