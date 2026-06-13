@@ -594,11 +594,12 @@ if (INITIAL_STATUS === 'verifying' && UPLOAD_TOKEN) {
   startPolling();
 }
 
-// ── Save QR card as image ──────────────────────────────────────────────────
-function saveCard() {
+// ── Save / Share QR card ──────────────────────────────────────────────────────
+// Strategy: navigator.share (mobile) → open in new tab (in-app WebView fallback) → <a download> (desktop)
+async function saveCard() {
   if (!QR_DATA_URL) return;
   const qrImg = new Image();
-  qrImg.onload = function() {
+  qrImg.onload = async function() {
     const out = document.createElement('canvas');
     out.width = 400; out.height = 560;
     const ctx = out.getContext('2d');
@@ -625,9 +626,34 @@ function saveCard() {
     ctx.fillText('\\u0e0a\\u0e33\\u0e23\\u0e30\\u0e01\\u0e48\\u0e2d\\u0e19: ' + EXPIRY, 200, 508);
     ctx.fillStyle = '#047857'; ctx.font = 'bold 12px sans-serif';
     ctx.fillText('\\u0e2b\\u0e21\\u0e39\\u0e19\\u0e38\\u0e48\\u0e19+\\u0e40\\u0e1b\\u0e4b\\u0e32\\u0e15\\u0e38\\u0e07 · SEVENDOG DEV', 200, 538);
+
+    const dataUrl = out.toDataURL('image/png');
+    const filename = 'payment-qr-' + SHORT_REF + '.png';
+
+    // 1) navigator.share with file — works on mobile Chrome/Safari
+    if (navigator.canShare) {
+      try {
+        const blob = await (await fetch(dataUrl)).blob();
+        const file = new File([blob], filename, { type: 'image/png' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: filename });
+          return;
+        }
+      } catch(e) { /* user cancelled or not supported → fall through */ }
+    }
+
+    // 2) Open image in new tab — user can long-press to save (works in FB/LINE WebView)
+    const w = window.open('', '_blank');
+    if (w) {
+      w.document.write('<img src="' + dataUrl + '" style="max-width:100%;display:block;margin:auto">');
+      w.document.title = filename;
+      return;
+    }
+
+    // 3) Desktop <a download> fallback
     const a = document.createElement('a');
-    a.download = 'payment-qr-' + SHORT_REF + '.png';
-    a.href = out.toDataURL('image/png');
+    a.download = filename;
+    a.href = dataUrl;
     a.click();
   };
   qrImg.src = QR_DATA_URL;
