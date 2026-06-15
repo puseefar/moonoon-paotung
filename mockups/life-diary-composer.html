@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Life Diary — Composer (Pro)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mali:ital,wght@0,400;0,600;0,700;1,400;1,600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'IBM Plex Sans Thai', sans-serif;
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #EAE0EC 0%, transparent 55%),
+      radial-gradient(1000px 700px at -10% 110%, #DCE7EC 0%, transparent 55%),
+      #ECE7E0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 32px 16px 60px;
+    gap: 24px;
+    flex-wrap: wrap;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ─── Design tokens ────────────────────────────────────────────── */
+  :root {
+    --paper:     #FBF8F3;
+    --paperDeep: #F3EEE5;
+    --ink:       #3D3548;
+    --inkSoft:   #7A7186;
+    --inkFaint:  #A9A1B3;
+    --line:      #E7DFD3;
+    --rose:      #D14F86;
+    --roseTint:  #FBEAF1;
+    --gold:      #CC9A3A;
+  }
+
+  /* ─── Phone frame ───────────────────────────────────────────────── */
+  .phone {
+    width: 392px;
+    height: 812px;
+    background: var(--paper);
+    border-radius: 44px;
+    box-shadow: 0 32px 80px rgba(61,53,72,0.28), 0 0 0 8px #fff, 0 0 0 9px #E1D9CD;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .status {
+    height: 44px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 22px; font-size: 12px; font-weight: 700; color: var(--ink);
+  }
+
+  /* ─── Mood themes ────────────────────────────────────────────────── */
+  :root {
+    --mA: #C7D8E4; --mB: #E2ECF1; --dot: #AFC5D8; /* default: ok */
+  }
+  .mood-great { --mA:#F0DBA0; --mB:#F6E9C6; --dot:#E9C46A; }
+  .mood-good  { --mA:#C8DCC2; --mB:#E1ECDC; --dot:#A8C3A0; }
+  .mood-ok    { --mA:#C7D8E4; --mB:#E2ECF1; --dot:#AFC5D8; }
+  .mood-tired { --mA:#D6CBE2; --mB:#E8E0F0; --dot:#B9A8C9; }
+  .mood-bad   { --mA:#E0C7CC; --mB:#EFDDE0; --dot:#C9A0A8; }
+
+  /* ─── Composer header ────────────────────────────────────────────── */
+  .cmp-header {
+    background: linear-gradient(135deg, var(--mA), var(--mB));
+    padding: 10px 16px 14px;
+    flex-shrink: 0;
+  }
+  .hrow { display: flex; align-items: center; gap: 8px; }
+  .hbtn {
+    height: 36px; border-radius: 18px;
+    background: rgba(61,53,72,0.10); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; padding: 0 14px; font-family: inherit;
+  }
+  .hbtn.back { width: 36px; padding: 0; }
+  .hbtn.save {
+    background: var(--inkFaint); color: #fff;
+    font-weight: 800; font-size: 13px; min-width: 72px;
+    color: rgba(255,255,255,0.7); cursor: default;
+  }
+  .hbtn.save.on { background: var(--rose); color: #fff; cursor: pointer; }
+  .htitle { flex: 1; font-size: 15px; font-weight: 700; color: var(--ink); text-align: center; }
+  .date-row { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
+  .date-chip {
+    background: rgba(61,53,72,0.08); border-radius: 10px;
+    padding: 4px 10px; font-size: 11px; font-weight: 600; color: var(--ink);
+    display: flex; align-items: center; gap: 4px; cursor: pointer;
+  }
+  .mood-badge {
+    margin-left: auto; display: flex; align-items: center; gap: 5px;
+  }
+  .mood-dot-sm {
+    width: 10px; height: 10px; border-radius: 5px; background: var(--dot);
+  }
+  .mood-label-sm { font-size: 11px; font-weight: 700; color: var(--ink); }
+  .act-badge {
+    background: rgba(61,53,72,0.08); border-radius: 8px;
+    padding: 2px 8px; font-size: 10px; font-weight: 700; color: var(--ink);
+    margin-left: 4px;
+  }
+
+  /* ─── STEP 1: Mood + Activity ───────────────────────────────────── */
+  .s1-scroll { flex: 1; overflow-y: auto; padding-bottom: 8px; }
+  .s1-scroll::-webkit-scrollbar { display: none; }
+
+  .section-lbl {
+    font-size: 11px; font-weight: 800; color: var(--inkFaint);
+    letter-spacing: 0.7px; text-transform: uppercase;
+    padding: 0 16px; margin: 16px 0 10px;
+  }
+
+  /* 5 mood circles */
+  .mood-picker { display: flex; justify-content: space-between; padding: 0 16px; gap: 6px; }
+  .mpick {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
+    padding: 10px 4px 8px; border-radius: 16px; cursor: pointer;
+    border: 2px solid transparent; background: transparent; font-family: inherit;
+    transition: all .15s;
+  }
+  .mpick.on {
+    background: rgba(255,255,255,0.7);
+    border-color: var(--dot);
+    box-shadow: 0 2px 10px rgba(61,53,72,0.10);
+  }
+  .mcircle {
+    width: 40px; height: 40px; border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; box-shadow: 0 2px 8px rgba(61,53,72,0.12);
+  }
+  .mpick.on .mcircle { box-shadow: 0 0 0 3px rgba(255,255,255,0.8), 0 0 0 5px var(--dot); }
+  .mlbl { font-size: 10px; font-weight: 700; color: var(--inkFaint); white-space: nowrap; }
+  .mpick.on .mlbl { color: var(--ink); }
+
+  /* 4×3 activity grid */
+  .act-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; padding: 0 16px; }
+  .achip {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    background: rgba(255,255,255,0.65); border-radius: 12px;
+    padding: 8px 4px; cursor: pointer;
+    border: 1.5px solid transparent; font-family: inherit;
+    transition: all .15s;
+  }
+  .achip.on { background: #fff; border-color: var(--rose); box-shadow: 0 2px 8px rgba(209,79,134,0.12); }
+  .ai { font-size: 18px; line-height: 1; }
+  .al { font-size: 9.5px; font-weight: 600; color: var(--inkFaint); white-space: nowrap; }
+  .achip.on .al { color: var(--rose); font-weight: 800; }
+
+  /* Daily question ticker */
+  .q-box {
+    margin: 14px 16px 0; background: rgba(255,255,255,0.6); border-radius: 14px;
+    padding: 12px 14px; display: flex; align-items: center; gap: 10px; cursor: pointer;
+  }
+  .q-dot { width: 6px; height: 6px; border-radius: 3px; background: var(--rose); flex-shrink: 0; }
+  .q-text { flex: 1; font-size: 13px; color: var(--inkSoft); font-style: italic; line-height: 1.5; }
+
+  /* Step 1 CTA */
+  .s1-cta { flex-shrink: 0; padding: 14px 16px; background: rgba(251,248,243,0.97); border-top: 1px solid var(--line); }
+  .cta-btn {
+    width: 100%; height: 50px; border-radius: 18px;
+    background: linear-gradient(135deg, var(--rose), #E0689A); color: #fff;
+    font-family: inherit; font-size: 15px; font-weight: 800;
+    border: none; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; gap: 8px;
+  }
+
+  /* ─── CANVAS WRITE AREA ──────────────────────────────────────────── */
+  .canvas-scroll { flex: 1; overflow-y: auto; padding: 12px 14px 8px; }
+  .canvas-scroll::-webkit-scrollbar { display: none; }
+
+  .canvas-card {
+    background: #fff; border-radius: 20px; overflow: hidden;
+    box-shadow: 0 2px 16px rgba(61,53,72,0.08); margin-bottom: 8px;
+  }
+  .canvas-bar {
+    height: 4px;
+    background: linear-gradient(90deg, var(--mA), var(--dot), var(--mB));
+  }
+  .canvas-body {
+    padding: 16px;
+    background-image: repeating-linear-gradient(
+      0deg, transparent, transparent 27px,
+      rgba(61,53,72,0.035) 27px, rgba(61,53,72,0.035) 28px
+    );
+  }
+  .ctitle {
+    width: 100%; border: none; outline: none; background: transparent;
+    font-family: 'Mali', cursive; font-size: 18px; font-weight: 700; font-style: italic;
+    color: var(--ink); margin-bottom: 10px; padding: 2px 0; line-height: 1.4;
+  }
+  .ctitle::placeholder { color: var(--inkFaint); font-weight: 400; font-style: italic; }
+  .ctextarea {
+    width: 100%; border: none; outline: none; background: transparent;
+    font-family: 'IBM Plex Sans Thai', sans-serif;
+    font-size: 14px; color: var(--inkSoft); line-height: 1.9;
+    resize: none; min-height: 100px;
+  }
+  .ctextarea::placeholder { color: var(--inkFaint); }
+  .cursor { display:inline-block; width:2px; height:16px; background:var(--rose);
+    margin-left:1px; vertical-align:middle; animation:blink 1.1s step-end infinite; }
+  @keyframes blink { 0%,100%{opacity:1}50%{opacity:0} }
+
+  /* Photo strip */
+  .photo-strip {
+    display: flex; gap: 8px; padding: 12px 16px 14px;
+    border-top: 1px solid var(--line); overflow-x: auto;
+  }
+  .photo-strip::-webkit-scrollbar { display: none; }
+  .pthumb {
+    width: 68px; height: 68px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; position: relative; overflow: hidden; cursor: pointer;
+  }
+  .pthumb::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(209,79,134,0.08), transparent);
+  }
+  .prem {
+    position: absolute; top: 3px; right: 3px; width: 18px; height: 18px;
+    border-radius: 9px; background: rgba(20,15,30,0.65);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; color: #fff; z-index: 1;
+  }
+  .padd {
+    width: 68px; height: 68px; border-radius: 12px; flex-shrink: 0;
+    border: 2px dashed var(--line); background: rgba(255,255,255,0.5);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; cursor: pointer; color: var(--inkFaint);
+  }
+
+  /* Expense row */
+  .exp-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px; border-top: 1px solid var(--line);
+  }
+  .exp-name { flex: 1; font-size: 13px; color: var(--ink); font-weight: 600; }
+  .exp-amt { font-size: 14px; font-weight: 800; color: var(--gold); }
+  .exp-del { font-size: 14px; color: var(--inkFaint); cursor: pointer; margin-left: 6px; }
+  .exp-add {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 16px; border-top: 1px solid var(--line); cursor: pointer;
+  }
+  .exp-add-lbl { font-size: 13px; color: var(--inkFaint); font-weight: 600; }
+
+  /* Bottom toolbar */
+  .toolbar {
+    flex-shrink: 0;
+    background: rgba(251,248,243,0.97);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--line);
+    padding: 10px 16px 14px;
+  }
+  .trow { display: flex; align-items: center; gap: 6px; }
+  .tbtn {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    background: rgba(255,255,255,0.7); border: 1.5px solid var(--line);
+    border-radius: 12px; padding: 7px 10px; cursor: pointer;
+    font-family: inherit; min-width: 52px;
+  }
+  .tbtn.on { background: var(--roseTint); border-color: var(--rose); }
+  .tico { font-size: 17px; line-height: 1; }
+  .tlbl { font-size: 9px; font-weight: 700; color: var(--inkFaint); white-space: nowrap; }
+  .tbtn.on .tlbl { color: var(--rose); }
+  .tspace { flex: 1; }
+  .char-n { font-size: 11px; color: var(--inkFaint); font-weight: 600; }
+
+  /* Simulated keyboard */
+  .kb {
+    flex-shrink: 0; height: 260px;
+    background: #CDD0D9; border-top: 1px solid rgba(0,0,0,0.18);
+    display: flex; flex-direction: column; padding: 8px 6px 6px; gap: 5px;
+  }
+  .krow { display: flex; gap: 4px; justify-content: center; }
+  .kkey {
+    background: #fff; border-radius: 5px; padding: 5px 8px;
+    font-size: 13px; font-weight: 500; color: #222;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.38); min-width: 28px; text-align: center;
+  }
+  .kkey.act { background: #ADB5C4; font-size: 11px; }
+  .kkey.space { min-width: 150px; font-size: 11px; color: #555; }
+  .kkey.ret { background: #ADB5C4; min-width: 50px; font-size: 10px; color: #fff; }
+
+  /* Quick Feel bottom sheet overlay */
+  .qs-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(61,53,72,0.42); backdrop-filter: blur(4px);
+  }
+  .qs-sheet {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: #fff; border-radius: 24px 24px 0 0;
+    box-shadow: 0 -8px 32px rgba(61,53,72,0.18);
+    padding: 20px 20px 32px;
+  }
+  .qs-handle { width: 36px; height: 4px; background: #E7DFD3; border-radius: 2px; margin: 0 auto 18px; }
+  .qs-row { display: flex; gap: 6px; margin-bottom: 16px; }
+  .qm-btn {
+    flex: 1; border-radius: 14px; padding: 9px 4px;
+    cursor: pointer; font-family: inherit; border: 2px solid transparent;
+    background: var(--paperDeep); display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  .qm-btn.on { border-color: var(--dot); background: rgba(255,255,255,0.9); }
+  .qm-lbl { font-size: 10px; font-weight: 700; color: var(--inkFaint); }
+  .qm-btn.on .qm-lbl { color: var(--ink); }
+
+  .screen-label {
+    background: rgba(61,53,72,0.75); color: #fff;
+    font-size: 11px; font-weight: 700; padding: 4px 10px;
+    border-radius: 8px; text-align: center; margin-bottom: 8px; display: inline-block;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     SCREEN A — Step 1: เลือก Mood + กิจกรรม (ยังไม่ได้เลือก)
+═══════════════════════════════════════════════════════════════════ -->
+<div style="display:flex;flex-direction:column;align-items:center">
+  <span class="screen-label">A — Step 1: เลือก Mood + กิจกรรม</span>
+  <div class="phone mood-ok" id="phoneA">
+
+    <div class="status" style="background:#E2ECF1"><span>10:30</span><span>● ◐ ▲ ⬛</span></div>
+
+    <!-- Header -->
+    <div class="cmp-header" id="headerA">
+      <div class="hrow">
+        <button class="hbtn back" onclick="history.back()">←</button>
+        <span class="htitle">บันทึกใหม่</span>
+        <button class="hbtn save" id="saveA">✓ บันทึก</button>
+      </div>
+      <div class="date-row">
+        <div class="date-chip">📅 วันอาทิตย์ที่ 15 มิ.ย. 2569</div>
+        <div class="date-chip" style="margin-left:auto">⏰ 10:30 น.</div>
+      </div>
+    </div>
+
+    <!-- Scrollable step content -->
+    <div class="s1-scroll">
+
+      <!-- Mood picker -->
+      <div class="section-lbl">💫 วันนี้รู้สึกเป็นอย่างไร?</div>
+      <div class="mood-picker">
+
+        <button class="mpick" id="mpA-great" onclick="pickMoodA('great')"
+          style="--dot:#E9C46A">
+          <div class="mcircle" style="background:#E9C46A">🤩</div>
+          <span class="mlbl">ดีมาก</span>
+        </button>
+
+        <button class="mpick" id="mpA-good" onclick="pickMoodA('good')"
+          style="--dot:#A8C3A0">
+          <div class="mcircle" style="background:#A8C3A0">😊</div>
+          <span class="mlbl">ดี</span>
+        </button>
+
+        <button class="mpick on" id="mpA-ok" onclick="pickMoodA('ok')"
+          style="--dot:#AFC5D8">
+          <div class="mcircle" style="background:#AFC5D8">😌</div>
+          <span class="mlbl">เฉยๆ</span>
+        </button>
+
+        <button class="mpick" id="mpA-tired" onclick="pickMoodA('tired')"
+          style="--dot:#B9A8C9">
+          <div class="mcircle" style="background:#B9A8C9">😤</div>
+          <span class="mlbl">เหนื่อย</span>
+        </button>
+
+        <button class="mpick" id="mpA-bad" onclick="pickMoodA('bad')"
+          style="--dot:#C9A0A8">
+          <div class="mcircle" style="background:#C9A0A8">😢</div>
+          <span class="mlbl">แย่</span>
+        </button>
+
+      </div>
+
+      <!-- Activity grid -->
+      <div class="section-lbl" style="margin-top:20px">🎯 ทำอะไรวันนี้? (เลือกได้หลายอย่าง)</div>
+      <div class="act-grid">
+        <button class="achip" onclick="this.classList.toggle('on')"><span class="ai">🏢</span><span class="al">ทำงาน</span></button>
+        <button class="achip" onclick="this.classList.toggle('on')"><span class="ai">🏪</span><span class="al">เปิดร้าน</span></button>
+        <button class="achip" onclick="this.classList.toggle('on')"><span class="ai">🏖️</span><span class="al">วันหยุด</span></button>
+        <button class="achip" onclick="this.classList.toggle('on')"><span class="ai">👨‍👩‍👧</span><span class="al">ครอบครัว</span></button>
+        <button class="achip" onclick="this.classList.toggle('on')"><span class="ai">✈️</span><span class="al">ไปทริป</span></button>
+        <button class="achip" onclick="this.classList.toggle('on')"><span class="ai">🎉</span><span class="al">เทศกาล</span></button>
+        <button class="achip" onclick="this.classList.toggle('on')"><span class="ai">📚</span><span class="al">เรียน</span></button>
+        <button class="achip" onclick="this.classList.toggle('on')"><span class="ai">🏠</span><span class="al">อยู่บ้าน</span></button>
+        <button class="achip" onclick="this.classList.toggle('on')"><span class="ai">🏃</span><span class="al">ออกกำลัง</span></button>
+        <button class="achip" onclick="this.classList.toggle('on')"><span class="ai">🏥</span><span class="al">พบแพทย์</span></button>
+        <button class="achip" onclick="this.classList.toggle('on')"><span class="ai">🛍️</span><span class="al">ช็อปปิ้ง</span></button>
+        <button class="achip on" onclick="this.classList.toggle('on')"><span class="ai">🍜</span><span class="al">ออกไปกิน</span></button>
+      </div>
+
+      <!-- Daily question -->
+      <div class="q-box" style="margin-bottom:16px">
+        <div class="q-dot"></div>
+        <div class="q-text" id="qA">วันนี้มีอะไรที่ทำให้ยิ้มได้บ้าง?</div>
+        <div style="font-size:14px;color:var(--inkFaint)">›</div>
+      </div>
+
+    </div><!-- /s1-scroll -->
+
+    <!-- CTA -->
+    <div class="s1-cta">
+      <button class="cta-btn">✏️ เริ่มเขียนบันทึก</button>
+    </div>
+
+  </div><!-- /phoneA -->
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     SCREEN B — Canvas กำลังพิมพ์ (keyboard แสดง, content เริ่มต้น)
+═══════════════════════════════════════════════════════════════════ -->
+<div style="display:flex;flex-direction:column;align-items:center">
+  <span class="screen-label">B — Canvas กำลังพิมพ์ + keyboard</span>
+  <div class="phone mood-great">
+
+    <div class="status" style="background:#F0DBA0"><span>10:35</span><span>● ◐ ▲ ⬛</span></div>
+
+    <!-- Compact header (mood confirmed) -->
+    <div class="cmp-header" style="background:linear-gradient(135deg,#F0DBA0,#F6E9C6)">
+      <div class="hrow">
+        <button class="hbtn back">←</button>
+        <span class="htitle">บันทึกใหม่</span>
+        <button class="hbtn save on">✓ บันทึก</button>
+      </div>
+      <div class="date-row">
+        <div class="date-chip">📅 วันอาทิตย์ที่ 15 มิ.ย. 2569</div>
+        <div class="mood-badge" style="--dot:#E9C46A">
+          <div class="mood-dot-sm"></div>
+          <span class="mood-label-sm">ดีมาก 🤩</span>
+          <div class="act-badge">🍜 ออกไปกิน</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Canvas (shrunk because keyboard is open) -->
+    <div class="canvas-scroll" style="padding-bottom:4px">
+      <div class="canvas-card">
+        <div class="canvas-bar" style="background:linear-gradient(90deg,#F0DBA0,#E9C46A,#F6E9C6)"></div>
+        <div class="canvas-body">
+          <input class="ctitle" placeholder="ชื่อบันทึก (ไม่บังคับ)" value="ไปกินหมูกะทะกับหมูนุ่น">
+          <div style="font-size:14px;color:#7A7186;line-height:1.9">
+            แดดร่มลมตกอากาศดีมาก ออกไปกินหมูกะทะ<span class="cursor"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toolbar (just above keyboard) -->
+    <div class="toolbar">
+      <div class="trow">
+        <button class="tbtn"><span class="tico">📷</span><span class="tlbl">รูปภาพ</span></button>
+        <button class="tbtn"><span class="tico">💰</span><span class="tlbl">รายจ่าย</span></button>
+        <button class="tbtn"><span class="tico">📍</span><span class="tlbl">สถานที่</span></button>
+        <button class="tbtn"><span class="tico">🏷️</span><span class="tlbl">แท็ก</span></button>
+        <div class="tspace"></div>
+        <span class="char-n">42 ตัว</span>
+      </div>
+    </div>
+
+    <!-- Keyboard simulation -->
+    <div class="kb">
+      <div class="krow">
+        <div class="kkey">ๆ</div><div class="kkey">ไ</div><div class="kkey">ำ</div>
+        <div class="kkey">พ</div><div class="kkey">ะ</div><div class="kkey">ั</div>
+        <div class="kkey">ี</div><div class="kkey">ร</div><div class="kkey">น</div>
+        <div class="kkey">ย</div><div class="kkey">บ</div>
+      </div>
+      <div class="krow">
+        <div class="kkey">ฟ</div><div class="kkey">ห</div><div class="kkey">ก</div>
+        <div class="kkey">ด</div><div class="kkey">เ</div><div class="kkey">้</div>
+        <div class="kkey">่</div><div class="kkey">า</div><div class="kkey">ส</div>
+        <div class="kkey">ว</div><div class="kkey">ง</div>
+      </div>
+      <div class="krow">
+        <div class="kkey act" style="min-width:42px">⬆</div>
+        <div class="kkey">ผ</div><div class="kkey">ป</div><div class="kkey">แ</div>
+        <div class="kkey">อ</div><div class="kkey">ิ</div><div class="kkey">ื</div>
+        <div class="kkey">ท</div><div class="kkey">ม</div><div class="kkey">ใ</div>
+        <div class="kkey act" style="min-width:42px;font-size:14px">⌫</div>
+      </div>
+      <div class="krow">
+        <div class="kkey act" style="min-width:52px;font-size:10px">123</div>
+        <div class="kkey" style="font-size:16px">🌐</div>
+        <div class="kkey space">ช่องว่าง</div>
+        <div class="kkey ret">ส่ง</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     SCREEN C — Canvas ครบสมบูรณ์ (รูปภาพ + ค่าใช้จ่าย + พร้อม save)
+═══════════════════════════════════════════════════════════════════ -->
+<div style="display:flex;flex-direction:column;align-items:center">
+  <span class="screen-label">C — Canvas ครบ: รูป 3 + ค่าใช้จ่าย + พร้อม save</span>
+  <div class="phone mood-great">
+
+    <div class="status" style="background:#F0DBA0"><span>10:52</span><span>● ◐ ▲ ⬛</span></div>
+
+    <div class="cmp-header" style="background:linear-gradient(135deg,#F0DBA0,#F6E9C6)">
+      <div class="hrow">
+        <button class="hbtn back">←</button>
+        <span class="htitle">บันทึกใหม่</span>
+        <button class="hbtn save on">✓ บันทึก</button>
+      </div>
+      <div class="date-row">
+        <div class="date-chip">📅 วันอาทิตย์ที่ 15 มิ.ย. 2569</div>
+        <div class="mood-badge" style="--dot:#E9C46A">
+          <div class="mood-dot-sm"></div>
+          <span class="mood-label-sm">ดีมาก 🤩</span>
+          <div class="act-badge">🍜 ออกไปกิน</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="canvas-scroll">
+
+      <div class="canvas-card">
+        <div class="canvas-bar" style="background:linear-gradient(90deg,#F0DBA0,#E9C46A,#F6E9C6)"></div>
+        <div class="canvas-body">
+          <div style="font-family:'Mali',cursive;font-size:18px;font-weight:700;font-style:italic;
+            color:#3D3548;margin-bottom:10px;line-height:1.4">
+            ไปกินหมูกะทะกับหมูนุ่น
+          </div>
+          <div style="font-size:14px;color:#7A7186;line-height:1.9">
+            แดดร่มลมตกอากาศดีมากซับบมอเตอร์ไซค์<br>
+            หาอะไรกินตอนเย็น กินเยอะมากน่ากินทั้งนั้น<br>
+            เลยตัดสินใจว่าต้องมม่วนมูลกระทะ 1 กิโลกรัม ไปนั่งที่บ้านกีพอ
+          </div>
+        </div>
+
+        <!-- Photo strip (3 photos + add) -->
+        <div class="photo-strip">
+          <div class="pthumb" style="background:linear-gradient(135deg,#D4C9E2,#C3B8D1)">
+            🍖 <div class="prem">✕</div>
+          </div>
+          <div class="pthumb" style="background:linear-gradient(135deg,#C3D6BE,#A8C3A0)">
+            🌿 <div class="prem">✕</div>
+          </div>
+          <div class="pthumb" style="background:linear-gradient(135deg,#F0DBA0,#E9C46A)">
+            🌅 <div class="prem">✕</div>
+          </div>
+          <div class="padd">＋</div>
+        </div>
+
+        <!-- Expense items -->
+        <div class="exp-item">
+          <span style="font-size:16px">🥩</span>
+          <span class="exp-name">หมูกะทะ 1 กก. + โค๊ก 2 ขวด</span>
+          <span class="exp-amt">฿250</span>
+          <span class="exp-del">✕</span>
+        </div>
+
+        <!-- Add expense -->
+        <div class="exp-add">
+          <span style="font-size:16px;color:var(--inkFaint)">＋</span>
+          <span class="exp-add-lbl">เพิ่มรายการค่าใช้จ่าย</span>
+        </div>
+      </div>
+
+      <!-- Location + tag chips (below canvas) -->
+      <div style="display:flex;gap:8px;padding:2px 2px 10px">
+        <div style="background:#fff;border:1.5px solid #E7DFD3;border-radius:12px;
+          padding:6px 12px;display:flex;align-items:center;gap:5px;cursor:pointer">
+          <span style="font-size:14px">📍</span>
+          <span style="font-size:12px;font-weight:600;color:#7A7186">เพิ่มสถานที่</span>
+        </div>
+        <div style="background:#fff;border:1.5px solid #E7DFD3;border-radius:12px;
+          padding:6px 12px;display:flex;align-items:center;gap:5px;cursor:pointer">
+          <span style="font-size:14px">🏷️</span>
+          <span style="font-size:12px;font-weight:600;color:#7A7186">เพิ่มแท็ก</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="trow">
+        <button class="tbtn on"><span class="tico">📷</span><span class="tlbl">รูปภาพ (3)</span></button>
+        <button class="tbtn on"><span class="tico">💰</span><span class="tlbl">฿250</span></button>
+        <button class="tbtn"><span class="tico">📍</span><span class="tlbl">สถานที่</span></button>
+        <button class="tbtn"><span class="tico">🏷️</span><span class="tlbl">แท็ก</span></button>
+        <div class="tspace"></div>
+        <span class="char-n">98 ตัว</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     SCREEN D — Quick Feel Sheet (bottom sheet mini composer)
+═══════════════════════════════════════════════════════════════════ -->
+<div style="display:flex;flex-direction:column;align-items:center">
+  <span class="screen-label">D — Quick Feel Sheet (บันทึกสั้นๆ)</span>
+  <div class="phone mood-ok" style="position:relative">
+
+    <div class="status" style="background:#F3EEE5"><span>21:14</span><span>● ◐ ▲ ⬛</span></div>
+
+    <!-- Blurred home content underneath -->
+    <div style="flex:1;padding:20px;opacity:0.3;pointer-events:none">
+      <div style="font-family:'Mali',cursive;font-size:20px;font-weight:700;color:#3D3548;margin-bottom:12px">
+        สมุดชีวิต
+      </div>
+      <div style="height:10px;background:#E7DFD3;border-radius:5px;margin-bottom:8px;width:55%"></div>
+      <div style="height:90px;background:#fff;border-radius:16px;margin-bottom:8px"></div>
+      <div style="height:120px;background:#fff;border-radius:16px;margin-bottom:8px"></div>
+      <div style="height:70px;background:#fff;border-radius:16px"></div>
+    </div>
+
+    <!-- Backdrop -->
+    <div class="qs-backdrop"></div>
+
+    <!-- Bottom sheet -->
+    <div class="qs-sheet">
+      <div class="qs-handle"></div>
+
+      <div style="font-size:11px;font-weight:800;color:#A9A1B3;letter-spacing:0.7px;
+        text-transform:uppercase;margin-bottom:14px">⚡ บันทึกสั้นๆ</div>
+
+      <!-- Mini 5-mood row -->
+      <div class="qs-row" style="--dot:#AFC5D8">
+        <button class="qm-btn" style="--dot:#E9C46A;background:#FAF1DC">
+          <span style="font-size:22px">🤩</span>
+          <span class="qm-lbl" style="color:#CC9A3A">ดีมาก</span>
+        </button>
+        <button class="qm-btn" style="--dot:#A8C3A0;background:#EAF0E7">
+          <span style="font-size:22px">😊</span>
+          <span class="qm-lbl" style="color:#7E9E7C">ดี</span>
+        </button>
+        <button class="qm-btn on" style="--dot:#AFC5D8;background:#E2ECF1;border-color:#AFC5D8">
+          <span style="font-size:22px">😌</span>
+          <span class="qm-lbl" style="color:#5C7F94">เฉยๆ</span>
+        </button>
+        <button class="qm-btn" style="--dot:#B9A8C9;background:#E8E0F0">
+          <span style="font-size:22px">😤</span>
+          <span class="qm-lbl" style="color:#8A7799">เหนื่อย</span>
+        </button>
+        <button class="qm-btn" style="--dot:#C9A0A8;background:#EFDDE0">
+          <span style="font-size:22px">😢</span>
+          <span class="qm-lbl" style="color:#9A7078">แย่</span>
+        </button>
+      </div>
+
+      <!-- Mini text area -->
+      <div style="background:#F5F3F8;border-radius:16px;padding:14px;margin-bottom:14px;
+        border:1.5px solid #E7DFD3;min-height:70px">
+        <div style="font-size:14px;color:#7A7186;line-height:1.8;font-style:italic">
+          วันนี้ผ่านไปเฉยๆ ไม่มีอะไรพิเศษ<span class="cursor"></span>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div style="display:flex;gap:8px">
+        <button style="flex:1;height:46px;border-radius:14px;border:1.5px solid #E7DFD3;
+          background:#fff;font-family:inherit;font-size:13px;font-weight:700;
+          color:#7A7186;cursor:pointer">ยกเลิก</button>
+        <button style="flex:2;height:46px;border-radius:14px;border:none;
+          background:linear-gradient(135deg,#D14F86,#E0689A);
+          font-family:inherit;font-size:14px;font-weight:800;
+          color:#fff;cursor:pointer">✓ บันทึก</button>
+      </div>
+
+      <!-- Full composer link -->
+      <div style="text-align:center;margin-top:14px">
+        <span style="font-size:12px;color:#A9A1B3">หรือ </span>
+        <a href="#" style="font-size:12px;font-weight:700;color:#D14F86;text-decoration:none">
+          เขียนบันทึกเต็ม →
+        </a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Navigation legend -->
+<div style="width:100%;text-align:center;margin-top:24px;padding:0 16px;
+  font-size:12px;color:rgba(61,53,72,0.5);font-family:'IBM Plex Sans Thai',sans-serif;line-height:2">
+  <strong style="color:rgba(61,53,72,0.7)">Life Diary Mockup Navigation:</strong><br>
+  <a href="life-diary-home.html" style="margin:0 8px;color:#D14F86;text-decoration:none">🏠 Home</a>
+  <a href="life-diary-timeline.html" style="margin:0 8px;color:#D14F86;text-decoration:none">📅 Timeline</a>
+  <a href="life-diary-search.html" style="margin:0 8px;color:#D14F86;text-decoration:none">🔍 Search</a>
+  <a href="life-diary-entry.html" style="margin:0 8px;color:#D14F86;text-decoration:none">📖 Entry Detail</a>
+  <span style="margin:0 8px;color:#D14F86;font-weight:800">✏️ Composer ← คุณอยู่ที่นี่</span>
+</div>
+
+<script>
+// ── Mood picker (Screen A) ────────────────────────────────────────────────
+const moodCfg = {
+  great: { mA:'#F0DBA0', mB:'#F6E9C6', dot:'#E9C46A', st:'#F0DBA0' },
+  good:  { mA:'#C8DCC2', mB:'#E1ECDC', dot:'#A8C3A0', st:'#C8DCC2' },
+  ok:    { mA:'#C7D8E4', mB:'#E2ECF1', dot:'#AFC5D8', st:'#E2ECF1' },
+  tired: { mA:'#D6CBE2', mB:'#E8E0F0', dot:'#B9A8C9', st:'#E8E0F0' },
+  bad:   { mA:'#E0C7CC', mB:'#EFDDE0', dot:'#C9A0A8', st:'#EFDDE0' },
+};
+
+let selMoodA = 'ok';
+
+function pickMoodA(key) {
+  selMoodA = key;
+  // deselect all
+  ['great','good','ok','tired','bad'].forEach(k => {
+    document.getElementById('mpA-' + k).classList.remove('on');
+  });
+  document.getElementById('mpA-' + key).classList.add('on');
+
+  // update phone theme via CSS class
+  const ph = document.getElementById('phoneA');
+  ph.className = 'phone mood-' + key;
+
+  // update header gradient
+  const cfg = moodCfg[key];
+  document.getElementById('headerA').style.background =
+    `linear-gradient(135deg, ${cfg.mA}, ${cfg.mB})`;
+
+  // enable save button
+  document.getElementById('saveA').classList.add('on');
+}
+
+// ── Daily question ticker ─────────────────────────────────────────────────
+const QS = [
+  'วันนี้มีอะไรที่ทำให้ยิ้มได้บ้าง?',
+  'สิ่งที่ดีที่สุดของวันนี้คืออะไร?',
+  'วันนี้ได้เรียนรู้อะไรใหม่?',
+  'อะไรที่อยากขอบคุณตัวเองในวันนี้?',
+  'วันนี้รู้สึกยังไงตอนตื่นนอน?',
+  'คนที่ทำให้วันนี้ดีขึ้นคือใคร?',
+  'วันนี้มีอะไรที่อยากเปลี่ยนไหม?',
+  'วันนี้ดูแลตัวเองดีแค่ไหน?',
+  'อะไรที่อยากเปลี่ยนในพรุ่งนี้?',
+];
+let qi = 0;
+const qEl = document.getElementById('qA');
+
+function tickQ() {
+  qi = (qi + 1) % QS.length;
+  qEl.style.opacity = '0';
+  qEl.style.transform = 'translateY(-6px)';
+  setTimeout(() => {
+    qEl.textContent = QS[qi];
+    qEl.style.transition = 'opacity .35s, transform .35s';
+    qEl.style.opacity = '1';
+    qEl.style.transform = 'translateY(0)';
+  }, 220);
+}
+
+qEl.style.transition = 'opacity .35s, transform .35s';
+setInterval(tickQ, 4500);
+</script>
+</body>
+</html>

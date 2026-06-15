@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Life Diary — Entry Detail (Pro)</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #E8E0F0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 32px 16px 60px;
+    font-family: -apple-system, 'Segoe UI', Tahoma, sans-serif;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  /* ─── Phone Frame ─────────────────────────────────── */
+  .phone {
+    width: 392px;
+    height: 812px;
+    background: #FBF8F3;
+    border-radius: 44px;
+    box-shadow: 0 32px 80px rgba(61,53,72,0.28), 0 0 0 1px rgba(61,53,72,0.08);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  /* ─── Status bar ──────────────────────────────────── */
+  .status-bar {
+    height: 44px;
+    background: #F3EEE5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #3D3548;
+    flex-shrink: 0;
+  }
+
+  /* ─── Design Tokens ───────────────────────────────── */
+  :root {
+    --paper:     #FBF8F3;
+    --paperDeep: #F3EEE5;
+    --ink:       #3D3548;
+    --inkSoft:   #7A7186;
+    --inkFaint:  #A9A1B3;
+    --line:      #E7DFD3;
+    --rose:      #D14F86;
+    --sage:      #7E9E7C;
+    --gold:      #CC9A3A;
+  }
+
+  /* ─── Mood Themes ─────────────────────────────────── */
+  .mood-great  { --mA:#F0DBA0; --mB:#F6E9C6; --dot:#E9C46A; }
+  .mood-good   { --mA:#C8DCC2; --mB:#E1ECDC; --dot:#A8C3A0; }
+  .mood-ok     { --mA:#C7D8E4; --mB:#E2ECF1; --dot:#AFC5D8; }
+  .mood-tired  { --mA:#D6CBE2; --mB:#E8E0F0; --dot:#B9A8C9; }
+  .mood-bad    { --mA:#E0C7CC; --mB:#EFDDE0; --dot:#C9A0A8; }
+
+  /* ─── Header ──────────────────────────────────────── */
+  .header {
+    background: linear-gradient(135deg, var(--mA), var(--mB));
+    padding: 12px 16px 16px;
+    flex-shrink: 0;
+  }
+  .header-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .back-btn {
+    width: 36px; height: 36px;
+    border-radius: 18px;
+    background: rgba(61,53,72,0.10);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; cursor: pointer; flex-shrink: 0;
+    border: none;
+  }
+  .header-date {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .header-date small {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--inkSoft);
+    margin-top: 1px;
+  }
+  .header-actions {
+    display: flex;
+    gap: 6px;
+  }
+  .icon-btn {
+    width: 34px; height: 34px;
+    border-radius: 17px;
+    background: rgba(61,53,72,0.10);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; cursor: pointer;
+    border: none;
+  }
+
+  /* Mood dot row */
+  .mood-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .mood-dot {
+    width: 12px; height: 12px;
+    border-radius: 6px;
+    background: var(--dot);
+    flex-shrink: 0;
+  }
+  .mood-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .mood-emoji {
+    font-size: 18px;
+    margin-left: 2px;
+  }
+  .activity-chip {
+    margin-left: auto;
+    background: rgba(61,53,72,0.10);
+    border-radius: 12px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink);
+    display: flex; align-items: center; gap: 4px;
+  }
+
+  /* ─── Scroll Area ─────────────────────────────────── */
+  .scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 14px 100px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .scroll::-webkit-scrollbar { display: none; }
+
+  /* ─── Canvas Card ─────────────────────────────────── */
+  .canvas-card {
+    background: #ffffff;
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(61,53,72,0.10), 0 1px 3px rgba(61,53,72,0.06);
+    margin-bottom: 12px;
+    position: relative;
+  }
+
+  /* Mood accent bar top */
+  .canvas-mood-bar {
+    height: 4px;
+    background: linear-gradient(90deg, var(--mA), var(--dot), var(--mB));
+  }
+
+  /* Subtle notebook lines background inside canvas */
+  .canvas-body {
+    padding: 18px 18px 20px;
+    background-image: repeating-linear-gradient(
+      0deg,
+      transparent, transparent 26px,
+      rgba(61,53,72,0.035) 26px, rgba(61,53,72,0.035) 27px
+    );
+  }
+
+  /* Time + location top row */
+  .canvas-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .meta-time {
+    font-size: 11px;
+    color: var(--inkFaint);
+    font-weight: 600;
+  }
+  .meta-dot { width: 3px; height: 3px; border-radius: 2px; background: var(--line); }
+  .meta-loc {
+    font-size: 11px;
+    color: var(--inkFaint);
+    display: flex; align-items: center; gap: 3px;
+  }
+
+  /* Title */
+  .canvas-title {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 20px;
+    font-weight: 700;
+    font-style: italic;
+    color: var(--ink);
+    line-height: 1.35;
+    margin-bottom: 10px;
+    letter-spacing: -0.2px;
+  }
+
+  /* Body text */
+  .canvas-text {
+    font-size: 14px;
+    color: var(--inkSoft);
+    line-height: 1.85;
+    margin-bottom: 16px;
+  }
+
+  /* Divider */
+  .canvas-divider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .canvas-divider::before,
+  .canvas-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+  .canvas-divider-icon { font-size: 14px; color: var(--inkFaint); }
+
+  /* ─── Photo Collage ───────────────────────────────── */
+  .photo-collage {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 120px 80px;
+    gap: 4px;
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 12px;
+    cursor: pointer;
+  }
+  .photo-collage .ph-main {
+    grid-row: span 2;
+    background: linear-gradient(135deg,#D4C9E2,#C3B8D1);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    overflow: hidden;
+  }
+  .photo-collage .ph-sub {
+    background: linear-gradient(135deg,#E2D6EB,#D4C6E0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .photo-collage .ph-sub.overlay-count {
+    background: rgba(61,53,72,0.6);
+  }
+  .photo-collage .ph-sub.overlay-count .count-text {
+    font-size: 16px;
+    font-weight: 800;
+    color: #fff;
+  }
+  /* Watercolor photo overlay effect */
+  .ph-main::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(209,79,134,0.12), rgba(126,158,124,0.08));
+  }
+  .ph-sub::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(204,154,58,0.1), transparent);
+  }
+  .ph-label {
+    font-size: 11px;
+    color: var(--inkFaint);
+    margin-bottom: 4px;
+    font-weight: 600;
+    display: flex; align-items: center; gap: 4px;
+  }
+
+  /* ─── Reflection Quote ────────────────────────────── */
+  .reflection-box {
+    background: linear-gradient(135deg, var(--mB), rgba(251,248,243,0.8));
+    border-radius: 14px;
+    padding: 14px 16px;
+    border-left: 3px solid var(--dot);
+    margin-top: 8px;
+  }
+  .reflection-label {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--inkFaint);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .reflection-text {
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--inkSoft);
+    line-height: 1.7;
+  }
+
+  /* ─── Expense Card ────────────────────────────────── */
+  .expense-card {
+    background: #fff;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(61,53,72,0.07);
+    margin-bottom: 12px;
+  }
+  .expense-header {
+    padding: 12px 16px 10px;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  .expense-header-label { flex: 1; font-size: 13px; font-weight: 700; color: var(--ink); }
+  .expense-total { font-size: 16px; font-weight: 900; color: var(--gold); }
+  .expense-row {
+    padding: 10px 16px;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .expense-row:last-child { border-bottom: none; }
+  .expense-name { flex: 1; font-size: 13px; color: var(--ink); }
+  .expense-qty { font-size: 12px; color: var(--inkFaint); }
+  .expense-amt { font-size: 13px; font-weight: 700; color: var(--gold); }
+  .expense-saved {
+    font-size: 10px; font-weight: 700;
+    background: #ECFDF5; color: #065F46;
+    border-radius: 6px; padding: 2px 6px; margin-left: 4px;
+  }
+
+  /* ─── Prev / Next Nav ─────────────────────────────── */
+  .entry-nav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .nav-btn {
+    flex: 1;
+    background: #fff;
+    border: 1.5px solid var(--line);
+    border-radius: 14px;
+    padding: 12px;
+    display: flex; align-items: center; gap: 8px;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .nav-btn.prev { flex-direction: row; }
+  .nav-btn.next { flex-direction: row-reverse; }
+  .nav-icon { font-size: 16px; color: var(--inkFaint); }
+  .nav-text { flex: 1; }
+  .nav-dir { font-size: 10px; color: var(--inkFaint); font-weight: 600; }
+  .nav-title {
+    font-size: 12px; font-weight: 700; color: var(--ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 100px;
+  }
+
+  /* ─── Bottom Nav ──────────────────────────────────── */
+  .bottom-nav {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 78px;
+    background: rgba(255,255,255,0.96);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--line);
+    display: flex;
+    align-items: flex-start;
+    padding-top: 8px;
+    z-index: 100;
+  }
+  .bnav-tab {
+    flex: 1;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 3px;
+    cursor: pointer; padding: 4px 0;
+    text-decoration: none;
+  }
+  .bnav-ico { font-size: 22px; line-height: 1; }
+  .bnav-lbl { font-size: 10px; font-weight: 600; color: var(--inkFaint); }
+  .bnav-tab.active .bnav-lbl { color: var(--rose); font-weight: 800; }
+  .bnav-tab.active .bnav-ico { filter: none; }
+
+  /* ─── Photo Modal ─────────────────────────────────── */
+  .modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(20,15,30,0.92);
+    z-index: 200;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-close {
+    position: absolute;
+    top: 60px; right: 20px;
+    width: 36px; height: 36px;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.15);
+    border: none; color: #fff;
+    font-size: 18px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal-photo {
+    width: 320px; height: 320px;
+    border-radius: 18px;
+    background: linear-gradient(135deg,#D4C9E2,#BFB0CE);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 64px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .modal-counter {
+    margin-top: 16px;
+    font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.6);
+  }
+  .modal-dots {
+    display: flex; gap: 6px; margin-top: 12px;
+  }
+  .modal-dot {
+    width: 6px; height: 6px; border-radius: 3px;
+    background: rgba(255,255,255,0.3);
+    transition: all 0.2s;
+  }
+  .modal-dot.active {
+    width: 18px;
+    background: #fff;
+  }
+  .modal-nav {
+    display: flex; gap: 16px; margin-top: 20px;
+  }
+  .modal-nav-btn {
+    width: 44px; height: 44px;
+    border-radius: 22px;
+    background: rgba(255,255,255,0.15);
+    border: none; color: #fff;
+    font-size: 20px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ─── Labels ──────────────────────────────────────── */
+  .screen-label {
+    background: rgba(61,53,72,0.75);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 8px;
+    display: inline-block;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN A — Pro Entry Detail (Full Content / "ดีมาก" mood)
+═════════════════════════════════════════════════════════════ -->
+<div style="display:flex;flex-direction:column;align-items:center">
+  <span class="screen-label">ตัวอย่าง A — มีรูปภาพ + ค่าใช้จ่าย</span>
+  <div class="phone mood-great">
+    <!-- Status -->
+    <div class="status-bar">
+      <span>10:56</span>
+      <span>● ◐ ▲ ⬛</span>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-row">
+        <button class="back-btn">←</button>
+        <div class="header-date">
+          วันอาทิตย์ที่ 15 มิถุนายน 2569
+          <small>ความทรงจำ · 10:30 น.</small>
+        </div>
+        <div class="header-actions">
+          <button class="icon-btn">✏️</button>
+          <button class="icon-btn">⋯</button>
+        </div>
+      </div>
+      <div class="mood-row">
+        <div class="mood-dot"></div>
+        <span class="mood-label">ดีมาก</span>
+        <span class="mood-emoji">🤩</span>
+        <div class="activity-chip">🏖️ วันหยุด</div>
+      </div>
+    </div>
+
+    <!-- Scroll -->
+    <div class="scroll">
+
+      <!-- Canvas Card -->
+      <div class="canvas-card">
+        <div class="canvas-mood-bar"></div>
+        <div class="canvas-body">
+
+          <!-- Meta -->
+          <div class="canvas-meta">
+            <span class="meta-time">10:30 น.</span>
+            <div class="meta-dot"></div>
+            <span class="meta-loc">📍 C682+X9R, Chumphon Buri District</span>
+          </div>
+
+          <!-- Title -->
+          <div class="canvas-title">ไปกินหมูกะทะกับหมูนุ่น</div>
+
+          <!-- Text -->
+          <div class="canvas-text">
+            แดดร่มลมตกอากาศดีมากซับบมอเตอร์ไซค์หาหมอนั้นหาอะไรกินตอนเย็นกินเยอะมากน่ากินทั้งนั้น เลยตัดสินใจว่าต้องมม่วนมูลกระทะ 1 กิโลกรัมไปนั่งที่บ้านกีพอ
+          </div>
+
+          <!-- Divider -->
+          <div class="canvas-divider">
+            <span class="canvas-divider-icon">🌸</span>
+          </div>
+
+          <!-- Photo label -->
+          <div class="ph-label">🖼️ รูปภาพ (3)</div>
+
+          <!-- Photo Collage -->
+          <div class="photo-collage" onclick="openModal()">
+            <div class="ph-main">🍖</div>
+            <div class="ph-sub">🌿</div>
+            <div class="ph-sub overlay-count">
+              <span class="count-text">+1</span>
+            </div>
+          </div>
+
+          <!-- Reflection -->
+          <div class="reflection-box">
+            <div class="reflection-label">บางความทรงจำ</div>
+            <div class="reflection-text">
+              "ก็อยู่อุ่นกว่าที่คิด 🌾"
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Expense Card -->
+      <div class="expense-card">
+        <div class="expense-header">
+          <span style="font-size:16px">💰</span>
+          <span class="expense-header-label">ค่าใช้จ่าย</span>
+          <span class="expense-total">฿250.00</span>
+        </div>
+        <div class="expense-row">
+          <span style="font-size:16px">🥩</span>
+          <span class="expense-name">หมูกระทะ 1 กิโลกรัม โค๊ก 2 ขวด</span>
+          <span class="expense-amt">฿250
+            <span class="expense-saved">บันทึกแล้ว ✓</span>
+          </span>
+        </div>
+        <div style="padding:10px 16px;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:12px;font-weight:700;color:#7A7186">รวม</span>
+          <span style="font-size:15px;font-weight:900;color:#CC9A3A">฿250.00</span>
+        </div>
+      </div>
+
+      <!-- Prev/Next -->
+      <div class="entry-nav">
+        <a class="nav-btn prev" href="#">
+          <span class="nav-icon">‹</span>
+          <div class="nav-text">
+            <div class="nav-dir">ก่อนหน้า</div>
+            <div class="nav-title">ฝนตกทั้งวัน...</div>
+          </div>
+        </a>
+        <a class="nav-btn next" href="#">
+          <span class="nav-icon">›</span>
+          <div class="nav-text" style="text-align:right">
+            <div class="nav-dir">ถัดไป</div>
+            <div class="nav-title">เที่ยวตลาด...</div>
+          </div>
+        </a>
+      </div>
+
+      <!-- "Write new memory" CTA -->
+      <div style="text-align:center;padding:8px 0">
+        <a href="life-diary-composer.html" style="display:inline-flex;align-items:center;gap:8px;
+          background:#fff;border:1.5px solid #E7DFD3;border-radius:20px;
+          padding:10px 20px;text-decoration:none;color:#D14F86;font-size:13px;font-weight:700">
+          ✏️ บันทึกความทรงจำใหม่
+        </a>
+      </div>
+
+    </div><!-- /scroll -->
+
+    <!-- Bottom Nav -->
+    <nav class="bottom-nav">
+      <a class="bnav-tab" href="life-diary-home.html">
+        <span class="bnav-ico">🏠</span>
+        <span class="bnav-lbl">ชีวิต</span>
+      </a>
+      <a class="bnav-tab" href="life-diary-timeline.html">
+        <span class="bnav-ico">📅</span>
+        <span class="bnav-lbl">ปฏิทิน</span>
+      </a>
+      <a class="bnav-tab" href="life-diary-search.html">
+        <span class="bnav-ico">🔍</span>
+        <span class="bnav-lbl">ค้นหา</span>
+      </a>
+      <a class="bnav-tab active" href="#">
+        <span class="bnav-ico">📖</span>
+        <span class="bnav-lbl">บันทึก</span>
+      </a>
+    </nav>
+
+    <!-- Photo Modal -->
+    <div class="modal-overlay" id="photoModal">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <div class="modal-photo" id="modalPhoto">🍖</div>
+      <div class="modal-counter">1 / 3</div>
+      <div class="modal-dots">
+        <div class="modal-dot active"></div>
+        <div class="modal-dot"></div>
+        <div class="modal-dot"></div>
+      </div>
+      <div class="modal-nav">
+        <button class="modal-nav-btn" onclick="prevPhoto()">‹</button>
+        <button class="modal-nav-btn" onclick="nextPhoto()">›</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN B — เหนื่อย mood + ไม่มีรูป + ไม่มีค่าใช้จ่าย
+═════════════════════════════════════════════════════════════ -->
+<div style="display:flex;flex-direction:column;align-items:center">
+  <span class="screen-label">ตัวอย่าง B — เฉพาะข้อความ / "เหนื่อย" mood</span>
+  <div class="phone mood-tired">
+    <!-- Status -->
+    <div class="status-bar" style="background:#EDE6F4">
+      <span>22:14</span>
+      <span>● ◐ ▲ ⬛</span>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-row">
+        <button class="back-btn">←</button>
+        <div class="header-date">
+          วันพุธที่ 11 มิถุนายน 2569
+          <small>ความทรงจำ · 22:00 น.</small>
+        </div>
+        <div class="header-actions">
+          <button class="icon-btn">✏️</button>
+          <button class="icon-btn">⋯</button>
+        </div>
+      </div>
+      <div class="mood-row">
+        <div class="mood-dot"></div>
+        <span class="mood-label">เหนื่อย</span>
+        <span class="mood-emoji">😤</span>
+        <div class="activity-chip">🏢 ทำงาน</div>
+      </div>
+    </div>
+
+    <!-- Scroll -->
+    <div class="scroll">
+
+      <!-- Canvas Card (text only) -->
+      <div class="canvas-card">
+        <div class="canvas-mood-bar"></div>
+        <div class="canvas-body">
+
+          <div class="canvas-meta">
+            <span class="meta-time">22:00 น.</span>
+          </div>
+
+          <div class="canvas-title">ฝนตกทั้งวัน แดดไม่พักผ่อน</div>
+
+          <div class="canvas-text">
+            วางกลวิชั้นนั้วนนี้... เจอใคร ไปไหน คิดอะไร<br>
+            เกือบใช้ชั่วนั้วนนี้... เจอใคร ไปไหน คิดอะไร<br>
+            <br>
+            ทุกอย่างดูเหนื่อยไปหมดเลย ทั้งที่จริงๆ ก็ไม่มีอะไรผิดปกติ
+            แค่รู้สึกว่าวันนี้ยาวนานมาก อยากนอน
+          </div>
+
+          <div class="canvas-divider">
+            <span class="canvas-divider-icon">🌙</span>
+          </div>
+
+          <!-- Mood insight (no photos) -->
+          <div style="background:#F5F3F8;border-radius:14px;padding:16px;text-align:center;margin-bottom:8px">
+            <div style="font-size:32px;margin-bottom:8px">💜</div>
+            <div style="font-size:13px;color:#7A7186;line-height:1.7">
+              วันที่เหนื่อยก็มีคุณค่าเหมือนกัน<br>
+              พักก่อน แล้วค่อยเริ่มใหม่พรุ่งนี้
+            </div>
+          </div>
+
+          <!-- Reflection -->
+          <div class="reflection-box">
+            <div class="reflection-label">Insight จาก AI</div>
+            <div class="reflection-text">
+              คุณรู้สึกเหนื่อย 3 วันติดกัน ลองพักผ่อนดูนะ 🌿
+              <span style="font-size:10px;background:#EDE6F4;color:#7A7186;
+                border-radius:6px;padding:2px 6px;margin-left:4px;font-style:normal;font-weight:700">
+                ✨ Premium
+              </span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Prev/Next -->
+      <div class="entry-nav">
+        <a class="nav-btn prev" href="#">
+          <span class="nav-icon">‹</span>
+          <div class="nav-text">
+            <div class="nav-dir">ก่อนหน้า</div>
+            <div class="nav-title">ไปกินหมูกะทะ...</div>
+          </div>
+        </a>
+        <a class="nav-btn next" href="#">
+          <span class="nav-icon">›</span>
+          <div class="nav-text" style="text-align:right">
+            <div class="nav-dir">ถัดไป</div>
+            <div class="nav-title">วันพักผ่อน...</div>
+          </div>
+        </a>
+      </div>
+
+      <div style="text-align:center;padding:8px 0">
+        <a href="life-diary-composer.html" style="display:inline-flex;align-items:center;gap:8px;
+          background:#fff;border:1.5px solid #E7DFD3;border-radius:20px;
+          padding:10px 20px;text-decoration:none;color:#D14F86;font-size:13px;font-weight:700">
+          ✏️ บันทึกความทรงจำใหม่
+        </a>
+      </div>
+    </div>
+
+    <nav class="bottom-nav" style="background:rgba(247,243,254,0.96)">
+      <a class="bnav-tab" href="life-diary-home.html"><span class="bnav-ico">🏠</span><span class="bnav-lbl">ชีวิต</span></a>
+      <a class="bnav-tab" href="life-diary-timeline.html"><span class="bnav-ico">📅</span><span class="bnav-lbl">ปฏิทิน</span></a>
+      <a class="bnav-tab" href="life-diary-search.html"><span class="bnav-ico">🔍</span><span class="bnav-lbl">ค้นหา</span></a>
+      <a class="bnav-tab active" href="#"><span class="bnav-ico">📖</span><span class="bnav-lbl">บันทึก</span></a>
+    </nav>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN C — Quick Feel (บันทึกสั้นๆ 1-2 บรรทัด)
+═════════════════════════════════════════════════════════════ -->
+<div style="display:flex;flex-direction:column;align-items:center">
+  <span class="screen-label">ตัวอย่าง C — Quick Feel (บันทึกสั้น)</span>
+  <div class="phone mood-good">
+    <div class="status-bar" style="background:#E0EADA">
+      <span>14:22</span>
+      <span>● ◐ ▲ ⬛</span>
+    </div>
+
+    <div class="header">
+      <div class="header-row">
+        <button class="back-btn">←</button>
+        <div class="header-date">
+          วันเสาร์ที่ 14 มิถุนายน 2569
+          <small>ความทรงจำ · 14:22 น.</small>
+        </div>
+        <div class="header-actions">
+          <button class="icon-btn">✏️</button>
+          <button class="icon-btn">⋯</button>
+        </div>
+      </div>
+      <div class="mood-row">
+        <div class="mood-dot"></div>
+        <span class="mood-label">ดี</span>
+        <span class="mood-emoji">😊</span>
+        <div class="activity-chip">🍜 ออกไปกิน</div>
+      </div>
+    </div>
+
+    <div class="scroll">
+      <div class="canvas-card">
+        <div class="canvas-mood-bar"></div>
+        <div class="canvas-body" style="min-height:200px;display:flex;flex-direction:column">
+
+          <div class="canvas-meta">
+            <span class="meta-time">14:22 น.</span>
+          </div>
+
+          <!-- Quick Feel — ไม่มี title, text สั้น, canvas ไม่เต็ม -->
+          <div class="canvas-text" style="font-size:16px;color:#3D3548;font-style:italic;
+            font-family:Georgia,serif;line-height:1.9;flex:1;margin-bottom:0">
+            "อาหารอร่อยมากวันนี้ 🍜<br>
+            กินกับเพื่อนสนุก ชอบบรรยากาศ"
+          </div>
+
+          <!-- Expand CTA -->
+          <div style="margin-top:16px;padding-top:12px;border-top:1px solid #E7DFD3;
+            display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;color:#A9A1B3">เพิ่มรายละเอียด</span>
+            <div style="flex:1;height:1px;background:#E7DFD3"></div>
+            <button style="background:#FBF8F3;border:1.5px solid #E7DFD3;border-radius:12px;
+              padding:6px 14px;font-size:12px;font-weight:700;color:#D14F86;cursor:pointer">
+              ✏️ เขียนต่อ
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Upgrade CTA (ถ้า free) -->
+      <div style="background:#fff;border-radius:18px;padding:16px;margin-bottom:12px;
+        border:1.5px solid #E7DFD3;text-align:center">
+        <div style="font-size:11px;font-weight:700;color:#A9A1B3;letter-spacing:0.5px;margin-bottom:8px">
+          ✨ PREMIUM FEATURE
+        </div>
+        <div style="font-size:14px;font-weight:800;color:#3D3548;margin-bottom:6px">
+          AI วิเคราะห์อารมณ์จากบันทึก
+        </div>
+        <div style="font-size:12px;color:#7A7186;line-height:1.7;margin-bottom:12px">
+          เชื่อมโยง mood trend รายสัปดาห์<br>
+          แนะนำการดูแลตัวเองอัตโนมัติ
+        </div>
+        <button style="background:linear-gradient(135deg,#D14F86,#E0689A);
+          border:none;border-radius:14px;padding:10px 24px;
+          color:#fff;font-size:13px;font-weight:800;cursor:pointer">
+          อัปเกรดเป็น Premium
+        </button>
+      </div>
+
+      <div class="entry-nav">
+        <a class="nav-btn prev" href="#"><span class="nav-icon">‹</span><div class="nav-text"><div class="nav-dir">ก่อนหน้า</div><div class="nav-title">ฝนตกทั้งวัน...</div></div></a>
+        <a class="nav-btn next" href="#"><span class="nav-icon">›</span><div class="nav-text" style="text-align:right"><div class="nav-dir">ถัดไป</div><div class="nav-title">วันพักผ่อน...</div></div></a>
+      </div>
+
+      <div style="text-align:center;padding:8px 0">
+        <a href="life-diary-composer.html" style="display:inline-flex;align-items:center;gap:8px;
+          background:#fff;border:1.5px solid #E7DFD3;border-radius:20px;
+          padding:10px 20px;text-decoration:none;color:#D14F86;font-size:13px;font-weight:700">
+          ✏️ บันทึกความทรงจำใหม่
+        </a>
+      </div>
+    </div>
+
+    <nav class="bottom-nav" style="background:rgba(240,248,238,0.96)">
+      <a class="bnav-tab" href="life-diary-home.html"><span class="bnav-ico">🏠</span><span class="bnav-lbl">ชีวิต</span></a>
+      <a class="bnav-tab" href="life-diary-timeline.html"><span class="bnav-ico">📅</span><span class="bnav-lbl">ปฏิทิน</span></a>
+      <a class="bnav-tab" href="life-diary-search.html"><span class="bnav-ico">🔍</span><span class="bnav-lbl">ค้นหา</span></a>
+      <a class="bnav-tab active" href="#"><span class="bnav-ico">📖</span><span class="bnav-lbl">บันทึก</span></a>
+    </nav>
+  </div>
+</div>
+
+<script>
+// ── Photo Modal ────────────────────────────────────────────────
+const photos = ['🍖', '🌿', '🌅'];
+let currentPhoto = 0;
+
+function openModal() {
+  currentPhoto = 0;
+  updateModal();
+  document.getElementById('photoModal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('photoModal').classList.remove('open');
+}
+function nextPhoto() {
+  currentPhoto = (currentPhoto + 1) % photos.length;
+  updateModal();
+}
+function prevPhoto() {
+  currentPhoto = (currentPhoto - 1 + photos.length) % photos.length;
+  updateModal();
+}
+function updateModal() {
+  document.getElementById('modalPhoto').textContent = photos[currentPhoto];
+  document.querySelector('.modal-counter').textContent = `${currentPhoto + 1} / ${photos.length}`;
+  document.querySelectorAll('.modal-dot').forEach((d, i) => {
+    d.classList.toggle('active', i === currentPhoto);
+  });
+}
+
+// Close modal on overlay click
+document.getElementById('photoModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// Keyboard nav
+document.addEventListener('keydown', (e) => {
+  if (!document.getElementById('photoModal').classList.contains('open')) return;
+  if (e.key === 'ArrowRight') nextPhoto();
+  if (e.key === 'ArrowLeft') prevPhoto();
+  if (e.key === 'Escape') closeModal();
+});
+</script>
+</body>
+</html>
