@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import type { AppVariables } from '../types.js';
 import { eq } from 'drizzle-orm';
 import { db } from '../db/client.js';
-import { lineConnections, lineNotifLog } from '../db/schema.js';
+import { lineConnections, lineNotifLog, users } from '../db/schema.js';
 import { genId } from '../lib/id.js';
 import { config } from '../config.js';
 import { authMiddleware, requireTier } from '../middleware/auth.js';
@@ -58,6 +58,27 @@ pkg13Router.delete('/connection', async (c) => {
   return c.json({ ok: true, data: { success: true } });
 });
 
+// GET /pkg13/notifications — ดึง notification settings ของ user
+pkg13Router.get('/notifications', async (c) => {
+  const userId = c.get('userId') as string;
+  const conn = await db.query.lineConnections.findFirst({ where: eq(lineConnections.userId, userId) });
+  if (!conn) {
+    return c.json({
+      ok: true,
+      data: { enabled: false, paymentAlerts: true, orderAlerts: true, dailyDigest: false },
+    });
+  }
+  return c.json({
+    ok: true,
+    data: {
+      enabled: conn.notificationsEnabled ?? false,
+      paymentAlerts: conn.paymentAlerts ?? true,
+      orderAlerts: conn.orderAlerts ?? true,
+      dailyDigest: conn.dailyDigest ?? false,
+    },
+  });
+});
+
 // PUT /pkg13/notifications
 pkg13Router.put('/notifications', async (c) => {
   const userId = c.get('userId') as string;
@@ -78,7 +99,16 @@ pkg13Router.put('/notifications', async (c) => {
   };
   await db.update(lineConnections).set(updates).where(eq(lineConnections.userId, userId));
 
-  return c.json({ ok: true, data: { ...conn, ...updates, connectedAt: (conn.connectedAt as Date).toISOString() } });
+  const merged = { ...conn, ...updates };
+  return c.json({
+    ok: true,
+    data: {
+      enabled: merged.notificationsEnabled ?? false,
+      paymentAlerts: merged.paymentAlerts ?? true,
+      orderAlerts: merged.orderAlerts ?? true,
+      dailyDigest: merged.dailyDigest ?? false,
+    },
+  });
 });
 
 // ── Internal helper — ส่ง LINE message ──────────────────────────────────────
@@ -198,7 +228,12 @@ export async function lineCallbackHandler(c: Context) {
   }
 }
 
+// LINE push notifications เปิดเฉพาะ Premium tier (server/business) เท่านั้น
+// Pro tier เชื่อมต่อ LINE ได้ แต่ไม่รับ push notification
 export async function notifyPaymentPaid(userId: string, amount: number, refId: string) {
+  const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
+  if (!user || (user.tier !== 'server' && user.tier !== 'business')) return;
+
   const conn = await db.query.lineConnections.findFirst({ where: eq(lineConnections.userId, userId) });
   if (!conn?.notificationsEnabled || !conn.paymentAlerts) return;
 
