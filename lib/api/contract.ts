@@ -39,6 +39,7 @@ export interface PaymentRequest {
   paidAt?: string;
   refId?: string;
   createdAt: string;
+  uploadSlipUrl?: string;  // public URL + token สำหรับลูกค้าอัปโหลดสลิป
 }
 
 export interface SlipVerifyInput {
@@ -67,6 +68,9 @@ export interface LineConnection {
   displayName?: string;
   pictureUrl?: string;
   notificationsEnabled: boolean;
+  paymentAlerts?: boolean;
+  orderAlerts?: boolean;
+  dailyDigest?: boolean;
   connectedAt?: string;
 }
 

@@ -1,12 +1,17 @@
-import { useState, useCallback } from 'react';
-import { View, Text, Pressable, ActivityIndicator, Alert, ScrollView, Switch } from 'react-native';
+import { useState, useCallback, useEffect } from 'react';
+import { View, Text, Pressable, ActivityIndicator, Alert, ScrollView, Switch, Linking } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { api } from '@/lib/api/client';
-import type { LineConnection, LineNotificationSettings } from '@/lib/api/contract';
+import type { LineConnection, LineNotificationSettings, PlanTier } from '@/lib/api/contract';
 import { useSnackbar } from '@/components/ui/SnackbarProvider';
+
+// Push notification เปิดเฉพาะ Premium (server/business) เท่านั้น
+function isPremium(tier: PlanTier | null): boolean {
+  return tier === 'server' || tier === 'business';
+}
 
 export default function LineConnectScreen() {
   const insets = useSafeAreaInsets();
@@ -15,32 +20,61 @@ export default function LineConnectScreen() {
 
   const [conn, setConn] = useState<LineConnection | null>(null);
   const [settings, setSettings] = useState<LineNotificationSettings | null>(null);
+  const [userTier, setUserTier] = useState<PlanTier | null>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [updating, setUpdating] = useState(false);
 
   const load = useCallback(async () => {
-    const [connRes, settingsRes] = await Promise.all([
+    const [connRes, settingsRes, entRes] = await Promise.all([
       api.getLineConnection(),
       api.getLineSettings(),
+      api.getEntitlement(),
     ]);
     if (connRes.ok) setConn(connRes.data);
     if (settingsRes.ok) setSettings(settingsRes.data);
+    if (entRes.ok) setUserTier(entRes.data.tier);
     setLoading(false);
   }, []);
 
   useFocusEffect(useCallback(() => { setLoading(true); load(); }, [load]));
 
+  // รับ deep link กลับจาก LINE OAuth callback
+  useEffect(() => {
+    const handleUrl = async ({ url }: { url: string }) => {
+      if (!url.startsWith('poatung://line-callback')) return;
+      const parsed = new URL(url);
+      const success = parsed.searchParams.get('success');
+      const displayName = parsed.searchParams.get('displayName');
+      const error = parsed.searchParams.get('error');
+
+      setConnecting(false);
+      if (success === '1') {
+        showSnackbar({ message: `✅ เชื่อมต่อ LINE สำเร็จ${displayName ? ` (${displayName})` : ''}`, variant: 'success' });
+        load();
+      } else {
+        showSnackbar({ message: `❌ เชื่อมต่อ LINE ไม่สำเร็จ: ${error ?? 'unknown'}`, variant: 'error' });
+      }
+    };
+
+    const sub = Linking.addEventListener('url', handleUrl);
+    return () => sub.remove();
+  }, [load, showSnackbar]);
+
   async function handleConnect() {
     setConnecting(true);
     try {
-      // Mock: simulate LINE OA connect flow
-      const result = await api.mockConnectLine();
-      if (result.ok) {
-        setConn(result.data);
-        showSnackbar({ message: '✅ เชื่อมต่อ LINE สำเร็จ', variant: 'success' });
+      const result = await api.getLineConnectUrl();
+      if (!result.ok) {
+        showSnackbar({ message: '❌ ไม่สามารถสร้าง URL เชื่อมต่อได้', variant: 'error' });
+        setConnecting(false);
+        return;
       }
-    } finally {
+      // เปิด LINE Login ใน browser — callback จะกลับมาที่ poatung://line-callback
+      await Linking.openURL(result.data.connectUrl);
+      // setConnecting จะถูก reset เมื่อ deep link กลับมา
+    } catch {
+      showSnackbar({ message: '❌ ไม่สามารถเปิด LINE ได้', variant: 'error' });
       setConnecting(false);
     }
   }
@@ -150,43 +184,72 @@ export default function LineConnectScreen() {
           </View>
 
           {/* Notification settings (แสดงเมื่อเชื่อมแล้ว) */}
-          {conn?.connected && settings && (
+          {conn?.connected && (
             <View style={{ backgroundColor: '#fff', borderRadius: 18, padding: 20,
               elevation: 1, shadowColor: '#059669', shadowOpacity: 0.08, shadowRadius: 8 }}>
-              <Text style={{ fontSize: 15, fontWeight: '800', color: '#111', marginBottom: 16 }}>
-                ⚙️ ตั้งค่าการแจ้งเตือน
-              </Text>
-
-              {([
-                { key: 'enabled' as const, label: 'เปิดรับการแจ้งเตือน', icon: '🔔' },
-                { key: 'paymentAlerts' as const, label: 'แจ้งเตือนการชำระเงิน', icon: '💳' },
-                { key: 'orderAlerts' as const, label: 'แจ้งเตือน order ใหม่', icon: '📦' },
-                { key: 'dailyDigest' as const, label: 'สรุปรายวัน', icon: '📊' },
-              ] as const).map(item => (
-                <View key={item.key}
-                  style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12,
-                    borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}>
-                  <Text style={{ fontSize: 20, marginRight: 12 }}>{item.icon}</Text>
-                  <Text style={{ flex: 1, fontSize: 14, color: '#374151', fontWeight: '500' }}>
-                    {item.label}
-                  </Text>
-                  <Switch
-                    value={settings[item.key]}
-                    onValueChange={(v) => toggleSetting(item.key, v)}
-                    disabled={updating || (item.key !== 'enabled' && !settings.enabled)}
-                    trackColor={{ false: '#E5E7EB', true: '#6EE7B7' }}
-                    thumbColor={settings[item.key] ? '#059669' : '#9CA3AF'}
-                  />
-                </View>
-              ))}
-
-              <View style={{ marginTop: 12, backgroundColor: '#F0FDF4',
-                borderRadius: 10, padding: 12, flexDirection: 'row', gap: 8 }}>
-                <Text>ℹ️</Text>
-                <Text style={{ flex: 1, fontSize: 11, color: '#065F46', lineHeight: 18 }}>
-                  การแจ้งเตือนถูกส่งผ่าน LINE OA ไม่เกิน 2 ครั้ง/วัน เพื่อควบคุมต้นทุน
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                <Text style={{ fontSize: 15, fontWeight: '800', color: '#111', flex: 1 }}>
+                  ⚙️ ตั้งค่าการแจ้งเตือน
                 </Text>
+                {!isPremium(userTier) && (
+                  <View style={{ backgroundColor: '#FEF3C7', borderRadius: 8,
+                    paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: '#FCD34D' }}>
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#92400E' }}>
+                      ✨ Premium
+                    </Text>
+                  </View>
+                )}
               </View>
+
+              {!isPremium(userTier) ? (
+                /* Pro tier — แสดง Premium lock */
+                <View style={{ backgroundColor: '#FFFBEB', borderRadius: 12, padding: 16,
+                  borderWidth: 1.5, borderColor: '#FCD34D', alignItems: 'center', gap: 8 }}>
+                  <Text style={{ fontSize: 28 }}>🔒</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#92400E', textAlign: 'center' }}>
+                    Push Notification เฉพาะ Premium
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#B45309', textAlign: 'center', lineHeight: 18 }}>
+                    คุณเชื่อมต่อ LINE แล้ว แต่การส่งแจ้งเตือนอัตโนมัติ{'\n'}
+                    ต้องอัปเกรดเป็น Premium ก่อนครับ
+                  </Text>
+                </View>
+              ) : settings ? (
+                /* Premium tier — แสดง toggles ครบ */
+                <>
+                  {([
+                    { key: 'enabled' as const, label: 'เปิดรับการแจ้งเตือน', icon: '🔔' },
+                    { key: 'paymentAlerts' as const, label: 'แจ้งเตือนการชำระเงิน', icon: '💳' },
+                    { key: 'orderAlerts' as const, label: 'แจ้งเตือน order ใหม่', icon: '📦' },
+                    { key: 'dailyDigest' as const, label: 'สรุปรายวัน', icon: '📊' },
+                  ] as const).map(item => (
+                    <View key={item.key}
+                      style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12,
+                        borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}>
+                      <Text style={{ fontSize: 20, marginRight: 12 }}>{item.icon}</Text>
+                      <Text style={{ flex: 1, fontSize: 14, color: '#374151', fontWeight: '500' }}>
+                        {item.label}
+                      </Text>
+                      <Switch
+                        value={settings[item.key]}
+                        onValueChange={(v) => toggleSetting(item.key, v)}
+                        disabled={updating || (item.key !== 'enabled' && !settings.enabled)}
+                        trackColor={{ false: '#E5E7EB', true: '#6EE7B7' }}
+                        thumbColor={settings[item.key] ? '#059669' : '#9CA3AF'}
+                      />
+                    </View>
+                  ))}
+                  <View style={{ marginTop: 12, backgroundColor: '#F0FDF4',
+                    borderRadius: 10, padding: 12, flexDirection: 'row', gap: 8 }}>
+                    <Text>ℹ️</Text>
+                    <Text style={{ flex: 1, fontSize: 11, color: '#065F46', lineHeight: 18 }}>
+                      การแจ้งเตือนถูกส่งผ่าน LINE OA ไม่เกิน 2 ครั้ง/วัน เพื่อควบคุมต้นทุน
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                <ActivityIndicator color="#059669" />
+              )}
             </View>
           )}
 

@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/logo/logo-moonoon-paotung-padded.png",
-    "scheme": "expensetracker",
+    "scheme": ["expensetracker", "poatung"],
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
