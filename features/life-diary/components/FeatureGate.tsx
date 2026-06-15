@@ -9,6 +9,6 @@ interface Props {
 }
 
 export function FeatureGate({ feature, children, fallback = null }: Props) {
-  const tier = useDiaryTier();
+  const { tier } = useDiaryTier();
   return DIARY_TIER_CONFIG[tier][feature] ? <>{children}</> : <>{fallback}</>;
 }

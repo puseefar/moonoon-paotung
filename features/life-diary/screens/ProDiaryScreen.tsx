@@ -10,7 +10,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, Pressable, ActivityIndicator,
   Animated, Modal, TextInput, TouchableWithoutFeedback,
-  Dimensions, Platform,
+  Dimensions, Platform, Keyboard,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -276,8 +276,17 @@ export default function ProDiaryScreen() {
   const [sheetMode, setSheetMode] = useState<'choose' | 'feel'>('choose');
   const [quickNote, setQuickNote] = useState('');
   const [quickMood, setQuickMood] = useState<MoodKey>('good');
+  const [keyboardH, setKeyboardH] = useState(0);
   const sheetY = useRef(new Animated.Value(400)).current;
   const backdropOp = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const showEv = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEv = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const show = Keyboard.addListener(showEv, e => setKeyboardH(e.endCoordinates.height));
+    const hide = Keyboard.addListener(hideEv, () => setKeyboardH(0));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
 
   function openSheet() {
     setSheetMode('choose');
@@ -665,7 +674,7 @@ export default function ProDiaryScreen() {
             </View>
           ) : (
             /* ── Quick feel form ───────────────────────────────────────────── */
-            <View style={{ padding: 20, paddingBottom: insets.bottom + 20 }}>
+            <View style={{ padding: 20, paddingBottom: keyboardH > 0 ? keyboardH + 12 : insets.bottom + 20 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
                 <Pressable onPress={() => setSheetMode('choose')} style={{ marginRight: 10 }}>
                   <Text style={{ color: C.inkSoft, fontSize: 14 }}>‹ กลับ</Text>

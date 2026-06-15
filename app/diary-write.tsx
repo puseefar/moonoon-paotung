@@ -63,7 +63,12 @@ function CheckItem({ label, done, tag }: { label: string; done: boolean; tag?: s
 }
 
 export default function DiaryWriteScreen() {
-  const tier = useDiaryTier();
+  const { tier, loading } = useDiaryTier();
+  if (loading) return (
+    <View style={{ flex: 1, backgroundColor: '#FBF8F3', justifyContent: 'center', alignItems: 'center' }}>
+      <ActivityIndicator size="large" color="#D14F86" />
+    </View>
+  );
   if (tier === 'pro' || tier === 'premium') return <ProDiaryWriteScreen />;
   return <FreeDiaryWriteScreen />;
 }

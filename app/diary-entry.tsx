@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator, Image, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, Image, Alert, Platform } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -115,7 +115,12 @@ interface EntryDetail {
 }
 
 export default function DiaryEntryScreen() {
-  const tier = useDiaryTier();
+  const { tier, loading } = useDiaryTier();
+  if (loading) return (
+    <View style={{ flex: 1, backgroundColor: '#FBF8F3', justifyContent: 'center', alignItems: 'center' }}>
+      <ActivityIndicator size="large" color="#D14F86" />
+    </View>
+  );
   if (tier === 'pro' || tier === 'premium') return <ProEntryDetailScreen />;
   return <FreeDiaryEntryDetail />;
 }
