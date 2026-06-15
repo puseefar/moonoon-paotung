@@ -17,6 +17,8 @@ import { useWalletStore } from '@/stores/useWalletStore';
 import { formatCurrency } from '@/lib/format';
 import { useSnackbar } from '@/components/ui/SnackbarProvider';
 import type { Category } from '@/db/schema';
+import { useDiaryTier } from '@/features/life-diary/hooks/useDiaryTier';
+import ProDiaryWriteScreen from '@/features/life-diary/screens/ProDiaryWriteScreen';
 
 const MOOD_LABELS: Record<string, string> = {
   '😊': 'มีความสุข', '🥰': 'รัก/อบอุ่น', '😆': 'สนุก',
@@ -61,6 +63,12 @@ function CheckItem({ label, done, tag }: { label: string; done: boolean; tag?: s
 }
 
 export default function DiaryWriteScreen() {
+  const tier = useDiaryTier();
+  if (tier === 'pro' || tier === 'premium') return <ProDiaryWriteScreen />;
+  return <FreeDiaryWriteScreen />;
+}
+
+function FreeDiaryWriteScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { showSnackbar } = useSnackbar();

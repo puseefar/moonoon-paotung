@@ -347,7 +347,7 @@ export default function ProDiaryScreen() {
             </Text>
           </View>
           <Pressable
-            onPress={() => router.push('/diary' as any)}
+            onPress={() => router.push('/diary-search' as any)}
             style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(61,53,72,0.08)',
               justifyContent: 'center', alignItems: 'center' }}>
             <Text style={{ fontSize: 17 }}>🔍</Text>

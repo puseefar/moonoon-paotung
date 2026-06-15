@@ -166,11 +166,14 @@ export const diaryService = {
 
     if (data.createTransaction && data.walletId && data.amount > 0) {
       transactionId = generateId();
+      const walletRow = await db.select({ name: wallets.name }).from(wallets).where(eq(wallets.id, data.walletId)).limit(1);
       await db.insert(transactions).values({
         id: transactionId, amount: data.amount,
         type: 'expense',
         categoryId: data.categoryId ?? null,
         walletId: data.walletId,
+        walletNameSnapshot: walletRow[0]?.name ?? null,
+        sourceType: 'manual',
         note: data.itemName,
         date: now, isRecurring: false, createdAt: now, updatedAt: now,
       });
@@ -225,6 +228,17 @@ export const diaryService = {
     ]);
     const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
     return { entry, media, expenses, totalExpenses };
+  },
+
+  async getEntriesWithRelations(options?: { limit?: number }): Promise<import('@/features/life-diary/types').EntryWithRelations[]> {
+    const entries = await this.getEntries({ limit: options?.limit ?? 200 });
+    return Promise.all(entries.map(async entry => {
+      const [media, expenses] = await Promise.all([
+        this.getMediaForEntry(entry.id),
+        this.getExpensesForEntry(entry.id),
+      ]);
+      return { entry, media, expenses, totalExpenses: expenses.reduce((s, e) => s + e.amount, 0) };
+    }));
   },
 
   // ── Stats ──────────────────────────────────────────────────────────────────
