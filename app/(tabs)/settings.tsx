@@ -1,10 +1,12 @@
-import { Image, ImageSourcePropType, View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { Image, ImageSourcePropType, View, Text, ScrollView, Pressable, StyleSheet, Switch, Alert } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { Card } from '@/components/ui/Card';
+import { entitlementService, type PackageId } from '@/services/entitlementService';
 
 // ── Setting Widget Icons ─────────────────────────────────────────────────────
 const SETTING_ICONS = {
@@ -69,6 +71,104 @@ function SettingItem({ icon, title, subtitle, onPress }: SettingItemProps) {
         <Text style={[styles.chevron, { color: colors.textSecondary }]}>›</Text>
       </View>
     </Pressable>
+  );
+}
+
+// ── Dev Tools (only in __DEV__ builds, never in production APK) ──────────────
+const DEV_PACKAGES: { id: PackageId; label: string; icon: string }[] = [
+  { id: 'pkg-01-diary',       icon: '📖', label: 'สมุดชีวิต Pro' },
+  { id: 'pkg-13-social',      icon: '💬', label: 'LINE Connect' },
+  { id: 'pkg-15-payment',     icon: '💳', label: 'Payment QR' },
+  { id: 'pkg-05-marketplace', icon: '🏪', label: 'Mini Shop' },
+  { id: 'pkg-02-budget',      icon: '📊', label: 'Budget' },
+  { id: 'pkg-03-bills',       icon: '🧾', label: 'Bills' },
+  { id: 'pkg-07-goals',       icon: '🎯', label: 'Goals' },
+  { id: 'pkg-14-estimator',   icon: '🛒', label: 'Pre-Trip' },
+];
+
+function DevToolsSection() {
+  const [states, setStates] = useState<Partial<Record<PackageId, boolean>>>({});
+  const [toggling, setToggling] = useState<PackageId | null>(null);
+
+  const load = useCallback(async () => {
+    const all = await entitlementService.getAllPackageStates();
+    setStates(all);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function toggle(id: PackageId, value: boolean) {
+    setToggling(id);
+    await entitlementService.setPackageEnabled(id, value);
+    setStates(prev => ({ ...prev, [id]: value }));
+    setToggling(null);
+  }
+
+  function resetAll() {
+    Alert.alert('Reset Entitlements', 'รีเซ็ต package ทุกตัวกลับ default?', [
+      { text: 'ยกเลิก', style: 'cancel' },
+      {
+        text: 'Reset', style: 'destructive', onPress: async () => {
+          for (const p of DEV_PACKAGES) {
+            await entitlementService.setPackageEnabled(p.id, false);
+          }
+          await load();
+        },
+      },
+    ]);
+  }
+
+  return (
+    <View style={{ marginHorizontal: 16, marginTop: 24, marginBottom: 8 }}>
+      {/* Section header */}
+      <View style={{ flexDirection: 'row', alignItems: 'center',
+        marginBottom: 10, gap: 8 }}>
+        <Text style={{ fontSize: 11, fontWeight: '800', color: '#EF4444',
+          letterSpacing: 0.6, textTransform: 'uppercase', flex: 1 }}>
+          🛠 Dev Tools · Entitlements
+        </Text>
+        <Pressable onPress={resetAll}
+          style={{ backgroundColor: '#FEF2F2', borderRadius: 8,
+            paddingHorizontal: 10, paddingVertical: 4 }}>
+          <Text style={{ fontSize: 11, fontWeight: '700', color: '#EF4444' }}>Reset</Text>
+        </Pressable>
+      </View>
+
+      {/* Package toggles */}
+      <View style={{ backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden',
+        borderWidth: 1.5, borderColor: '#FCA5A5' }}>
+        {DEV_PACKAGES.map((pkg, idx) => (
+          <View key={pkg.id}>
+            <View style={{ flexDirection: 'row', alignItems: 'center',
+              paddingVertical: 11, paddingHorizontal: 14 }}>
+              <Text style={{ fontSize: 18, marginRight: 10 }}>{pkg.icon}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#1F2937' }}>
+                  {pkg.label}
+                </Text>
+                <Text style={{ fontSize: 10, color: '#9CA3AF', marginTop: 1 }}>
+                  {pkg.id}
+                </Text>
+              </View>
+              <Switch
+                value={states[pkg.id] ?? false}
+                onValueChange={(v) => toggle(pkg.id, v)}
+                disabled={toggling === pkg.id}
+                trackColor={{ false: '#E5E7EB', true: '#FCA5A5' }}
+                thumbColor={states[pkg.id] ? '#EF4444' : '#9CA3AF'}
+              />
+            </View>
+            {idx < DEV_PACKAGES.length - 1 && (
+              <View style={{ height: 1, backgroundColor: '#FEE2E2', marginHorizontal: 14 }} />
+            )}
+          </View>
+        ))}
+      </View>
+
+      <Text style={{ fontSize: 10, color: '#9CA3AF', textAlign: 'center', marginTop: 8 }}>
+        ⚠️ Dev only — ซ่อนใน Production APK · เปลี่ยนแล้วกลับไปหน้าเดิมเพื่อ reload
+      </Text>
+    </View>
   );
 }
 
@@ -307,6 +407,9 @@ export default function SettingsScreen() {
             />
           </Card>
         </View>
+
+        {/* ── Dev Tools (DEV builds only) ──────────────────────────────────── */}
+        {__DEV__ && <DevToolsSection />}
 
       </ScrollView>
     </View>
