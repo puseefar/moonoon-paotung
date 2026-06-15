@@ -8,6 +8,8 @@ import { diaryService } from '@/services/diaryService';
 import type { DiaryEntry, DiaryMedia, DiaryExpense } from '@/db/schema';
 import { formatCurrency } from '@/lib/format';
 import { useSnackbar } from '@/components/ui/SnackbarProvider';
+import { useDiaryTier } from '@/features/life-diary/hooks/useDiaryTier';
+import ProEntryDetailScreen from '@/features/life-diary/screens/ProEntryDetailScreen';
 
 // ── Emotion Theme System ──────────────────────────────────────────────────────
 interface MoodTheme {
@@ -113,6 +115,12 @@ interface EntryDetail {
 }
 
 export default function DiaryEntryScreen() {
+  const tier = useDiaryTier();
+  if (tier === 'pro' || tier === 'premium') return <ProEntryDetailScreen />;
+  return <FreeDiaryEntryDetail />;
+}
+
+function FreeDiaryEntryDetail() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { showSnackbar } = useSnackbar();
