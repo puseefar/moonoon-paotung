@@ -593,7 +593,7 @@ export default function ProDiaryScreen() {
         </TouchableWithoutFeedback>
 
         <Animated.View style={{
-          position: 'absolute', left: 0, right: 0, bottom: 0,
+          position: 'absolute', left: 0, right: 0, bottom: keyboardH,
           backgroundColor: C.paper,
           borderTopLeftRadius: 28, borderTopRightRadius: 28,
           transform: [{ translateY: sheetY }],
@@ -674,7 +674,7 @@ export default function ProDiaryScreen() {
             </View>
           ) : (
             /* ── Quick feel form ───────────────────────────────────────────── */
-            <View style={{ padding: 20, paddingBottom: keyboardH > 0 ? keyboardH + 12 : insets.bottom + 20 }}>
+            <View style={{ padding: 20, paddingBottom: insets.bottom + 20 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
                 <Pressable onPress={() => setSheetMode('choose')} style={{ marginRight: 10 }}>
                   <Text style={{ color: C.inkSoft, fontSize: 14 }}>‹ กลับ</Text>
@@ -714,6 +714,8 @@ export default function ProDiaryScreen() {
                 onChangeText={setQuickNote}
                 multiline
                 numberOfLines={3}
+                blurOnSubmit
+                onSubmitEditing={() => Keyboard.dismiss()}
                 style={{
                   backgroundColor: '#fff', borderRadius: 14, padding: 14,
                   borderWidth: 1.5, borderColor: C.line,
