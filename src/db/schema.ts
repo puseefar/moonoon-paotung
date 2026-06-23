@@ -102,10 +102,29 @@ export const products = pgTable('products', {
 export const orders = pgTable('orders', {
   id: text('id').primaryKey(),
   shopId: text('shop_id').references(() => shops.id).notNull(),
-  productId: text('product_id').references(() => products.id).notNull(),
-  productName: text('product_name').notNull(),
-  amount: doublePrecision('amount').notNull(),
-  status: text('status').$type<'pending'|'confirmed'|'paid'|'cancelled'>().default('pending').notNull(),
+  // Legacy single-product fields (nullable for new multi-item orders)
+  productId: text('product_id').references(() => products.id),
+  productName: text('product_name'),
+  amount: doublePrecision('amount'),
+  // New full-order fields (v2)
+  orderNo: text('order_no'),
+  itemsJson: text('items_json'),              // JSON: OrderLineItem[]
+  customerName: text('customer_name'),
+  customerPhone: text('customer_phone'),
+  customerAddress: text('customer_address'),
+  subtotal: doublePrecision('subtotal'),
+  shippingCost: doublePrecision('shipping_cost').default(0),
+  discount: doublePrecision('discount').default(0),
+  total: doublePrecision('total'),
+  deliveryMethod: text('delivery_method'),    // 'free'|'fixed'|'pickup'
+  paymentMethod: text('payment_method'),      // 'promptpay'|'bank'
+  note: text('note'),
+  paymentRequestId: text('payment_request_id').references(() => paymentRequests.id),
+  expiresAt: timestamp('expires_at'),
+  publicToken: text('public_token'),
+  status: text('status')
+    .$type<'PENDING_PAYMENT'|'VERIFYING_SLIP'|'SLIP_REJECTED'|'PAID'|'PREPARING'|'SHIPPED'|'COMPLETED'|'CANCELLED'|'REFUNDED'|'pending'|'confirmed'|'paid'|'cancelled'>()
+    .default('PENDING_PAYMENT').notNull(),
   buyerLineId: text('buyer_line_id'),
   buyerName: text('buyer_name'),
   refId: text('ref_id'),

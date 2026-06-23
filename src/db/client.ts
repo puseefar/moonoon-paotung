@@ -126,6 +126,26 @@ export async function initDb() {
   await client`CREATE INDEX IF NOT EXISTS idx_orders_shop ON orders(shop_id)`;
   await client`CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)`;
 
+  // ── PKG-05 v2 order migration (idempotent) ───────────────────────────────────
+  await client`ALTER TABLE orders ALTER COLUMN product_id DROP NOT NULL`.catch(() => {});
+  await client`ALTER TABLE orders ALTER COLUMN product_name DROP NOT NULL`.catch(() => {});
+  await client`ALTER TABLE orders ALTER COLUMN amount DROP NOT NULL`.catch(() => {});
+  await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_no text`;
+  await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS items_json text`;
+  await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_name text`;
+  await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_phone text`;
+  await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_address text`;
+  await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS subtotal double precision`;
+  await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_cost double precision DEFAULT 0`;
+  await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount double precision DEFAULT 0`;
+  await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS total double precision`;
+  await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_method text`;
+  await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method text`;
+  await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS note text`;
+  await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_request_id text REFERENCES payment_requests(id)`.catch(() => {});
+  await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS expires_at timestamptz`;
+  await client`ALTER TABLE orders ADD COLUMN IF NOT EXISTS public_token text`;
+
   await client`
     CREATE TABLE IF NOT EXISTS action_log (
       id text PRIMARY KEY NOT NULL,

@@ -1,10 +1,13 @@
 import { Hono } from 'hono';
 import type { AppVariables } from '../types.js';
 import { eq, and } from 'drizzle-orm';
+import { randomBytes } from 'crypto';
 import { db } from '../db/client.js';
-import { shops, products, orders } from '../db/schema.js';
+import { shops, products, orders, paymentRequests } from '../db/schema.js';
 import { genId } from '../lib/id.js';
+import { generatePromptPayQR } from '../lib/promptpay.js';
 import { authMiddleware, requireTier } from '../middleware/auth.js';
+import { config } from '../config.js';
 
 export const pkg05Router = new Hono<{ Variables: AppVariables }>();
 pkg05Router.use('*', authMiddleware);
@@ -128,6 +131,113 @@ pkg05Router.get('/orders', async (c) => {
   return c.json({ ok: true, data: orderList.map(toOrderResponse) });
 });
 
+// GET /pkg05/orders/:id
+pkg05Router.get('/orders/:id', async (c) => {
+  const userId = c.get('userId') as string;
+  const shop = await db.query.shops.findFirst({ where: eq(shops.userId, userId) });
+  if (!shop) return c.json({ ok: false, code: 'NOT_FOUND', message: 'ไม่มีร้าน' }, 404);
+
+  const order = await db.query.orders.findFirst({
+    where: and(eq(orders.id, c.req.param('id')), eq(orders.shopId, shop.id)),
+  });
+  if (!order) return c.json({ ok: false, code: 'NOT_FOUND', message: 'ไม่พบ order' }, 404);
+  return c.json({ ok: true, data: toOrderResponse(order) });
+});
+
+// POST /pkg05/orders
+pkg05Router.post('/orders', async (c) => {
+  const userId = c.get('userId') as string;
+  const shop = await db.query.shops.findFirst({ where: eq(shops.userId, userId) });
+  if (!shop) return c.json({ ok: false, code: 'NOT_FOUND', message: 'สร้างร้านก่อนรับออเดอร์' }, 404);
+  if (!shop.isOpen) return c.json({ ok: false, code: 'SHOP_CLOSED', message: 'ร้านปิดอยู่' }, 422);
+
+  type CreateOrderBody = {
+    items: { productId: string; qty: number }[];
+    customer: { name: string; phone: string; address: string };
+    deliveryMethod: 'free' | 'fixed' | 'pickup';
+    paymentMethod: 'promptpay' | 'bank';
+    note?: string;
+  };
+  const body = await c.req.json<CreateOrderBody>();
+
+  if (!body.items?.length) return c.json({ ok: false, code: 'BAD_REQUEST', message: 'ไม่มีสินค้า' }, 400);
+  if (!body.customer?.name?.trim() || !body.customer?.phone?.trim()) {
+    return c.json({ ok: false, code: 'BAD_REQUEST', message: 'กรุณาระบุชื่อและเบอร์โทรผู้รับ' }, 400);
+  }
+
+  // Resolve product snapshots + validate stock
+  const FIXED_SHIPPING = 40;
+  const resolvedItems: { productId: string; name: string; price: number; qty: number; image?: string }[] = [];
+  let subtotal = 0;
+  for (const ci of body.items) {
+    const prod = await db.query.products.findFirst({
+      where: and(eq(products.id, ci.productId), eq(products.shopId, shop.id)),
+    });
+    if (!prod) return c.json({ ok: false, code: 'PRODUCT_NOT_FOUND', message: `ไม่พบสินค้า ${ci.productId}` }, 404);
+    if (!prod.isActive) return c.json({ ok: false, code: 'PRODUCT_UNAVAILABLE', message: `${prod.name} ไม่พร้อมขาย` }, 422);
+    resolvedItems.push({ productId: prod.id, name: prod.name, price: prod.price, qty: ci.qty });
+    subtotal += prod.price * ci.qty;
+  }
+
+  const shippingCost = body.deliveryMethod === 'fixed' ? FIXED_SHIPPING : 0;
+  const total = subtotal + shippingCost;
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + 30 * 60 * 1000); // 30 min
+
+  // Generate ORDER-YYYYMMDD-XXXX
+  const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+  const countResult = await db.query.orders.findMany({ where: eq(orders.shopId, shop.id) });
+  const seq = String(countResult.length + 1).padStart(4, '0');
+  const orderNo = `ORDER-${dateStr}-${seq}`;
+
+  // Create PromptPay payment request if needed
+  let paymentRequestId: string | undefined;
+  if (body.paymentMethod === 'promptpay') {
+    const reqId = genId();
+    const qrPayload = generatePromptPayQR(config.promptpay.id, total);
+    const uploadToken = randomBytes(32).toString('base64url');
+    await db.insert(paymentRequests).values({
+      id: reqId,
+      userId,
+      amount: total,
+      description: `ออเดอร์ ${orderNo} ร้าน${shop.name}`,
+      qrPayload,
+      status: 'pending',
+      uploadToken,
+      expiresAt,
+      createdAt: now,
+    });
+    paymentRequestId = reqId;
+  }
+
+  const orderId = genId();
+  const publicToken = randomBytes(16).toString('base64url');
+  await db.insert(orders).values({
+    id: orderId,
+    shopId: shop.id,
+    orderNo,
+    itemsJson: JSON.stringify(resolvedItems),
+    customerName: body.customer.name.trim(),
+    customerPhone: body.customer.phone.trim(),
+    customerAddress: body.customer.address.trim(),
+    subtotal,
+    shippingCost,
+    discount: 0,
+    total,
+    deliveryMethod: body.deliveryMethod,
+    paymentMethod: body.paymentMethod,
+    note: body.note?.trim() || null,
+    paymentRequestId: paymentRequestId ?? null,
+    expiresAt,
+    publicToken,
+    status: 'PENDING_PAYMENT',
+    createdAt: now,
+  });
+
+  const created = await db.query.orders.findFirst({ where: eq(orders.id, orderId) });
+  return c.json({ ok: true, data: toOrderResponse(created!) }, 201);
+});
+
 // POST /pkg05/orders/:id/confirm
 pkg05Router.post('/orders/:id/confirm', async (c) => {
   const userId = c.get('userId') as string;
@@ -143,6 +253,26 @@ pkg05Router.post('/orders/:id/confirm', async (c) => {
   }
 
   await db.update(orders).set({ status: 'confirmed' }).where(eq(orders.id, order.id));
+  const updated = await db.query.orders.findFirst({ where: eq(orders.id, order.id) });
+  return c.json({ ok: true, data: toOrderResponse(updated!) });
+});
+
+// PATCH /pkg05/orders/:id/status
+pkg05Router.patch('/orders/:id/status', async (c) => {
+  const userId = c.get('userId') as string;
+  const shop = await db.query.shops.findFirst({ where: eq(shops.userId, userId) });
+  if (!shop) return c.json({ ok: false, code: 'NOT_FOUND', message: 'ไม่มีร้าน' }, 404);
+
+  const order = await db.query.orders.findFirst({
+    where: and(eq(orders.id, c.req.param('id')), eq(orders.shopId, shop.id)),
+  });
+  if (!order) return c.json({ ok: false, code: 'NOT_FOUND', message: 'ไม่พบ order' }, 404);
+
+  const { status } = await c.req.json<{ status: string }>();
+  const now = new Date();
+  const extra: Partial<typeof orders.$inferInsert> = status === 'PAID' ? { paidAt: now } : {};
+  await db.update(orders).set({ status: status as any, ...extra }).where(eq(orders.id, order.id));
+
   const updated = await db.query.orders.findFirst({ where: eq(orders.id, order.id) });
   return c.json({ ok: true, data: toOrderResponse(updated!) });
 });
@@ -165,12 +295,51 @@ function toProductResponse(p: typeof products.$inferSelect) {
 }
 
 function toOrderResponse(o: typeof orders.$inferSelect) {
+  // New v2 order (has itemsJson)
+  if (o.itemsJson) {
+    const items = JSON.parse(o.itemsJson) as { productId: string; name: string; price: number; qty: number; image?: string }[];
+    return {
+      orderId: o.id,
+      orderNo: o.orderNo ?? o.id,
+      shopId: o.shopId,
+      customer: {
+        name: o.customerName ?? '',
+        phone: o.customerPhone ?? '',
+        address: o.customerAddress ?? '',
+      },
+      items,
+      subtotal: o.subtotal ?? 0,
+      shippingCost: o.shippingCost ?? 0,
+      discount: o.discount ?? 0,
+      total: o.total ?? 0,
+      deliveryMethod: o.deliveryMethod as 'free' | 'fixed' | 'pickup' ?? 'free',
+      paymentMethod: o.paymentMethod as 'promptpay' | 'bank' ?? 'promptpay',
+      note: o.note ?? undefined,
+      status: o.status,
+      paymentRequestId: o.paymentRequestId ?? undefined,
+      expiresAt: o.expiresAt ? (o.expiresAt as Date).toISOString() : new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      publicToken: o.publicToken ?? '',
+      paidAt: o.paidAt ? (o.paidAt as Date).toISOString() : undefined,
+      createdAt: (o.createdAt as Date).toISOString(),
+    };
+  }
+  // Legacy v1 order (single product, backward compat)
   return {
-    orderId: o.id, shopId: o.shopId, productId: o.productId,
-    productName: o.productName, amount: o.amount, status: o.status,
-    buyerName: o.buyerName ?? undefined, buyerLineId: o.buyerLineId ?? undefined,
-    refId: o.refId ?? undefined,
-    createdAt: (o.createdAt as Date).toISOString(),
+    orderId: o.id,
+    orderNo: o.id,
+    shopId: o.shopId,
+    customer: { name: o.buyerName ?? '', phone: '', address: '' },
+    items: o.productId ? [{ productId: o.productId, name: o.productName ?? '', price: o.amount ?? 0, qty: 1 }] : [],
+    subtotal: o.amount ?? 0,
+    shippingCost: 0,
+    discount: 0,
+    total: o.amount ?? 0,
+    deliveryMethod: 'free' as const,
+    paymentMethod: 'promptpay' as const,
+    status: o.status,
+    expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    publicToken: '',
     paidAt: o.paidAt ? (o.paidAt as Date).toISOString() : undefined,
+    createdAt: (o.createdAt as Date).toISOString(),
   };
 }
