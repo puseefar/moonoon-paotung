@@ -126,6 +126,18 @@ export async function initDb() {
   await client`CREATE INDEX IF NOT EXISTS idx_orders_shop ON orders(shop_id)`;
   await client`CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)`;
 
+  // ── PKG-05 stock column (idempotent) ────────────────────────────────────────
+  await client`ALTER TABLE products ADD COLUMN IF NOT EXISTS stock double precision DEFAULT 999`;
+
+  // ── PKG-05 stock deduction idempotency table ─────────────────────────────────
+  await client`
+    CREATE TABLE IF NOT EXISTS stock_deductions (
+      id text PRIMARY KEY NOT NULL,
+      order_id text NOT NULL,
+      deducted_at timestamptz NOT NULL
+    )
+  `;
+
   // ── PKG-05 v2 order migration (idempotent) ───────────────────────────────────
   await client`ALTER TABLE orders ALTER COLUMN product_id DROP NOT NULL`.catch(() => {});
   await client`ALTER TABLE orders ALTER COLUMN product_name DROP NOT NULL`.catch(() => {});

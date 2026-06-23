@@ -3,7 +3,8 @@ import type { AppVariables } from '../types.js';
 import { eq, and } from 'drizzle-orm';
 import { randomBytes } from 'crypto';
 import { db } from '../db/client.js';
-import { shops, products, orders, paymentRequests } from '../db/schema.js';
+import { shops, products, orders, paymentRequests, stockDeductions } from '../db/schema.js';
+import { sql } from 'drizzle-orm';
 import { genId } from '../lib/id.js';
 import { generatePromptPayQR } from '../lib/promptpay.js';
 import { authMiddleware, requireTier } from '../middleware/auth.js';
@@ -257,6 +258,41 @@ pkg05Router.post('/orders/:id/confirm', async (c) => {
   return c.json({ ok: true, data: toOrderResponse(updated!) });
 });
 
+// ── Stock deduction (idempotent) ─────────────────────────────────────────────
+// ตัดสต็อกได้ครั้งเดียวต่อ paymentRef — ใช้ stockDeductions เป็น idempotency guard
+async function deductStockIdempotent(order: typeof orders.$inferSelect): Promise<'deducted' | 'already_done' | 'oversell'> {
+  const idempotencyKey = order.paymentRequestId ?? order.id;
+  const existing = await db.query.stockDeductions.findFirst({ where: eq(stockDeductions.id, idempotencyKey) });
+  if (existing) return 'already_done';
+
+  if (!order.itemsJson) return 'already_done';
+  const items = JSON.parse(order.itemsJson) as { productId: string; qty: number }[];
+
+  // ตรวจ stock ก่อนตัด
+  for (const item of items) {
+    const prod = await db.query.products.findFirst({ where: eq(products.id, item.productId) });
+    if (prod && prod.stock !== null && prod.stock !== undefined && prod.stock < item.qty) {
+      return 'oversell';
+    }
+  }
+
+  // ตัดสต็อกทุก item
+  for (const item of items) {
+    await db.update(products)
+      .set({ stock: sql`GREATEST(0, COALESCE(stock, 999) - ${item.qty})` })
+      .where(eq(products.id, item.productId));
+  }
+
+  // บันทึก idempotency record
+  await db.insert(stockDeductions).values({
+    id: idempotencyKey,
+    orderId: order.id,
+    deductedAt: new Date(),
+  });
+
+  return 'deducted';
+}
+
 // PATCH /pkg05/orders/:id/status
 pkg05Router.patch('/orders/:id/status', async (c) => {
   const userId = c.get('userId') as string;
@@ -272,6 +308,14 @@ pkg05Router.patch('/orders/:id/status', async (c) => {
   const now = new Date();
   const extra: Partial<typeof orders.$inferInsert> = status === 'PAID' ? { paidAt: now } : {};
   await db.update(orders).set({ status: status as any, ...extra }).where(eq(orders.id, order.id));
+
+  // ตัดสต็อก idempotent เมื่อ transition เข้า PAID
+  if (status === 'PAID') {
+    const result = await deductStockIdempotent(order);
+    if (result === 'oversell') {
+      await db.update(orders).set({ status: 'OVERSELL_FLAGGED' as any }).where(eq(orders.id, order.id));
+    }
+  }
 
   const updated = await db.query.orders.findFirst({ where: eq(orders.id, order.id) });
   return c.json({ ok: true, data: toOrderResponse(updated!) });

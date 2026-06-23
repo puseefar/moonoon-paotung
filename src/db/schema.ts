@@ -96,6 +96,7 @@ export const products = pgTable('products', {
   description: text('description').notNull().default(''),
   isActive: boolean('is_active').default(true),
   sortOrder: doublePrecision('sort_order').default(0),
+  stock: doublePrecision('stock').default(999),  // null = ไม่จำกัด
   createdAt: timestamp('created_at').notNull(),
 }, (t) => [index('idx_products_shop').on(t.shopId)]);
 
@@ -134,6 +135,13 @@ export const orders = pgTable('orders', {
   index('idx_orders_shop').on(t.shopId),
   index('idx_orders_status').on(t.status),
 ]);
+
+// ── Stock Deduction Log (idempotency) ─────────────────────────────────────────
+export const stockDeductions = pgTable('stock_deductions', {
+  id: text('id').primaryKey(),        // paymentRef (idempotency key)
+  orderId: text('order_id').notNull(),
+  deductedAt: timestamp('deducted_at').notNull(),
+});
 
 // ── Action Log ────────────────────────────────────────────────────────────────
 export const actionLog = pgTable('action_log', {

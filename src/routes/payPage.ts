@@ -6,7 +6,7 @@ import { eq, and, desc } from 'drizzle-orm';
 import { createHash } from 'crypto';
 import QRCode from 'qrcode';
 import { db } from '../db/client.js';
-import { paymentRequests, paymentSlips, slipUsed, actionLog } from '../db/schema.js';
+import { paymentRequests, paymentSlips, slipUsed, actionLog, orders, shops } from '../db/schema.js';
 import { config } from '../config.js';
 import { genId } from '../lib/id.js';
 import { notifyPaymentPaid } from './pkg13.js';
@@ -282,6 +282,14 @@ payPageRouter.get('/:id', async (c) => {
   const isPaid    = req.status === 'paid';
   const hasToken  = !!req.uploadToken && req.uploadToken === token;
 
+  // ดึงชื่อร้านจาก order ที่ผูกกับ payment request นี้ (ถ้ามี)
+  const linkedOrder = await db.query.orders.findFirst({ where: eq(orders.paymentRequestId, id) });
+  let shopName = 'หมูนุ่น+เป๋าตุง';
+  if (linkedOrder?.shopId) {
+    const shop = await db.query.shops.findFirst({ where: eq(shops.id, linkedOrder.shopId) });
+    if (shop?.name) shopName = shop.name;
+  }
+
   const amount    = Number(req.amount).toLocaleString('th-TH', { minimumFractionDigits: 2 });
   const shortRef  = id.slice(0, 8).toUpperCase();
   const expiryDt  = (req.expiresAt as Date).toLocaleDateString('th-TH', {
@@ -316,8 +324,8 @@ payPageRouter.get('/:id', async (c) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-  <title>ชำระเงิน ฿${amount} — หมูนุ่น+เป๋าตุง</title>
-  <meta property="og:title" content="ชำระเงิน ฿${amount} — หมูนุ่น+เป๋าตุง">
+  <title>ชำระเงิน ฿${amount} — ${shopName}</title>
+  <meta property="og:title" content="ชำระเงิน ฿${amount} — ${shopName}">
   <meta property="og:description" content="${req.description} · รหัส ${shortRef}">
   <meta property="og:image" content="${config.serverUrl}/pay/${id}/qr.png">
   <meta property="og:image:width" content="400">
@@ -391,8 +399,8 @@ payPageRouter.get('/:id', async (c) => {
 <div class="page">
   <div class="header">
     <div class="header-row">
-      <div class="hicon">🐷</div>
-      <span class="htitle">หมูนุ่น+เป๋าตุง</span>
+      <div class="hicon">🛍️</div>
+      <span class="htitle">${shopName}</span>
     </div>
     <div class="hsub">Thai QR Payment · PromptPay</div>
   </div>
@@ -403,8 +411,11 @@ payPageRouter.get('/:id', async (c) => {
   <div class="card" id="qr-card" style="display:${isPaid ? 'none' : 'block'}">
     <div class="card-body">
       <div class="row">
-        <span class="rlabel">ผู้รับเงิน</span>
-        <span class="rval">หมูนุ่น+เป๋าตุง<br><small style="color:#6B7280;font-weight:400">${config.promptpay.id}</small></span>
+        <span class="rlabel">ร้านค้า</span>
+        <span class="rval">${shopName}<br><small style="color:#6B7280;font-weight:400">PromptPay: ${config.promptpay.id}</small></span>
+      </div>
+      <div class="row" style="background:#FFFBEB;border-radius:8px;padding:8px 10px;margin-bottom:4px">
+        <span style="font-size:11px;color:#92400E;line-height:1.5">ℹ️ ชื่อที่แสดงในแอปธนาคารขณะสแกนจะเป็น<strong>ชื่อบัญชีจริงของเจ้าของร้าน</strong> ซึ่งเป็นข้อจำกัดของระบบพร้อมเพย์บุคคลธรรมดา</span>
       </div>
       <div class="row">
         <span class="rlabel">รายการ</span>
@@ -464,18 +475,50 @@ payPageRouter.get('/:id', async (c) => {
   </div>
   `}
 
-  <!-- ── Thank you page ── -->
+  <!-- ── Thank you page (Order-level success) ── -->
   <div id="section-paid" style="display:${isPaid ? 'block' : 'none'}">
     <div class="thank-icon">✅</div>
     <div class="thank-title">ขอบคุณสำหรับการชำระเงิน</div>
-    <div class="thank-sub">ยอด ฿${amount}<br>ชำระเรียบร้อยแล้ว</div>
+    <div class="thank-sub">ร้านค้าได้รับการชำระเงินเรียบร้อยแล้ว</div>
+
+    ${linkedOrder ? `
+    <!-- Order number -->
+    <div style="margin:12px 16px 0;background:#F5F3FF;border-radius:12px;padding:12px 16px;border:1px solid #DDD6FE">
+      <div style="font-size:10px;color:#7C3AED;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:6px">📦 เลขที่คำสั่งซื้อ</div>
+      <div style="font-size:18px;font-weight:900;color:#5B21B6;font-family:monospace;letter-spacing:2px">${linkedOrder.orderNo ?? id.slice(0, 8).toUpperCase()}</div>
+    </div>
+
+    <!-- Items -->
+    ${(() => {
+      try {
+        const items = JSON.parse(linkedOrder.itemsJson ?? '[]') as {name: string; price: number; qty: number}[];
+        if (!items.length) return '';
+        const rows = items.map(i =>
+          `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #F3F4F6">
+            <span style="font-size:13px;color:#2D1B69;font-weight:600">${i.name} ×${i.qty}</span>
+            <span style="font-size:13px;font-weight:700;color:#7C3AED">฿${(i.price * i.qty).toLocaleString('th-TH')}</span>
+          </div>`
+        ).join('');
+        return `<div style="margin:8px 16px 0;background:#fff;border-radius:12px;padding:12px 16px;border:1px solid #E5E7EB">
+          <div style="font-size:10px;color:#6B7280;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:8px">รายการสินค้า</div>
+          ${rows}
+          <div style="display:flex;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:2px solid #EDE9FE">
+            <span style="font-size:14px;font-weight:800;color:#2D1B69">ยอดรวม</span>
+            <span style="font-size:18px;font-weight:900;color:#7C3AED">฿${Number(linkedOrder.total ?? req.amount).toLocaleString('th-TH', {minimumFractionDigits: 2})}</span>
+          </div>
+        </div>`;
+      } catch { return ''; }
+    })()}
+    ` : `
     <div style="text-align:center;margin:8px 16px 0">
       <div style="font-size:10px;color:#6B7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">รหัสอ้างอิง</div>
       <div style="font-size:22px;font-weight:900;color:#047857;letter-spacing:4px;font-family:monospace">${shortRef}</div>
     </div>
+    `}
+
     <div class="upload-section" style="background:#ECFDF5;border-color:#6EE7B7;margin-top:16px">
       <div class="upload-title" style="color:#065F46">🔒 บันทึกหน้าจอนี้เป็นหลักฐาน</div>
-      <div class="upload-desc" style="color:#047857">Screenshot หน้านี้ไว้เป็นหลักฐานการชำระเงินครับ</div>
+      <div class="upload-desc" style="color:#047857">Screenshot หน้านี้ไว้เป็นหลักฐานการชำระเงิน<br>ร้านค้าจะติดต่อกลับเพื่อยืนยันการจัดส่งครับ</div>
     </div>
   </div>
 
