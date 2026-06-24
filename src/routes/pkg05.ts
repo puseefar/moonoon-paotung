@@ -153,7 +153,7 @@ pkg05Router.post('/orders', async (c) => {
   if (!shop.isOpen) return c.json({ ok: false, code: 'SHOP_CLOSED', message: 'ร้านปิดอยู่' }, 422);
 
   type CreateOrderBody = {
-    items: { productId: string; qty: number }[];
+    items: { productId: string; qty: number; unitPrice?: number; name?: string; image?: string }[];
     customer: { name: string; phone: string; address: string };
     deliveryMethod: 'free' | 'fixed' | 'pickup';
     paymentMethod: 'promptpay' | 'bank';
@@ -176,8 +176,12 @@ pkg05Router.post('/orders', async (c) => {
     });
     if (!prod) return c.json({ ok: false, code: 'PRODUCT_NOT_FOUND', message: `ไม่พบสินค้า ${ci.productId}` }, 404);
     if (!prod.isActive) return c.json({ ok: false, code: 'PRODUCT_UNAVAILABLE', message: `${prod.name} ไม่พร้อมขาย` }, 422);
-    resolvedItems.push({ productId: prod.id, name: prod.name, price: prod.price, qty: ci.qty });
-    subtotal += prod.price * ci.qty;
+    // variant เก็บ local บนเครื่องผู้ขาย — server ไม่รู้ราคา variant
+    // ใช้ราคา/ชื่อที่ client ส่งมา (snapshot จากตะกร้า) ถ้ามี, fallback เป็นราคาฐาน
+    const unitPrice = (typeof ci.unitPrice === 'number' && ci.unitPrice >= 0) ? ci.unitPrice : prod.price;
+    const itemName = ci.name?.trim() || prod.name;
+    resolvedItems.push({ productId: prod.id, name: itemName, price: unitPrice, qty: ci.qty, image: ci.image });
+    subtotal += unitPrice * ci.qty;
   }
 
   const shippingCost = body.deliveryMethod === 'fixed' ? FIXED_SHIPPING : 0;
