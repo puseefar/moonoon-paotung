@@ -153,7 +153,7 @@ pkg05Router.post('/orders', async (c) => {
   if (!shop.isOpen) return c.json({ ok: false, code: 'SHOP_CLOSED', message: 'ร้านปิดอยู่' }, 422);
 
   type CreateOrderBody = {
-    items: { productId: string; qty: number; unitPrice?: number; name?: string; image?: string; variantId?: string; variantLabel?: string }[];
+    items: { productId: string; qty: number; unitPrice?: number; name?: string; image?: string; variantId?: string; variantLabel?: string; unitCost?: number }[];
     customer: { name: string; phone: string; address: string };
     deliveryMethod: 'free' | 'fixed' | 'pickup';
     paymentMethod: 'promptpay' | 'bank';
@@ -168,7 +168,7 @@ pkg05Router.post('/orders', async (c) => {
 
   // Resolve product snapshots + validate stock
   const FIXED_SHIPPING = 40;
-  const resolvedItems: { productId: string; name: string; price: number; qty: number; image?: string; variantId?: string; variantLabel?: string }[] = [];
+  const resolvedItems: { productId: string; name: string; price: number; qty: number; image?: string; variantId?: string; variantLabel?: string; unitCost?: number }[] = [];
   let subtotal = 0;
   for (const ci of body.items) {
     const prod = await db.query.products.findFirst({
@@ -180,7 +180,7 @@ pkg05Router.post('/orders', async (c) => {
     // ใช้ราคา/ชื่อที่ client ส่งมา (snapshot จากตะกร้า) ถ้ามี, fallback เป็นราคาฐาน
     const unitPrice = (typeof ci.unitPrice === 'number' && ci.unitPrice >= 0) ? ci.unitPrice : prod.price;
     const itemName = ci.name?.trim() || prod.name;
-    resolvedItems.push({ productId: prod.id, name: itemName, price: unitPrice, qty: ci.qty, image: ci.image, variantId: ci.variantId, variantLabel: ci.variantLabel });
+    resolvedItems.push({ productId: prod.id, name: itemName, price: unitPrice, qty: ci.qty, image: ci.image, variantId: ci.variantId, variantLabel: ci.variantLabel, unitCost: ci.unitCost });
     subtotal += unitPrice * ci.qty;
   }
 
