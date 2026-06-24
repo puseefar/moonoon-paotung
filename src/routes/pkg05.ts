@@ -153,7 +153,7 @@ pkg05Router.post('/orders', async (c) => {
   if (!shop.isOpen) return c.json({ ok: false, code: 'SHOP_CLOSED', message: 'ร้านปิดอยู่' }, 422);
 
   type CreateOrderBody = {
-    items: { productId: string; qty: number; unitPrice?: number; name?: string; image?: string }[];
+    items: { productId: string; qty: number; unitPrice?: number; name?: string; image?: string; variantId?: string; variantLabel?: string }[];
     customer: { name: string; phone: string; address: string };
     deliveryMethod: 'free' | 'fixed' | 'pickup';
     paymentMethod: 'promptpay' | 'bank';
@@ -168,7 +168,7 @@ pkg05Router.post('/orders', async (c) => {
 
   // Resolve product snapshots + validate stock
   const FIXED_SHIPPING = 40;
-  const resolvedItems: { productId: string; name: string; price: number; qty: number; image?: string }[] = [];
+  const resolvedItems: { productId: string; name: string; price: number; qty: number; image?: string; variantId?: string; variantLabel?: string }[] = [];
   let subtotal = 0;
   for (const ci of body.items) {
     const prod = await db.query.products.findFirst({
@@ -180,7 +180,7 @@ pkg05Router.post('/orders', async (c) => {
     // ใช้ราคา/ชื่อที่ client ส่งมา (snapshot จากตะกร้า) ถ้ามี, fallback เป็นราคาฐาน
     const unitPrice = (typeof ci.unitPrice === 'number' && ci.unitPrice >= 0) ? ci.unitPrice : prod.price;
     const itemName = ci.name?.trim() || prod.name;
-    resolvedItems.push({ productId: prod.id, name: itemName, price: unitPrice, qty: ci.qty, image: ci.image });
+    resolvedItems.push({ productId: prod.id, name: itemName, price: unitPrice, qty: ci.qty, image: ci.image, variantId: ci.variantId, variantLabel: ci.variantLabel });
     subtotal += unitPrice * ci.qty;
   }
 
@@ -264,7 +264,7 @@ pkg05Router.post('/orders/:id/confirm', async (c) => {
 
 // ── Stock deduction (idempotent) ─────────────────────────────────────────────
 // ตัดสต็อกได้ครั้งเดียวต่อ paymentRef — ใช้ stockDeductions เป็น idempotency guard
-async function deductStockIdempotent(order: typeof orders.$inferSelect): Promise<'deducted' | 'already_done' | 'oversell'> {
+export async function deductStockIdempotent(order: typeof orders.$inferSelect): Promise<'deducted' | 'already_done' | 'oversell'> {
   const idempotencyKey = order.paymentRequestId ?? order.id;
   const existing = await db.query.stockDeductions.findFirst({ where: eq(stockDeductions.id, idempotencyKey) });
   if (existing) return 'already_done';
@@ -295,6 +295,26 @@ async function deductStockIdempotent(order: typeof orders.$inferSelect): Promise
   });
 
   return 'deducted';
+}
+
+// ── Mark order PAID เมื่อสลิปผ่านบนหน้าเว็บสาธารณะ (payPage) ──────────────────
+// เรียกจาก runSlipVerification หลังตั้ง paymentRequests.status='paid'
+// เพื่อให้ order ขยับเป็น PAID + ตัดสต็อก server (เดิม flow นี้ไม่เชื่อมกลับ order เลย)
+export async function markOrderPaidFromPayment(paymentReqId: string, transRef: string): Promise<void> {
+  const order = await db.query.orders.findFirst({ where: eq(orders.paymentRequestId, paymentReqId) });
+  if (!order) return;
+  if (order.status === 'PAID' || order.status === 'COMPLETED') return; // กันทำซ้ำ
+
+  const now = new Date();
+  await db.update(orders)
+    .set({ status: 'PAID', paidAt: now, refId: transRef })
+    .where(eq(orders.id, order.id));
+
+  // ตัดสต็อก idempotent (idempotency key = paymentRequestId)
+  const result = await deductStockIdempotent(order);
+  if (result === 'oversell') {
+    await db.update(orders).set({ status: 'OVERSELL_FLAGGED' as any }).where(eq(orders.id, order.id));
+  }
 }
 
 // PATCH /pkg05/orders/:id/status
@@ -364,6 +384,7 @@ function toOrderResponse(o: typeof orders.$inferSelect) {
       paymentMethod: o.paymentMethod as 'promptpay' | 'bank' ?? 'promptpay',
       note: o.note ?? undefined,
       status: o.status,
+      slipRef: o.refId ?? undefined,
       paymentRequestId: o.paymentRequestId ?? undefined,
       expiresAt: o.expiresAt ? (o.expiresAt as Date).toISOString() : new Date(Date.now() + 30 * 60 * 1000).toISOString(),
       publicToken: o.publicToken ?? '',

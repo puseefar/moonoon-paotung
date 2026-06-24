@@ -10,6 +10,7 @@ import { paymentRequests, paymentSlips, slipUsed, actionLog, orders, shops } fro
 import { config } from '../config.js';
 import { genId } from '../lib/id.js';
 import { notifyPaymentPaid } from './pkg13.js';
+import { markOrderPaidFromPayment } from './pkg05.js';
 
 export const payPageRouter = new Hono();
 
@@ -149,6 +150,11 @@ async function runSlipVerification(
   });
 
   notifyPaymentPaid(userId, expectedAmount, transRef!).catch(() => {});
+
+  // เชื่อมกลับ order: ขยับเป็น PAID + ตัดสต็อก server (เดิมขาดขั้นนี้ → order ค้าง PENDING)
+  await markOrderPaidFromPayment(paymentReqId, transRef!).catch((e) => {
+    console.error('[PayPage] markOrderPaidFromPayment failed:', e);
+  });
 }
 
 // ── GET /pay/:id/qr.png  (serve QR as real PNG — for OG image + mobile save) ──
