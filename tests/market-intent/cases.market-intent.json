@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "language": "th",
+  "description": "Mini golden set — Market Selling Intent rule (ขายของในตลาด) + guard (มติทีม 8 มิ.ย. 2569)",
+  "cases": [
+    { "id": "mkt-pos-trade-01", "group": "positive_trade", "text": "ซื้อไก่ 5000 ไปย่างขายในตลาดได้เงิน 12000", "expectTradeSet": true, "expectConfidence": "high", "expectCostAmount": 5000, "expectRevenueAmount": 12000, "expectProfit": 7000, "expectCategory": "ขายของในตลาด", "expectCostCategory": "ต้นทุนขาย", "expectRevenueCategory": "ขายของในตลาด", "expectBusinessActivity": "ขายของในตลาด" },
+    { "id": "mkt-pos-trade-02", "group": "positive_trade", "text": "ซื้อลูกชิ้น 700 ไปขายในตลาดได้เงิน 2400", "expectTradeSet": true, "expectConfidence": "high", "expectCostAmount": 700, "expectRevenueAmount": 2400, "expectProfit": 1700, "expectCategory": "ขายของในตลาด", "expectCostCategory": "ต้นทุนขาย", "expectRevenueCategory": "ขายของในตลาด", "expectBusinessActivity": "ขายของในตลาด" },
+    { "id": "mkt-pos-trade-03", "group": "positive_trade", "text": "ซื้อหมู 1000 ไปทอดขายได้เงิน 3000", "expectTradeSet": true, "expectConfidence": "high", "expectCostAmount": 1000, "expectRevenueAmount": 3000, "expectProfit": 2000, "expectCategory": "ขายของในตลาด", "expectCostCategory": "ต้นทุนขาย", "expectRevenueCategory": "ขายของในตลาด", "expectBusinessActivity": "ขายของในตลาด" },
+    { "id": "mkt-pos-trade-04", "group": "positive_trade", "text": "ซื้อกล้วย 100 มาทอดขายได้ 350", "expectTradeSet": true, "expectConfidence": "high", "expectCostAmount": 100, "expectRevenueAmount": 350, "expectProfit": 250, "expectCategory": "ขายของในตลาด", "expectCostCategory": "ต้นทุนขาย", "expectRevenueCategory": "ขายของในตลาด", "expectBusinessActivity": "ขายของในตลาด" },
+    { "id": "mkt-pos-trade-05", "group": "positive_trade", "text": "ซื้อปลาหมึก 500 ย่างขายได้ 1200", "expectTradeSet": true, "expectConfidence": "high", "expectCostAmount": 500, "expectRevenueAmount": 1200, "expectProfit": 700, "expectCategory": "ขายของในตลาด", "expectCostCategory": "ต้นทุนขาย", "expectRevenueCategory": "ขายของในตลาด", "expectBusinessActivity": "ขายของในตลาด" },
+    { "id": "mkt-pos-trade-06", "group": "positive_trade", "text": "ซื้อหมู 800 ปิ้งขายได้ 1500", "expectTradeSet": true, "expectConfidence": "high", "expectCostAmount": 800, "expectRevenueAmount": 1500, "expectProfit": 700, "expectCategory": "ขายของในตลาด", "expectCostCategory": "ต้นทุนขาย", "expectRevenueCategory": "ขายของในตลาด", "expectBusinessActivity": "ขายของในตลาด" },
+    { "id": "mkt-pos-trade-07", "group": "positive_trade", "text": "ซื้อของมา 2000 เอาไปขายตลาดได้ 3500", "expectTradeSet": true, "expectConfidence": "high", "expectCostAmount": 2000, "expectRevenueAmount": 3500, "expectProfit": 1500, "expectCategory": "ขายของในตลาด", "expectCostCategory": "ต้นทุนขาย", "expectRevenueCategory": "ขายของในตลาด", "expectBusinessActivity": "ขายของในตลาด" },
+    { "id": "mkt-pos-trade-08", "group": "positive_trade", "text": "ซื้อไก่ 300 ทอดขายตลาดได้ 900", "expectTradeSet": true, "expectConfidence": "high", "expectCostAmount": 300, "expectRevenueAmount": 900, "expectProfit": 600, "expectCategory": "ขายของในตลาด", "expectCostCategory": "ต้นทุนขาย", "expectRevenueCategory": "ขายของในตลาด", "expectBusinessActivity": "ขายของในตลาด" },
+    { "id": "mkt-pos-trade-09", "group": "positive_trade", "text": "รับผักสดจากชุมชนจ่ายไป 1,300 บาทไปขายในตลาดได้ 3,400 บาท", "expectTradeSet": true, "expectConfidence": "high", "expectCostAmount": 1300, "expectRevenueAmount": 3400, "expectProfit": 2100, "expectCategory": "ขายของในตลาด", "expectCostCategory": "ต้นทุนขาย", "expectRevenueCategory": "ขายของในตลาด", "expectBusinessActivity": "ขายของในตลาด" },
+    { "id": "mkt-pos-trade-10", "group": "positive_trade", "text": "รับซื้อหน่อไม้จากสวน 4000 บาทไปวางขายในตลาดได้ 9700 บาท", "expectTradeSet": true, "expectConfidence": "high", "expectCostAmount": 4000, "expectRevenueAmount": 9700, "expectProfit": 5700, "expectCategory": "ขายของในตลาด", "expectCostCategory": "ต้นทุนขาย", "expectRevenueCategory": "ขายของในตลาด", "expectBusinessActivity": "ขายของในตลาด" },
+    { "id": "mkt-pos-trade-11", "group": "positive_trade", "text": "รับหน่อไม้จากสวนจ่ายไป 4000 บาทไปวางขายในตลาดได้ 9700 บาท", "expectTradeSet": true, "expectConfidence": "high", "expectCostAmount": 4000, "expectRevenueAmount": 9700, "expectProfit": 5700, "expectCategory": "ขายของในตลาด", "expectCostCategory": "ต้นทุนขาย", "expectRevenueCategory": "ขายของในตลาด", "expectBusinessActivity": "ขายของในตลาด" },
+    { "id": "mkt-pos-trade-12", "group": "positive_trade", "text": "ซื้อชุดกาแฟ 700 บาทชงขายในตลาดเช้าได้ 2400 บาท", "expectTradeSet": true, "expectConfidence": "high", "expectCostAmount": 700, "expectRevenueAmount": 2400, "expectProfit": 1700, "expectCategory": "ขายของในตลาด", "expectCostCategory": "ต้นทุนขาย", "expectRevenueCategory": "ขายของในตลาด", "expectBusinessActivity": "ขายของในตลาด" },
+    { "id": "mkt-pos-trade-13", "group": "positive_trade", "text": "รับผักจากชุมชนจ่ายเงินไป 1300 ขายที่ตลาดได้ 3400", "expectTradeSet": true, "expectConfidence": "high", "expectCostAmount": 1300, "expectRevenueAmount": 3400, "expectProfit": 2100, "expectCategory": "ขายของในตลาด", "expectCostCategory": "ต้นทุนขาย", "expectRevenueCategory": "ขายของในตลาด", "expectBusinessActivity": "ขายของในตลาด" },
+    { "id": "mkt-pos-trade-14", "group": "positive_trade", "text": "ต้นทุนหมู 1200 ทอดขายได้ 3300", "expectTradeSet": true, "expectConfidence": "high", "expectCostAmount": 1200, "expectRevenueAmount": 3300, "expectProfit": 2100, "expectCategory": "ขายของในตลาด", "expectCostCategory": "ต้นทุนขาย", "expectRevenueCategory": "ขายของในตลาด", "expectBusinessActivity": "ขายของในตลาด" },
+    { "id": "mkt-pos-trade-15", "group": "positive_trade", "text": "ซื้อปลามา 1500 ขายในตลาดนัดได้ 4200", "expectTradeSet": true, "expectConfidence": "high", "expectCostAmount": 1500, "expectRevenueAmount": 4200, "expectProfit": 2700, "expectCategory": "ขายของในตลาด", "expectCostCategory": "ต้นทุนขาย", "expectRevenueCategory": "ขายของในตลาด", "expectBusinessActivity": "ขายของในตลาด" },
+    { "id": "mkt-pos-trade-16", "group": "positive_trade", "text": "จ่ายไป 900 รับมะม่วงจากสวนขายในตลาดได้ 2500", "expectTradeSet": true, "expectConfidence": "high", "expectCostAmount": 900, "expectRevenueAmount": 2500, "expectProfit": 1600, "expectCategory": "ขายของในตลาด", "expectCostCategory": "ต้นทุนขาย", "expectRevenueCategory": "ขายของในตลาด", "expectBusinessActivity": "ขายของในตลาด" },
+    { "id": "mkt-pos-trade-17", "group": "positive_trade", "text": "รับของสดจากหมู่บ้านจ่ายไป 600 ไปขายตลาดนัดได้ 1800", "expectTradeSet": true, "expectConfidence": "high", "expectCostAmount": 600, "expectRevenueAmount": 1800, "expectProfit": 1200, "expectCategory": "ขายของในตลาด", "expectCostCategory": "ต้นทุนขาย", "expectRevenueCategory": "ขายของในตลาด", "expectBusinessActivity": "ขายของในตลาด" },
+
+    { "id": "mkt-business-trade-01", "group": "business_trade", "text": "ซื้อชุดทำส้มตำ 800 บาทเร่ขายรถเข็นในชุมชนได้ 2500 บาท", "expectTradeSet": true, "expectConfidence": "medium", "expectCostAmount": 800, "expectRevenueAmount": 2500, "expectProfit": 1700, "expectCategory": "ธุรกิจส่วนตัว", "expectCostCategory": "ต้นทุนขาย", "expectRevenueCategory": "ธุรกิจส่วนตัว", "expectBusinessActivity": "ธุรกิจส่วนตัว" },
+    { "id": "mkt-business-trade-02", "group": "business_trade", "text": "ซื้อของมา 300 ขายได้ 500", "expectTradeSet": true, "expectConfidence": "medium", "expectCostAmount": 300, "expectRevenueAmount": 500, "expectProfit": 200, "expectCategory": "ธุรกิจส่วนตัว", "expectCostCategory": "ต้นทุนขาย", "expectRevenueCategory": "ธุรกิจส่วนตัว", "expectBusinessActivity": "ธุรกิจส่วนตัว" },
+    { "id": "mkt-business-trade-03", "group": "business_trade", "text": "ซื้อเสื้อมา 2000 ขายได้ 1500", "expectTradeSet": true, "expectConfidence": "medium", "expectCostAmount": 2000, "expectRevenueAmount": 1500, "expectProfit": -500, "expectCategory": "ธุรกิจส่วนตัว", "expectCostCategory": "ต้นทุนขาย", "expectRevenueCategory": "ธุรกิจส่วนตัว", "expectBusinessActivity": "ธุรกิจส่วนตัว" },
+
+    { "id": "mkt-pos-single-01", "group": "positive_single", "text": "ทอดขายได้ 800", "expectType": "income", "expectCategory": "ขายของในตลาด", "expectTradeSet": false },
+    { "id": "mkt-pos-single-02", "group": "positive_single", "text": "เอาไปขายได้ 500", "expectType": "income", "expectCategory": "ขายของในตลาด", "expectTradeSet": false },
+    { "id": "mkt-pos-single-03", "group": "positive_single", "text": "ของไปขายได้เงิน 700", "expectType": "income", "expectCategory": "ขายของในตลาด", "expectTradeSet": false },
+    { "id": "mkt-pos-single-04", "group": "positive_single", "text": "ปิ้งขายได้ 400", "expectType": "income", "expectCategory": "ขายของในตลาด", "expectTradeSet": false },
+    { "id": "mkt-pos-single-05", "group": "positive_single", "text": "นึ่งขายได้ 600", "expectType": "income", "expectCategory": "ขายของในตลาด", "expectTradeSet": false },
+    { "id": "mkt-pos-single-06", "group": "positive_single", "text": "ต้มขายได้ 450", "expectType": "income", "expectCategory": "ขายของในตลาด", "expectTradeSet": false },
+    { "id": "mkt-pos-single-07", "group": "positive_single", "text": "ขายของตลาดได้ 900", "expectType": "income", "expectCategory": "ขายของในตลาด", "expectTradeSet": false },
+    { "id": "mkt-pos-single-08", "group": "positive_single", "text": "ขายในตลาดได้ 1500", "expectType": "income", "expectCategory": "ขายของในตลาด", "expectTradeSet": false },
+    { "id": "mkt-pos-single-09", "group": "positive_single", "text": "รับผักสดจากชุมชนขายได้ 3400", "expectType": "income", "expectTradeSet": false },
+
+    { "id": "mkt-neg-hijack-01", "group": "negative_no_hijack", "text": "ไปตลาดซื้อผัก 80", "expectType": "expense", "notCategory": "ขายของในตลาด", "expectTradeSet": false },
+    { "id": "mkt-neg-hijack-02", "group": "negative_no_hijack", "text": "ซื้อข้าวตลาด 50", "expectType": "expense", "notCategory": "ขายของในตลาด", "expectTradeSet": false },
+    { "id": "mkt-neg-hijack-03", "group": "negative_no_hijack", "text": "ค่ารถไปตลาด 40", "expectType": "expense", "notCategory": "ขายของในตลาด", "expectTradeSet": false },
+    { "id": "mkt-neg-hijack-04", "group": "negative_no_hijack", "text": "จ่ายค่าเช่าแผงตลาด 500", "expectType": "expense", "notCategory": "ขายของในตลาด", "expectTradeSet": false },
+    { "id": "mkt-neg-hijack-05", "group": "negative_no_hijack", "text": "จ่ายตลาด 780", "expectType": "expense", "notCategory": "ขายของในตลาด", "expectTradeSet": false },
+    { "id": "mkt-neg-hijack-06", "group": "negative_no_hijack", "text": "ซื้อผลไม้ตลาดนัด 120", "expectType": "expense", "notCategory": "ขายของในตลาด", "expectTradeSet": false },
+    { "id": "mkt-neg-hijack-07", "group": "negative_no_hijack", "text": "กินหมูกะทะ 399", "expectType": "expense", "notCategory": "ขายของในตลาด", "expectTradeSet": false },
+    { "id": "mkt-neg-hijack-08", "group": "negative_no_hijack", "text": "เติมน้ำมัน 1200", "expectType": "expense", "notCategory": "ขายของในตลาด", "expectTradeSet": false },
+
+    { "id": "mkt-neg-income-01", "group": "negative_income", "text": "รับเงินเดือน 30000", "expectType": "income", "notCategory": "ขายของในตลาด" },
+    { "id": "mkt-neg-income-02", "group": "negative_income", "text": "รับค่าตัดต่อวิดีโอ 2500", "expectType": "income", "notCategory": "ขายของในตลาด" },
+    { "id": "mkt-neg-income-03", "group": "negative_income", "text": "ดอกเบี้ยเงินฝาก 120", "expectType": "income", "notCategory": "ขายของในตลาด" },
+
+    { "id": "mkt-amb-01", "group": "ambiguous_not_high", "text": "ค่าที่ตลาด 300", "notConfidence": "high", "expectTradeSet": false },
+    { "id": "mkt-amb-02", "group": "ambiguous_not_high", "text": "รับมาขาย ทุน 1000 ได้ 1000", "notConfidence": "high", "expectTradeSet": false },
+    { "id": "mkt-amb-03", "group": "ambiguous_not_high", "text": "ซื้อของหลายอย่าง 100 200 แล้วขายได้ 500", "notConfidence": "high" },
+
+    {
+      "id": "mkt-learning-normalize-01",
+      "group": "learning_normalize",
+      "text": "ซื้อลูกชิ้น 500 บาทไปขายในตลาดได้ 1,200",
+      "learningRules": [
+        { "normalizedKeyword": "ซื้อลูกชิ้นไปขายในตลาดได้", "type": "income", "category": "แม่ค้าออนไลน์", "confidence": 10 }
+      ],
+      "expectTradeSet": true,
+      "expectCategory": "แม่ค้าออนไลน์",
+      "expectCostCategory": "ต้นทุนขาย",
+      "expectRevenueCategory": "แม่ค้าออนไลน์",
+      "expectBusinessActivity": "แม่ค้าออนไลน์"
+    }
+  ]
+}

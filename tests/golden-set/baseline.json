@@ -1,0 +1,321 @@
+{
+  "generatedAt": "2026-06-08T16:09:35.069Z",
+  "dataFile": "golden_set_v1.jsonl",
+  "caseCount": 103,
+  "thresholds": {
+    "note": "categorical confidence → band",
+    "map": {
+      "high": "auto",
+      "medium": "suggest",
+      "low": "abstain"
+    }
+  },
+  "overall": {
+    "n": 103,
+    "FASR": 0.2,
+    "auto_band": 10,
+    "coverage": 0.11764705882352941,
+    "suggestion_accuracy": 0.6447368421052632,
+    "abstain_recall": 0.5555555555555556,
+    "field_accuracy": {
+      "category": 0.704225352112676,
+      "amount": 0.9058823529411765,
+      "transaction_count": 0.9411764705882353,
+      "trade_link": 1
+    }
+  },
+  "agricultureRecall": {
+    "total": 23,
+    "caught": 14,
+    "recall": 0.6086956521739131,
+    "missed": [
+      {
+        "id": "gs1-0204",
+        "input": "ค่าอาหารหมูที่เลี้ยง 700",
+        "predicted": "อาหาร/เครื่องดื่ม",
+        "band": "suggest",
+        "expected": "กิจกรรมการเกษตร"
+      },
+      {
+        "id": "gs1-0205",
+        "input": "ค่าน้ำมันเครื่องสูบน้ำเข้านา 300",
+        "predicted": "เดินทาง/น้ำมัน",
+        "band": "suggest",
+        "expected": "กิจกรรมการเกษตร"
+      },
+      {
+        "id": "gs1-0212",
+        "input": "ค่าน้ำมันหยอดเครื่องตัดหญ้าในสวน 90",
+        "predicted": "เดินทาง/น้ำมัน",
+        "band": "suggest",
+        "expected": "กิจกรรมการเกษตร"
+      },
+      {
+        "id": "gs1-0304",
+        "input": "ขายข้าวเปลือก 12000",
+        "predicted": "ธุรกิจส่วนตัว",
+        "band": "suggest",
+        "expected": "เกษตรกร"
+      },
+      {
+        "id": "gs1-0305",
+        "input": "ขายผักสวนครัว 480",
+        "predicted": "ธุรกิจส่วนตัว",
+        "band": "auto",
+        "expected": "เกษตรกร"
+      },
+      {
+        "id": "gs1-0306",
+        "input": "ขายไข่ไก่ 360",
+        "predicted": "ธุรกิจส่วนตัว",
+        "band": "suggest",
+        "expected": "เกษตรกร"
+      },
+      {
+        "id": "gs1-0308",
+        "input": "ขายผลไม้สวน 2300",
+        "predicted": "ธุรกิจส่วนตัว",
+        "band": "suggest",
+        "expected": "เกษตรกร"
+      },
+      {
+        "id": "gs1-0503",
+        "input": "ขายปลา 5 ตัว ตัวละ 60",
+        "predicted": "ธุรกิจส่วนตัว",
+        "band": "suggest",
+        "expected": "เกษตรกร"
+      },
+      {
+        "id": "gs1-0506",
+        "input": "ขายส้ม 10 กิโล กิโลละ 35",
+        "predicted": "ธุรกิจส่วนตัว",
+        "band": "suggest",
+        "expected": "เกษตรกร"
+      }
+    ]
+  },
+  "bySlice": {
+    "simple_single": {
+      "n": 12,
+      "FASR": 0,
+      "auto_band": 2,
+      "coverage": 0.16666666666666666,
+      "suggestion_accuracy": 1,
+      "abstain_recall": null,
+      "field_accuracy": {
+        "category": 1,
+        "amount": 1,
+        "transaction_count": 1,
+        "trade_link": 1
+      }
+    },
+    "thai_numeral": {
+      "n": 8,
+      "FASR": 1,
+      "auto_band": 1,
+      "coverage": 0.125,
+      "suggestion_accuracy": 0.8571428571428571,
+      "abstain_recall": null,
+      "field_accuracy": {
+        "category": 0.875,
+        "amount": 0.875,
+        "transaction_count": 1,
+        "trade_link": 1
+      }
+    },
+    "intent_object_conflict": {
+      "n": 12,
+      "FASR": 0,
+      "auto_band": 1,
+      "coverage": 0.08333333333333333,
+      "suggestion_accuracy": 0.7272727272727273,
+      "abstain_recall": null,
+      "field_accuracy": {
+        "category": 0.75,
+        "amount": 1,
+        "transaction_count": 1,
+        "trade_link": 1
+      }
+    },
+    "agriculture_intent": {
+      "n": 10,
+      "FASR": 0.5,
+      "auto_band": 2,
+      "coverage": 0.2,
+      "suggestion_accuracy": 0.625,
+      "abstain_recall": null,
+      "field_accuracy": {
+        "category": 0.6,
+        "amount": 1,
+        "transaction_count": 1,
+        "trade_link": 1
+      }
+    },
+    "agriculture_false_positive": {
+      "n": 16,
+      "FASR": 0,
+      "auto_band": 4,
+      "coverage": 0.26666666666666666,
+      "suggestion_accuracy": 0.9090909090909091,
+      "abstain_recall": 0,
+      "field_accuracy": {
+        "category": 0.9333333333333333,
+        "amount": 1,
+        "transaction_count": 1,
+        "trade_link": 1
+      }
+    },
+    "per_unit_pricing": {
+      "n": 8,
+      "FASR": null,
+      "auto_band": 0,
+      "coverage": 0,
+      "suggestion_accuracy": 0,
+      "abstain_recall": null,
+      "field_accuracy": {
+        "category": 0.125,
+        "amount": 0.75,
+        "transaction_count": 1,
+        "trade_link": 1
+      }
+    },
+    "compound_trade": {
+      "n": 10,
+      "FASR": null,
+      "auto_band": 0,
+      "coverage": 0,
+      "suggestion_accuracy": 1,
+      "abstain_recall": 1,
+      "field_accuracy": {
+        "category": null,
+        "amount": 1,
+        "transaction_count": 1,
+        "trade_link": 1
+      }
+    },
+    "compound_multi_item": {
+      "n": 5,
+      "FASR": null,
+      "auto_band": 0,
+      "coverage": 0,
+      "suggestion_accuracy": null,
+      "abstain_recall": null,
+      "field_accuracy": {
+        "category": null,
+        "amount": 0,
+        "transaction_count": 0,
+        "trade_link": 1
+      }
+    },
+    "implicit_category": {
+      "n": 6,
+      "FASR": null,
+      "auto_band": 0,
+      "coverage": 0,
+      "suggestion_accuracy": 0,
+      "abstain_recall": 0,
+      "field_accuracy": {
+        "category": 0,
+        "amount": 1,
+        "transaction_count": 1,
+        "trade_link": 1
+      }
+    },
+    "ambiguous_amount": {
+      "n": 5,
+      "FASR": null,
+      "auto_band": 0,
+      "coverage": null,
+      "suggestion_accuracy": 0,
+      "abstain_recall": 0.8,
+      "field_accuracy": {
+        "category": null,
+        "amount": null,
+        "transaction_count": null,
+        "trade_link": null
+      }
+    },
+    "out_of_scope": {
+      "n": 6,
+      "FASR": null,
+      "auto_band": 0,
+      "coverage": null,
+      "suggestion_accuracy": 0,
+      "abstain_recall": 0.8333333333333334,
+      "field_accuracy": {
+        "category": null,
+        "amount": null,
+        "transaction_count": null,
+        "trade_link": null
+      }
+    },
+    "code_switch_noise": {
+      "n": 5,
+      "FASR": null,
+      "auto_band": 0,
+      "coverage": 0,
+      "suggestion_accuracy": 0.25,
+      "abstain_recall": null,
+      "field_accuracy": {
+        "category": 0.2,
+        "amount": 1,
+        "transaction_count": 1,
+        "trade_link": 1
+      }
+    }
+  },
+  "autoBandFailures": [
+    {
+      "id": "gs1-0105",
+      "input": "ซื้อขนมยี่สิบห้า",
+      "slice": "thai_numeral",
+      "predicted": {
+        "band": "auto",
+        "confidence": "high",
+        "category": "ช้อปปิ้ง",
+        "amounts": [
+          25
+        ],
+        "count": 1,
+        "trade_link": false
+      },
+      "ground_truth": {
+        "transactions": [
+          {
+            "type": "expense",
+            "category": "อาหาร/เครื่องดื่ม",
+            "amount": 25
+          }
+        ],
+        "transaction_count": 1,
+        "trade_link": false
+      }
+    },
+    {
+      "id": "gs1-0305",
+      "input": "ขายผักสวนครัว 480",
+      "slice": "agriculture_intent",
+      "predicted": {
+        "band": "auto",
+        "confidence": "high",
+        "category": "ธุรกิจส่วนตัว",
+        "amounts": [
+          480
+        ],
+        "count": 1,
+        "trade_link": false
+      },
+      "ground_truth": {
+        "transactions": [
+          {
+            "type": "income",
+            "category": "เกษตรกร",
+            "amount": 480
+          }
+        ],
+        "transaction_count": 1,
+        "trade_link": false
+      }
+    }
+  ]
+}
