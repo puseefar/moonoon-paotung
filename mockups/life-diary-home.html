@@ -9,15 +9,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    /* design tokens — shared across all Life Diary screens */
     --paper:     #FBF8F3;
     --paper-deep:#F3EEE5;
-    --ink:       #3D3548;   /* PRIMARY text — always use on light bg */
-    --ink-soft:  #7A7186;   /* secondary text */
-    --ink-faint: #A9A1B3;   /* placeholder / hint */
+    --ink:       #3D3548;
+    --ink-soft:  #241d38;
+    --ink-faint: #A9A1B3;
     --line:      #E7DFD3;
-    --rose:      #D14F86;
-    --rose-soft: #E0689A;
+    --rose:      #f331a2;
+    --rose-soft: #ff59d65b;
+    --sky-soft: #0d7bf893;
     --rose-tint: #FBEAF1;
     --sage:      #7E9E7C;
     --sage-tint: #EAF0E7;
@@ -25,9 +25,6 @@
     --gold-tint: #FAF1DC;
     --radius:    22px;
     --shadow:    0 18px 50px -22px rgba(61,53,72,.45);
-    /* mood wash — driven by JS */
-    --wash-a:    #D7E2E8;
-    --wash-b:    #EBE0EC;
   }
   *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
   html, body { height:100%; }
@@ -50,19 +47,40 @@
     border-radius:40px; overflow:hidden; position:relative;
     box-shadow:var(--shadow), 0 0 0 8px #fff, 0 0 0 9px #E1D9CD;
     display:flex; flex-direction:column;
+    isolation:isolate;
   }
 
-  /* ── header: watercolor wash ── */
+  /* ── background slideshow ── */
+  .phone-bg-wrap {
+    position:absolute; inset:0;
+    z-index:-1; pointer-events:none;
+    border-radius:40px; overflow:hidden;
+  }
+  .phone-bg {
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    object-fit:cover; object-position:center center;
+    opacity:0; transition:opacity 1.4s ease-in-out;
+    pointer-events:none;
+  }
+  .phone-bg.active { opacity:0.78; }
+
+  /* ── header ── */
   .head {
     flex:none; position:relative; overflow:hidden;
-    background:linear-gradient(165deg, var(--wash-a) 0%, var(--wash-b) 62%, var(--paper) 100%);
+    background:linear-gradient(165deg, #ff89ef8c 0%, #239bf530 62%, rgba(67, 207, 253, 0.082) 100%);
     padding:18px 20px 0;
     transition:background .65s ease;
   }
-  /* soft paper bleed so header meets body smoothly */
+  /* text readability overlay on bg images */
+  .head::before {
+    content:""; position:absolute; inset:0;
+    background:linear-gradient(to bottom, rgba(20,5,40,.40) 0%, rgba(20,5,40,.20) 65%, transparent 100%);
+    pointer-events:none; z-index:1;
+  }
   .head::after {
-    content:""; position:absolute; left:0; right:0; bottom:-1px; height:32px;
-    background:linear-gradient(to bottom, transparent, var(--paper));
+    content:""; position:absolute; left:0; right:0; bottom:-1px; height:28px;
+    background:linear-gradient(to bottom, transparent, rgba(97,152,235,.15));
     pointer-events:none; z-index:1;
   }
 
@@ -72,12 +90,11 @@
   }
   .brand {
     font-family:'Mali', cursive; font-weight:700; font-size:20px;
-    color:var(--ink); /* FIX: ink, not colored */
-    line-height:1.2;
+    color:#ff28b7; line-height:1.2;
   }
   .brand small {
     display:block; font-family:'IBM Plex Sans Thai'; font-weight:400;
-    font-size:10.5px; color:var(--ink-soft); letter-spacing:.5px; margin-top:-1px;
+    font-size:12.5px; color:#f0d0f0; letter-spacing:.5px; margin-top:-1px;
   }
   .head-actions { display:flex; align-items:center; gap:8px; }
   .iconbtn {
@@ -97,189 +114,266 @@
 
   .date-strip {
     position:relative; z-index:2;
-    text-align:center; margin-top:12px;
+    text-align:center; margin-top:5px; margin-bottom: 5px;
     font-family:'Mali', cursive; font-size:14px;
-    color:var(--ink); opacity:.82; /* FIX: ink not colored */
+    color:#fff; opacity:.92;
+    text-shadow:0 1px 8px rgba(0,0,0,.5);
   }
 
-  /* ── mood picker ── */
-  .mood-q {
-    position:relative; z-index:2;
-    font-size:12px; font-weight:600; color:var(--ink-soft);
-    text-align:center; margin-top:15px; letter-spacing:.2px;
+  /* ══════════════════════════════════════
+     MOOD CHIP — collapsed / expandable
+  ══════════════════════════════════════ */
+  .mood-chip-wrap {
+    position:relative; z-index:2; padding:2px 0 2px;
   }
-  .moods {
-    display:flex; gap:6px; margin-top:9px; padding-bottom:14px;
-    position:relative; z-index:2;
+  .mood-chip-trigger {
+    display:flex; align-items:center; gap:8px;
+    border:none;
+    background: linear-gradient(355deg, #eb67c62f 0%, #239af500 62%, rgba(64, 167, 246, 0) 100%);
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    border-radius:20px;
+    padding-left: 4px;
+    padding-top: 7px;
+    padding-right: 8px;
+    padding-bottom:7px ;     
+    cursor:pointer; font-family:'IBM Plex Sans Thai',sans-serif;
+    font-size:13px; color:#fff; font-weight:500;
+    transition:background .2s, transform .15s;
+    width:60%; text-align:left;
   }
+  .mood-chip-trigger:hover { background:rgba(54, 106, 250, 0.295); }
+  .mood-chip-trigger:active { transform:scale(.98); }
+  .mc-emoji { font-size:20px; line-height:1; }
+  .mc-label { flex:1; }
+  .mc-badge {
+    font-size:10px; background:rgba(255,255,255,.25);
+    border-radius:10px; padding:2px 7px; display:none;
+  }
+  .mc-badge.on { display:inline-block; }
+  .mc-arrow { font-size:13px; opacity:.75; transition:transform .3s; }
+  .mood-chip-trigger.open .mc-arrow { transform:rotate(90deg); }
+
+  .mood-panel {
+    overflow:hidden; max-height:0; opacity:0;
+    transition:max-height .38s cubic-bezier(.4,0,.2,1), opacity .28s, padding .3s;
+  }
+  .mood-panel.open { max-height:88px; opacity:1; padding-top:6px; }
+
+  .moods { display:flex; gap:6px; padding-bottom:8px; }
   .mood {
-    flex:1; border:none; cursor:pointer; border-radius:15px;
-    background:rgba(255,255,255,.42); padding:9px 4px 7px;
-    display:flex; flex-direction:column; align-items:center; gap:4px;
-    transition:transform .18s, background .2s, box-shadow .2s;
+    flex:1; border:none; cursor:pointer; border-radius:14px;
+    background:rgba(255,255,255,.12);
+    padding:6px 4px;
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    transition:transform .18s, background .2s;
     font-family:inherit; touch-action:manipulation;
   }
-  .mood:hover  { background:rgba(255,255,255,.72); transform:translateY(-2px); }
-  .mood:active { transform:scale(.94); }
-  .mood .dot {
-    width:26px; height:26px; border-radius:50%;
-    box-shadow:inset 0 -3px 7px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.07);
-  }
-  /* FIX: label in ink, NOT pink — contrast issue from Team 3 */
-  .mood .lbl { font-size:10px; color:var(--ink); opacity:.72; font-weight:500; }
+  .mood:hover  { background:rgba(255,255,255,.28); transform:translateY(-2px); }
+  .mood:active { transform:scale(.93); }
+  .mood-emoji { font-size:26px; line-height:1.1; }
+  .mood .lbl  { font-size:9.5px; color:#fff; opacity:.80; font-weight:500; }
   .mood[aria-pressed="true"] {
-    background:#fff; box-shadow:0 6px 16px -6px rgba(61,53,72,.32);
+    background:rgba(255,255,255,.32);
+    box-shadow:0 0 0 2px rgba(255,255,255,.5);
     transform:translateY(-3px);
   }
-  .mood[aria-pressed="true"] .lbl { opacity:1; font-weight:700; color:var(--ink); }
+  .mood[aria-pressed="true"] .lbl { opacity:1; font-weight:700; }
 
-  /* ── activity mode row ── */
-  .act-section {
-    position:relative; z-index:2;
-    padding:0 0 14px;
+  /* ══════════════════════════════════════
+     ACTIVITY CHIP — collapsed / expandable
+  ══════════════════════════════════════ */
+  .act-chip-wrap {
+    position:relative; z-index:2; padding:2px 0 12px;
   }
-  .act-lbl {
-    font-size:11px; font-weight:600; color:var(--ink-soft);
-    letter-spacing:.2px; margin-bottom:8px;
-    display:flex; align-items:center; gap:6px;
+  .act-chip-trigger {
+    display:flex; align-items:center; gap:8px;
+    border:none;
+     background: linear-gradient(355deg, #eb67c62f 0%, #239af500 62%, rgba(64, 167, 246, 0) 100%);
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    border-radius:20px; 
+    padding-left: 4px;
+    padding-top: 7px;
+    padding-right: 8px;
+    padding-bottom: 7px;
+    cursor:pointer; font-family:'IBM Plex Sans Thai',sans-serif;
+    font-size:13px; color:#fff; font-weight:500;
+    transition:background .2s; width:60%; text-align:left;
   }
-  .act-lbl::after { content:""; flex:1; height:1px; background:rgba(0,0,0,.08); }
+  .act-chip-trigger:hover { background:rgba(54, 106, 250, 0.295); }
+  .ac-emoji { font-size:18px; line-height:1; }
+  .ac-label { flex:1; }
+  .ac-change { font-size:10.5px; opacity:.65; }
+  .ac-arrow  { font-size:13px; opacity:.75; transition:transform .3s; }
+  .act-chip-trigger.open .ac-arrow { transform:rotate(90deg); }
+
+  .act-panel {
+    overflow:hidden; max-height:0; opacity:0;
+    transition:max-height .38s cubic-bezier(.4,0,.2,1), opacity .28s, padding .3s;
+  }
+  .act-panel.open { max-height:160px; opacity:1; padding-top:6px; }
+
   .act-row {
-    display:flex; gap:7px;
-    overflow-x:auto; padding-bottom:3px;
+    display:flex; gap:6px; flex-wrap:wrap; padding-bottom:4px;
   }
-  .act-row::-webkit-scrollbar { height:0; }
   .act {
-    flex:none; border:none; cursor:pointer; border-radius:20px;
-    background:rgba(255,255,255,.48); padding:7px 13px;
-    display:flex; align-items:center; gap:6px;
+    flex:none; border:none; cursor:pointer; border-radius:18px;
+    background:rgba(143,201,255,.22); padding:6px 10px;
+    display:flex; align-items:center; gap:5px;
     font-family:'IBM Plex Sans Thai',sans-serif; font-size:12px;
-    color:var(--ink); font-weight:500;
+    color:#fff; font-weight:500;
     border:1.5px solid transparent;
-    transition:background .18s, border-color .18s, transform .15s, box-shadow .15s;
+    transition:background .18s, border-color .18s, transform .15s;
     white-space:nowrap; touch-action:manipulation;
   }
-  .act:hover   { background:rgba(255,255,255,.78); transform:translateY(-1px); }
+  .act:hover   { background:rgba(255,255,255,.28); transform:translateY(-1px); }
   .act:active  { transform:scale(.95); }
-  .act .aico   { font-size:16px; line-height:1; }
+  .act .aico   { font-size:14px; line-height:1; }
   .act[aria-pressed="true"] {
-    background:#fff; border-color:var(--rose-soft);
+    background:rgba(255,255,255,.92); border-color:var(--rose-soft);
     color:var(--rose); font-weight:700;
-    box-shadow:0 4px 14px -6px rgba(209,79,134,.3);
+    box-shadow:0 4px 12px -4px rgba(209,79,134,.35);
   }
 
   /* ── scrollable body ── */
-  .body { flex:1; overflow-y:auto; padding:8px 16px 164px; }
+  .body { flex:1; overflow-y:auto; padding:10px 16px 140px; }
   .body::-webkit-scrollbar { width:0; }
 
-  /* ── vertical slide daily question ── */
+  /* ── daily question card ── */
   .q-card {
-    margin:0 2px 0;
-    background:#fff; border:1px solid var(--line);
+    margin-top: 0px;
+    margin-right: 2px;
+    margin-bottom: 16px;
+    margin-left: 2px;
     border-left:3px solid var(--rose-soft);
-    border-radius:var(--radius);
-    overflow:hidden;
+    border-radius:var(--radius); overflow:hidden;
     transition:box-shadow .2s;
   }
   .q-card:hover { box-shadow:0 6px 20px -10px rgba(61,53,72,.2); }
   .q-head {
     display:flex; align-items:center; gap:9px;
-    padding:11px 14px 9px;
-    border-bottom:1px solid var(--rose-tint);
+    padding:2px 14px; border-bottom:1px solid rgba(255, 255, 255, 0.404);
   }
-  .q-icon { font-size:18px; flex:none; }
-  .q-tag {
-    flex:1; font-size:10px; font-weight:700; letter-spacing:.5px;
-    color:var(--rose); text-transform:uppercase;
+  .q-icon { font-size:17px; flex:none; }
+
+  h3{
+        background: linear-gradient(to right, #c878ec, #63f7d2, #5cbcfc);
+      	-webkit-background-clip: text;
+   	    -webkit-text-fill-color: transparent;
   }
+  
+  .q-tag  { flex:1;
+            font-size:14px; 
+            font-weight:400;           
+             padding:4px 8px; border-radius:14px;
+            letter-spacing:.5px;    
+            text-transform:uppercase; }
   .q-next {
     border:none; background:none; cursor:pointer; padding:4px 6px;
-    border-radius:8px; font-size:13px; color:var(--ink-faint);
-    transition:color .2s, background .2s;
-    font-family:inherit;
+    border-radius:8px; font-size:13px; color:var(--soft);
+    transition:color .2s, background .2s; font-family:inherit;
   }
   .q-next:hover { color:var(--rose); background:var(--rose-tint); }
 
-  /* sliding window — clips to 1 question */
-  .q-window {
-    height:58px; overflow:hidden; position:relative; cursor:pointer;
-  }
+  .q-window { height:50px; overflow:hidden; cursor:pointer; }
   .q-track {
     display:flex; flex-direction:column;
     transition:transform .42s cubic-bezier(.4,0,.2,1);
   }
   .q-item {
-    height:58px; flex:none;
-    display:flex; align-items:center;
-    padding:0 14px;
+    height:50px; flex:none;
+    display:flex; align-items:center; padding:0 14px;
     font-family:'Mali', cursive; font-size:14.5px;
-    color:var(--ink); line-height:1.4;
-  }
+     background: linear-gradient(to right, #d178fa, #63f7d2, #5cbcfc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 
-  /* dot indicators */
+    /* color:#170220;  */
+    line-height:1.4;
+  }
   .q-dots {
-    display:flex; align-items:center; justify-content:center; gap:5px;
-    padding:8px 14px 11px;
+    display:flex;
+     align-items:center;
+     justify-content:center; gap:5px;
+    padding:6px 14px 10px;
   }
   .q-dot {
     width:5px; height:5px; border-radius:50%;
-    background:var(--line); transition:background .3s, transform .3s;
+    background:#c094fa; transition:background .3s, transform .3s;
   }
-  .q-dot.on {
-    background:var(--rose-soft); transform:scale(1.35);
-  }
+  .q-dot.on { background:var(--sky-soft); transform:scale(1.35); }
 
-  /* ═══════════════════════════
+  /* ══════════════════════════════════════
+     MAIN CTA — most prominent element
+  ══════════════════════════════════════ */
+  .main-cta{
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+  }
+  .cta-main {
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    width:60%;
+     border:none; cursor:pointer;
+    background: linear-gradient(145deg, rgb(64 168 246 / 46%), #f65df373);
+    color:#fff; border-radius:22px; padding:10px 14px;
+    font-family:'Mali', cursive; font-size:17px; font-weight:500;
+    box-shadow:0 14px 32px -8px rgba(209,79,134,.52);
+    transition:transform .15s, box-shadow .15s;
+    margin:14px 2px 6px;
+    letter-spacing:.3px;
+  }
+  .cta-main:hover  { transform:translateY(-3px); box-shadow:0 18px 38px -8px rgba(209,79,134,.65); }
+  .cta-main:active { transform:scale(.97); }
+  .cta-main-ico { font-size:20px; }
+
+  /* ══════════════════════════════════════
      EMPTY STATE
-  ═══════════════════════════ */
+  ══════════════════════════════════════ */
   #emptyState { display:flex; flex-direction:column; align-items:stretch; }
 
-  /* Canvas — watercolor backdrop (home/empty only, NOT an entry container) */
   .canvas-bg {
-    margin:16px 2px 0;
-    border-radius:24px; overflow:hidden; position:relative;
+    margin:4px 2px 0; border-radius:24px; overflow:hidden; position:relative;
     background:
-      radial-gradient(ellipse 70% 60% at 15% 20%, rgba(193,216,228,.6) 0%, transparent 60%),
-      radial-gradient(ellipse 60% 50% at 85% 80%, rgba(224,200,220,.5) 0%, transparent 60%),
-      linear-gradient(175deg, #EAF0F5 0%, #F4EEF5 50%, #FAF5EE 100%);
-    border:1px solid rgba(200,190,220,.35);
-    min-height:200px;
+      radial-gradient(ellipse 70% 60% at 15% 20%, rgba(44,80,238,.075) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 85% 80%, rgba(233,79,207,.068) 0%, transparent 60%),
+      linear-gradient(175deg, rgba(183,132,250,.11) 0%, rgba(112,244,248,0) 50%, rgba(255,67,183,.12) 100%);
+    border:1px solid rgba(255,255,255,.40);
+    box-shadow:0 8px 32px -8px rgba(61,53,72,.18), inset 0 1px 0 rgba(165,167,240,.3);
+    min-height:148px;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    padding:26px 22px 22px; gap:10px;
+    padding:18px 16px; gap:8px;
   }
-  .canvas-easel { font-size:54px; line-height:1; filter:drop-shadow(0 4px 8px rgba(0,0,0,.1)); }
-  /* FIX: title in --ink NOT pink */
+  .img-history {
+    position:relative; width:100px; height:70px;
+    margin:0 auto 2px; flex:none;
+  }
+  .img-history img {
+    position:absolute; width:56px; height:56px;
+    object-fit:cover; border-radius:10px;
+    border:3.5px solid #fff;
+    box-shadow:0 5px 18px -4px rgba(61,53,72,.24);
+    transition:transform .22s ease;
+  }
+  .img-history img:nth-child(1) { transform:rotate(-14deg); left:-10px; top:9px; z-index:1; }
+  .img-history img:nth-child(2) { transform:rotate(-7deg);  left:28px;  top:4px;  z-index:2; }
+  .img-history img:nth-child(3) { transform:rotate(4deg);   right:-28px;top:6px; z-index:3; }
+  .img-history:hover img:nth-child(1) { transform:rotate(-18deg) translateX(-6px); }
+  .img-history:hover img:nth-child(2) { transform:rotate(6deg) translateY(-4px); }
+  .img-history:hover img:nth-child(3) { transform:rotate(-5deg) translateX(6px); }
+
   .canvas-title {
-    font-family:'Mali', cursive; font-size:17px; font-weight:600;
+    font-family:'Mali', cursive; font-size:15px; font-weight:600;
     color:var(--ink); text-align:center; line-height:1.4;
   }
-  /* FIX: subtitle in --ink-soft NOT pink */
   .canvas-sub {
     font-size:12.5px; color:var(--ink-soft);
-    text-align:center; line-height:1.55;
+    text-align:center; line-height:1.65; letter-spacing:.2px;
   }
 
-  /* Phase 1 KEY FIX: CTA button inside canvas, center screen */
-  .cta-canvas {
-    margin-top:6px; width:100%; max-width:260px;
-    border:none; cursor:pointer; border-radius:18px; padding:15px 20px;
-    font-family:'Mali', cursive; font-size:16px; font-weight:600; color:#fff;
-    background:linear-gradient(145deg, var(--rose-soft), var(--rose));
-    box-shadow:0 10px 24px -8px rgba(209,79,134,.55);
-    display:flex; align-items:center; justify-content:center; gap:8px;
-    transition:transform .15s, box-shadow .15s;
-  }
-  .cta-canvas:hover { transform:translateY(-2px); box-shadow:0 14px 30px -8px rgba(209,79,134,.65); }
-  .cta-canvas:active { transform:scale(.97); }
-
-  .or-hint {
-    margin-top:13px; font-size:11.5px; color:var(--ink-faint); text-align:center;
-  }
-  .or-hint b { color:var(--ink-soft); font-weight:600; }
-
-  /* ═══════════════════════════
+  /* ══════════════════════════════════════
      POPULATED STATE
-  ═══════════════════════════ */
+  ══════════════════════════════════════ */
   #populatedState { display:none; }
 
   .section-h {
@@ -289,29 +383,19 @@
   }
   .section-h::after { content:""; flex:1; height:1px; background:var(--line); }
 
-  /* Mood × Money insight — the differentiator (Team 3) */
   .insight {
     margin:14px 2px 4px; border-radius:var(--radius);
     padding:14px 16px; position:relative; overflow:hidden;
     background:linear-gradient(135deg, #FBEAF1 0%, #FAF1DC 100%);
-    border:1px solid #F0DDD0; cursor:pointer;
-    transition:box-shadow .2s;
+    border:1px solid #F0DDD0; cursor:pointer; transition:box-shadow .2s;
   }
   .insight:hover { box-shadow:0 6px 20px -10px rgba(61,53,72,.2); }
-  .i-tag {
-    font-size:10px; font-weight:700; letter-spacing:.6px;
-    color:var(--rose); text-transform:uppercase;
-  }
-  /* FIX: insight body text in --ink */
-  .insight h3 {
-    font-family:'Mali', cursive; font-size:15px; line-height:1.45;
-    margin-top:5px; color:var(--ink);
-  }
+  .i-tag { font-size:10px; font-weight:700; letter-spacing:.6px; color:var(--rose); text-transform:uppercase; }
+  .insight h3 { font-family:'Mali',cursive; font-size:15px; line-height:1.45; margin-top:5px; color:var(--ink); }
   .insight h3 b { color:var(--rose); }
   .insight .i-more { margin-top:7px; font-size:11.5px; color:var(--ink-soft); }
   .insight .i-more b { color:var(--gold); font-weight:600; }
 
-  /* entry card */
   .entry {
     background:#fff; border:1px solid var(--line); border-radius:var(--radius);
     margin:0 2px 12px; overflow:hidden; cursor:pointer;
@@ -320,53 +404,135 @@
   .entry:hover { transform:translateY(-2px); box-shadow:0 8px 24px -10px rgba(61,53,72,.22); }
   .entry-bar  { height:5px; }
   .entry-body { padding:13px 15px 10px; }
-  .entry-meta {
-    display:flex; align-items:center; gap:7px; margin-bottom:6px; flex-wrap:wrap;
-  }
+  .entry-meta { display:flex; align-items:center; gap:7px; margin-bottom:6px; flex-wrap:wrap; }
   .entry-mood-dot { width:9px; height:9px; border-radius:50%; flex:none; }
-  /* FIX: meta text all in --ink-soft */
-  .entry-time, .entry-place {
-    font-size:11px; color:var(--ink-soft);
-  }
+  .entry-time, .entry-place { font-size:11px; color:var(--ink-soft); }
   .entry-place::before { content:"· "; }
-  /* FIX: title in --ink NOT rose */
-  .entry-title {
-    font-family:'Mali', cursive; font-size:15px; font-weight:600;
-    color:var(--ink); margin-bottom:4px; line-height:1.35;
-  }
+  .entry-title { font-family:'Mali',cursive; font-size:15px; font-weight:600; color:var(--ink); margin-bottom:4px; line-height:1.35; }
   .entry-preview { font-size:12.5px; color:var(--ink-soft); line-height:1.5; }
   .entry-preview b { color:var(--gold); font-weight:600; }
-  .entry-foot {
-    display:flex; align-items:center; gap:7px; padding:8px 15px 12px;
-    border-top:1px solid var(--line); flex-wrap:wrap;
-  }
-  .chip {
-    font-size:10px; font-weight:600; padding:3px 9px; border-radius:20px;
-  }
+  .entry-foot { display:flex; align-items:center; gap:7px; padding:8px 15px 12px; border-top:1px solid var(--line); flex-wrap:wrap; }
+  .chip { font-size:10px; font-weight:600; padding:3px 9px; border-radius:20px; }
   .chip-rose { background:var(--rose-tint); color:var(--rose); }
   .chip-gold { background:var(--gold-tint); color:var(--gold); }
   .chip-sage { background:var(--sage-tint); color:var(--sage); }
   .entry-spend { margin-left:auto; font-size:12px; font-weight:700; color:var(--gold); }
 
-  /* ── FAB (Phase 1 KEY FIX: single button, clear label, NO icon-only) ── */
-  .fab-wrap {
-    position:absolute; right:18px; bottom:78px; z-index:10;
+  /* ── bottom nav ── */
+  .bottom-nav {
+    flex:none; height:60px;
+    background:#45c8f147;
+    border-top:1px solid var(--line);
+    display:flex; align-items:stretch;
   }
-  .fab {
-    display:flex; align-items:center; gap:9px;
-    border:none; cursor:pointer; touch-action:manipulation;
-    background:linear-gradient(145deg, var(--rose-soft), var(--rose));
-    color:#fff; border-radius:28px; padding:14px 22px 14px 18px;
-    font-family:'Mali', cursive; font-size:15.5px; font-weight:600;
-    box-shadow:0 12px 28px -8px rgba(209,79,134,.62);
-    transition:transform .15s, box-shadow .15s;
-    white-space:nowrap;
+  .bnav-tab {
+    flex:1; border:none; background:none; cursor:pointer; font-family:inherit;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:3px; color:var(--ink-faint); transition:color .2s;
   }
-  .fab:hover  { transform:translateY(-3px); box-shadow:0 16px 34px -8px rgba(209,79,134,.72); }
-  .fab:active { transform:scale(.96); }
-  .fab-ico    { font-size:17px; }
+  .bnav-tab.active { color:var(--rose); }
+  .bnav-tab:hover:not(.active) { color:var(--ink-soft); }
+  .bnav-ico { font-size:20px; line-height:1; }
+  .bnav-lbl { font-size:9.5px; font-weight:500; }
 
-  /* ── demo state toggle (for prototype review only) ── */
+  /* ── bottom sheet ── */
+  .sheet-backdrop {
+    position:absolute; inset:0; z-index:20;
+    background:rgba(61,53,72,.48);
+    opacity:0; pointer-events:none; transition:opacity .32s ease;
+  }
+  .sheet-backdrop.on { opacity:1; pointer-events:all; }
+
+  .sheet {
+    position:absolute; left:0; right:0; bottom:0; z-index:21;
+    background:var(--paper); border-radius:28px 28px 0 0;
+    padding:10px 20px calc(28px + env(safe-area-inset-bottom));
+    transform:translateY(100%);
+    transition:transform .42s cubic-bezier(.32,1.18,.5,1);
+    box-shadow:0 -12px 40px -10px rgba(61,53,72,.22);
+  }
+  .sheet.on { transform:translateY(0); }
+  .sheet-handle { width:36px; height:4px; border-radius:2px; background:var(--line); margin:0 auto 16px; }
+  .sheet-title { font-family:'Mali',cursive; font-size:18px; font-weight:700; color:var(--ink); margin-bottom:3px; }
+  .sheet-sub   { font-size:12px; color:var(--ink-soft); margin-bottom:15px; }
+
+  .sheet-opts { display:flex; flex-direction:column; gap:8px; }
+  .sopt {
+    display:flex; align-items:center; gap:13px;
+    background:#fff; border:1.5px solid var(--line);
+    border-radius:18px; padding:13px 15px;
+    cursor:pointer; font-family:inherit; text-align:left; width:100%;
+    transition:background .18s, border-color .18s, transform .15s, box-shadow .15s;
+  }
+  .sopt:hover { background:var(--paper-deep); border-color:var(--rose-soft); transform:translateY(-2px); box-shadow:0 6px 18px -8px rgba(209,79,134,.3); }
+  .sopt:active { transform:scale(.98); }
+  .sopt-ico  { font-size:26px; flex:none; }
+  .sopt-body { flex:1; }
+  .sopt-body b    { display:block; font-size:14px; color:var(--ink); font-weight:600; }
+  .sopt-body span { display:block; font-size:11.5px; color:var(--ink-soft); margin-top:2px; line-height:1.4; }
+  .sopt-arr  { font-size:18px; color:var(--ink-faint); flex:none; }
+  .sopt.quick { background:var(--rose-tint); border-color:rgba(209,79,134,.2); }
+  .sopt.quick .sopt-body b { color:var(--rose); }
+  .sopt.quick:hover { border-color:var(--rose-soft); background:#fff; }
+
+  .quick-feel {
+    display:none; margin-top:10px;
+    background:#fff; border:1.5px solid rgba(209,79,134,.2);
+    border-radius:20px; padding:14px 16px;
+  }
+  .quick-feel.on { display:block; animation:qfIn .28s ease; }
+  @keyframes qfIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:none; } }
+  .qf-label { font-size:11px; font-weight:600; color:var(--ink-soft); margin-bottom:8px; }
+  .qf-moods { display:flex; gap:6px; margin-bottom:12px; }
+  .qf-mood {
+    flex:1; border:1.5px solid var(--line); border-radius:14px;
+    background:var(--paper); padding:7px 4px;
+    cursor:pointer; display:flex; flex-direction:column;
+    align-items:center; gap:3px; font-family:inherit;
+    transition:background .18s, border-color .18s, transform .15s;
+  }
+  .qf-mood:hover { background:var(--rose-tint); border-color:var(--rose-soft); transform:translateY(-1px); }
+  .qf-mood .qfm-ico { font-size:22px; line-height:1; }
+  .qf-mood .qfm-lbl { font-size:9.5px; color:var(--ink-soft); font-weight:500; }
+  .qf-mood[aria-pressed="true"] { background:var(--rose-tint); border-color:var(--rose-soft); }
+  .qf-mood[aria-pressed="true"] .qfm-lbl { color:var(--rose); font-weight:700; }
+  .qf-text {
+    width:100%; border:1.5px solid var(--line); border-radius:14px;
+    padding:11px 14px; resize:none; font-family:'Mali',cursive;
+    font-size:14px; color:var(--ink); background:var(--paper);
+    outline:none; min-height:72px; transition:border-color .2s, background .2s;
+  }
+  .qf-text:focus { border-color:var(--rose-soft); background:#fff; }
+  .qf-text::placeholder { color:var(--ink-faint); }
+  .qf-row { display:flex; gap:8px; margin-top:10px; }
+  .qf-save {
+    flex:1; border:none; cursor:pointer;
+    background:linear-gradient(145deg, var(--rose-soft), var(--rose));
+    color:#fff; border-radius:14px; padding:12px 16px;
+    font-family:'Mali',cursive; font-size:15px; font-weight:600;
+    box-shadow:0 8px 20px -8px rgba(209,79,134,.5);
+    transition:transform .15s, box-shadow .15s;
+  }
+  .qf-save:hover  { transform:translateY(-1px); }
+  .qf-save:active { transform:scale(.97); }
+  .qf-cancel {
+    border:1.5px solid var(--line); background:#fff;
+    color:var(--ink-soft); border-radius:14px; padding:12px 14px;
+    font-family:inherit; font-size:13px; font-weight:500; cursor:pointer;
+  }
+
+  .home-toast {
+    position:absolute; left:50%; bottom:92px;
+    transform:translateX(-50%) translateY(16px);
+    background:var(--ink); color:#fff; font-size:13px;
+    padding:10px 18px; border-radius:30px; opacity:0;
+    pointer-events:none; transition:.32s; font-weight:500;
+    white-space:nowrap; z-index:30;
+    box-shadow:0 10px 24px -8px rgba(0,0,0,.4);
+  }
+  .home-toast.on { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* demo bar */
   .demo-bar {
     max-width:392px; margin:14px auto 0;
     display:flex; gap:8px; justify-content:center;
@@ -380,152 +546,8 @@
   .dbtn.on { background:var(--ink); color:#fff; border-color:var(--ink); }
   .dbtn:hover:not(.on) { background:rgba(255,255,255,.9); }
 
-  /* ── bottom navigation ── */
-  .bottom-nav {
-    flex:none; height:60px; background:var(--paper);
-    border-top:1px solid var(--line); display:flex; align-items:stretch;
-  }
-  .bnav-tab {
-    flex:1; border:none; background:none; cursor:pointer; font-family:inherit;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:3px; color:var(--ink-faint); transition:color .2s;
-  }
-  .bnav-tab.active { color:var(--rose); }
-  .bnav-tab:hover:not(.active) { color:var(--ink-soft); }
-  .bnav-ico { font-size:20px; line-height:1; }
-  .bnav-lbl { font-size:9.5px; font-weight:500; }
-
   @media(prefers-reduced-motion:reduce){
     *, *::before, *::after { animation:none!important; transition:none!important; }
-  }
-
-  /* ═══════════════════════════════════════════
-     BOTTOM SHEET — Phase 2
-     "วันนี้จะบันทึกแบบไหน?" — 3 entry modes
-  ═══════════════════════════════════════════ */
-  .sheet-backdrop {
-    position:absolute; inset:0; z-index:20;
-    background:rgba(61,53,72,.48);
-    opacity:0; pointer-events:none;
-    transition:opacity .32s ease;
-  }
-  .sheet-backdrop.on { opacity:1; pointer-events:all; }
-
-  .sheet {
-    position:absolute; left:0; right:0; bottom:0; z-index:21;
-    background:var(--paper); border-radius:28px 28px 0 0;
-    padding:10px 20px calc(28px + env(safe-area-inset-bottom));
-    transform:translateY(100%);
-    transition:transform .42s cubic-bezier(.32,1.18,.5,1);
-    box-shadow:0 -12px 40px -10px rgba(61,53,72,.22);
-  }
-  .sheet.on { transform:translateY(0); }
-
-  .sheet-handle {
-    width:36px; height:4px; border-radius:2px;
-    background:var(--line); margin:0 auto 16px;
-  }
-  .sheet-title {
-    font-family:'Mali',cursive; font-size:18px; font-weight:700;
-    color:var(--ink); margin-bottom:3px;
-  }
-  .sheet-sub { font-size:12px; color:var(--ink-soft); margin-bottom:15px; }
-
-  /* 3 option cards */
-  .sheet-opts { display:flex; flex-direction:column; gap:8px; }
-  .sopt {
-    display:flex; align-items:center; gap:13px;
-    background:#fff; border:1.5px solid var(--line);
-    border-radius:18px; padding:13px 15px;
-    cursor:pointer; font-family:inherit; text-align:left; width:100%;
-    transition:background .18s, border-color .18s, transform .15s, box-shadow .15s;
-  }
-  .sopt:hover {
-    background:var(--paper-deep); border-color:var(--rose-soft);
-    transform:translateY(-2px); box-shadow:0 6px 18px -8px rgba(209,79,134,.3);
-  }
-  .sopt:active { transform:scale(.98); }
-  .sopt-ico  { font-size:26px; flex:none; }
-  .sopt-body { flex:1; }
-  .sopt-body b { display:block; font-size:14px; color:var(--ink); font-weight:600; }
-  .sopt-body span { display:block; font-size:11.5px; color:var(--ink-soft); margin-top:2px; line-height:1.4; }
-  .sopt-arr  { font-size:18px; color:var(--ink-faint); flex:none; }
-
-  /* option 3: quick mode — accent border */
-  .sopt.quick { background:var(--rose-tint); border-color:rgba(209,79,134,.2); }
-  .sopt.quick .sopt-body b { color:var(--rose); }
-  .sopt.quick .sopt-arr    { color:var(--rose-soft); }
-  .sopt.quick:hover { border-color:var(--rose-soft); background:#fff; }
-
-  /* inline quick-feel form */
-  .quick-feel {
-    display:none; margin-top:10px;
-    background:#fff; border:1.5px solid rgba(209,79,134,.2);
-    border-radius:20px; padding:14px 16px;
-  }
-  .quick-feel.on { display:block; animation:qfIn .28s ease; }
-  @keyframes qfIn {
-    from { opacity:0; transform:translateY(-6px); }
-    to   { opacity:1; transform:none; }
-  }
-
-  /* mini mood row inside quick-feel */
-  .qf-label { font-size:11px; font-weight:600; color:var(--ink-soft); margin-bottom:8px; }
-  .qf-moods { display:flex; gap:6px; margin-bottom:12px; }
-  .qf-mood {
-    flex:1; border:1.5px solid var(--line); border-radius:14px;
-    background:var(--paper); padding:7px 4px;
-    cursor:pointer; display:flex; flex-direction:column;
-    align-items:center; gap:3px; font-family:inherit;
-    transition:background .18s, border-color .18s, transform .15s;
-  }
-  .qf-mood:hover { background:var(--rose-tint); border-color:var(--rose-soft); transform:translateY(-1px); }
-  .qf-mood .qfm-ico { font-size:22px; line-height:1; }
-  .qf-mood .qfm-lbl { font-size:9.5px; color:var(--ink-soft); font-weight:500; }
-  .qf-mood[aria-pressed="true"] {
-    background:var(--rose-tint); border-color:var(--rose-soft);
-    box-shadow:0 4px 10px -4px rgba(209,79,134,.3);
-  }
-  .qf-mood[aria-pressed="true"] .qfm-lbl { color:var(--rose); font-weight:700; }
-
-  .qf-text {
-    width:100%; border:1.5px solid var(--line); border-radius:14px;
-    padding:11px 14px; resize:none; font-family:'Mali',cursive;
-    font-size:14px; color:var(--ink); background:var(--paper);
-    outline:none; min-height:72px; transition:border-color .2s, background .2s;
-  }
-  .qf-text:focus { border-color:var(--rose-soft); background:#fff; }
-  .qf-text::placeholder { color:var(--ink-faint); }
-
-  .qf-row { display:flex; gap:8px; margin-top:10px; }
-  .qf-save {
-    flex:1; border:none; cursor:pointer;
-    background:linear-gradient(145deg, var(--rose-soft), var(--rose));
-    color:#fff; border-radius:14px; padding:12px 16px;
-    font-family:'Mali',cursive; font-size:15px; font-weight:600;
-    box-shadow:0 8px 20px -8px rgba(209,79,134,.5);
-    transition:transform .15s, box-shadow .15s;
-  }
-  .qf-save:hover  { transform:translateY(-1px); box-shadow:0 12px 24px -8px rgba(209,79,134,.6); }
-  .qf-save:active { transform:scale(.97); }
-  .qf-cancel {
-    border:1.5px solid var(--line); background:#fff;
-    color:var(--ink-soft); border-radius:14px; padding:12px 14px;
-    font-family:inherit; font-size:13px; font-weight:500; cursor:pointer;
-  }
-
-  /* home toast */
-  .home-toast {
-    position:absolute; left:50%; bottom:92px;
-    transform:translateX(-50%) translateY(16px);
-    background:var(--ink); color:#fff; font-size:13px;
-    padding:10px 18px; border-radius:30px; opacity:0;
-    pointer-events:none; transition:.32s; font-weight:500;
-    white-space:nowrap; z-index:30;
-    box-shadow:0 10px 24px -8px rgba(0,0,0,.4);
-  }
-  .home-toast.on {
-    opacity:1; transform:translateX(-50%) translateY(0);
   }
 </style>
 </head>
@@ -533,55 +555,83 @@
 
 <div class="phone">
 
+  <div class="phone-bg-wrap">
+    <img class="phone-bg active" id="bgA" src="" alt="">
+    <img class="phone-bg"        id="bgB" src="" alt="">
+  </div>
+
   <!-- ══════════ HEADER ══════════ -->
   <header class="head" id="head">
 
     <div class="head-top">
       <div class="brand">Life Diary<small>สมุดชีวิต</small></div>
       <div class="head-actions">
-        <button class="iconbtn" title="ค้นหา" aria-label="ค้นหา">🔍</button>
+        <!-- <button class="iconbtn" title="ค้นหา" aria-label="ค้นหา">🔍</button> -->
         <div class="avatar" title="โปรไฟล์" role="button" tabindex="0">ส</div>
       </div>
     </div>
 
-    <div class="date-strip">วันอาทิตย์ที่ 15 มิถุนายน 2569</div>
+    <div class="date-strip">วันอังคารที่ 17 มิถุนายน 2569</div>
 
-    <!-- Mood Picker — home screen -->
-    <p class="mood-q">วันนี้รู้สึกอย่างไร?</p>
-    <div class="moods" id="moods" role="group" aria-label="เลือกอารมณ์">
-      <button class="mood" data-a="#F0DBA0" data-b="#F6E9C6" aria-pressed="false">
-        <span class="dot" style="background:#E9C46A"></span><span class="lbl">ดีมาก</span>
+    <!-- ── Mood Chip (collapsed, Facebook-reaction style) ── -->
+    <div class="mood-chip-wrap">
+      <button class="mood-chip-trigger" id="moodTrigger"
+              aria-expanded="false" aria-controls="moodPanel">
+        <span class="mc-emoji" id="mcEmoji">🙂</span>
+        <span class="mc-label" id="mcLabel">วันนี้รู้สึกอย่างไร?</span>
+        <span class="mc-badge" id="mcBadge"></span>
+        <span class="mc-arrow">›</span>
       </button>
-      <button class="mood" data-a="#C8DCC2" data-b="#E1ECDC" aria-pressed="false">
-        <span class="dot" style="background:#A8C3A0"></span><span class="lbl">ดี</span>
-      </button>
-      <button class="mood" data-a="#C7D8E4" data-b="#E2ECF1" aria-pressed="false">
-        <span class="dot" style="background:#AFC5D8"></span><span class="lbl">เฉยๆ</span>
-      </button>
-      <button class="mood" data-a="#D6CBE2" data-b="#E8E0F0" aria-pressed="false">
-        <span class="dot" style="background:#B9A8C9"></span><span class="lbl">เหนื่อย</span>
-      </button>
-      <button class="mood" data-a="#E0C7CC" data-b="#EFDDE0" aria-pressed="false">
-        <span class="dot" style="background:#C9A0A8"></span><span class="lbl">แย่</span>
-      </button>
+      <div class="mood-panel" id="moodPanel" role="group" aria-label="เลือกอารมณ์">
+        <div class="moods">
+          <button class="mood" data-a="#fa5ecb33" data-b="#b2c9fd46"
+                  data-emoji="😄" data-label="ดีมาก" aria-pressed="false">
+            <span class="mood-emoji">😄</span><span class="lbl">ดีมาก</span>
+          </button>
+          <button class="mood" data-a="#67a7f149" data-b="#ecdce54f"
+                  data-emoji="😊" data-label="ดี" aria-pressed="false">
+            <span class="mood-emoji">😊</span><span class="lbl">ดี</span>
+          </button>
+          <button class="mood" data-a="#a3d4f749" data-b="#e2ecf159"
+                  data-emoji="😐" data-label="สบายๆ" aria-pressed="false">
+            <span class="mood-emoji">😐</span><span class="lbl">สบายๆ</span>
+          </button>
+          <button class="mood" data-a="#431e6b4f" data-b="#ca9ff538"
+                  data-emoji="😔" data-label="เหนื่อย" aria-pressed="false">
+            <span class="mood-emoji">😔</span><span class="lbl">เหนื่อย</span>
+          </button>
+          <button class="mood" data-a="#f8678450" data-b="#89a7fa49"
+                  data-emoji="😞" data-label="สู้ๆ" aria-pressed="false">
+            <span class="mood-emoji">😞</span><span class="lbl">สู้ๆ</span>
+          </button>
+        </div>
+      </div>
     </div>
 
-    <!-- Activity Mode Row — วันนี้ทำอะไรน่า -->
-    <div class="act-section">
-      <div class="act-lbl">วันนี้ทำอะไรน่า</div>
-      <div class="act-row" id="actRow" role="group" aria-label="เลือกกิจกรรมวันนี้">
-        <button class="act" data-act="work"     aria-pressed="false"><span class="aico">🏢</span>ทำงาน</button>
-        <button class="act" data-act="shop"     aria-pressed="false"><span class="aico">🏪</span>เปิดร้าน</button>
-        <button class="act" data-act="dayoff"   aria-pressed="false"><span class="aico">🌴</span>วันหยุด</button>
-        <button class="act" data-act="family"   aria-pressed="false"><span class="aico">👨‍👩‍👧</span>พาครอบครัว</button>
-        <button class="act" data-act="trip"     aria-pressed="false"><span class="aico">✈️</span>ไปทริป</button>
-        <button class="act" data-act="festival" aria-pressed="false"><span class="aico">🎉</span>เทศกาล</button>
-        <button class="act" data-act="study"    aria-pressed="false"><span class="aico">📚</span>เรียน/อบรม</button>
-        <button class="act" data-act="home"     aria-pressed="false"><span class="aico">🏠</span>อยู่บ้าน</button>
-        <button class="act" data-act="exercise" aria-pressed="false"><span class="aico">💪</span>ออกกำลัง</button>
-        <button class="act" data-act="doctor"   aria-pressed="false"><span class="aico">🏥</span>นัดหมอ</button>
-        <button class="act" data-act="shop2"    aria-pressed="false"><span class="aico">🛒</span>ช็อปปิ้ง</button>
-        <button class="act" data-act="eatout"   aria-pressed="false"><span class="aico">🍽️</span>กินข้าวนอกบ้าน</button>
+    <!-- ── Activity Chip (collapsed, expandable) ── -->
+    <div class="act-chip-wrap">
+      <button class="act-chip-trigger" id="actTrigger"
+              aria-expanded="false" aria-controls="actPanel">
+        <span class="ac-emoji" id="acEmoji">🌟</span>
+        <span class="ac-label" id="acLabel">วันนี้ทำอะไรอยู่น๊า?</span>
+        <span class="ac-change" id="acChange"></span>
+        <span class="ac-arrow">›</span>
+      </button>
+      <div class="act-panel" id="actPanel" role="group" aria-label="เลือกกิจกรรมวันนี้">
+        <div class="act-row" id="actRow">
+          <button class="act" data-ico="🏢" data-label="ทำงาน"       aria-pressed="false"><span class="aico">🏢</span>ทำงาน</button>
+          <button class="act" data-ico="🏪" data-label="เปิดร้าน"    aria-pressed="false"><span class="aico">🏪</span>เปิดร้าน</button>
+          <button class="act" data-ico="🌴" data-label="วันหยุด"     aria-pressed="false"><span class="aico">🌴</span>วันหยุด</button>
+          <button class="act" data-ico="👨‍👩‍👧" data-label="พาครอบครัว" aria-pressed="false"><span class="aico">👨‍👩‍👧</span>พาครอบครัว</button>
+          <button class="act" data-ico="✈️" data-label="ไปทริป"      aria-pressed="false"><span class="aico">✈️</span>ไปทริป</button>
+          <button class="act" data-ico="🎉" data-label="เทศกาล"     aria-pressed="false"><span class="aico">🎉</span>เทศกาล</button>
+          <button class="act" data-ico="📚" data-label="เรียน/อบรม" aria-pressed="false"><span class="aico">📚</span>เรียน/อบรม</button>
+          <button class="act" data-ico="🏠" data-label="อยู่บ้าน"   aria-pressed="false"><span class="aico">🏠</span>อยู่บ้าน</button>
+          <button class="act" data-ico="💪" data-label="ออกกำลัง"   aria-pressed="false"><span class="aico">💪</span>ออกกำลัง</button>
+          <button class="act" data-ico="🏥" data-label="นัดหมอ"     aria-pressed="false"><span class="aico">🏥</span>นัดหมอ</button>
+          <button class="act" data-ico="🛒" data-label="ช็อปปิ้ง"   aria-pressed="false"><span class="aico">🛒</span>ช็อปปิ้ง</button>
+          <button class="act" data-ico="🍽️" data-label="กินข้าวนอก" aria-pressed="false"><span class="aico">🍽️</span>กินข้าวนอก</button>
+        </div>
       </div>
     </div>
 
@@ -590,57 +640,49 @@
   <!-- ══════════ BODY ══════════ -->
   <div class="body">
 
-    <!-- Daily Question — vertical slide ticker -->
+    <!-- 1. Daily Question — vertical slide -->
     <div class="q-card" id="qcard">
       <div class="q-head">
         <span class="q-icon">💬</span>
-        <span class="q-tag">คำถามประจำวัน</span>
+      
+        <span class="q-tag">
+         <h3>คำถามประจำวัน</h3>
+        </span>
         <button class="q-next" id="qnext" aria-label="คำถามถัดไป">ถัดไป ›</button>
       </div>
-
-      <!-- vertical sliding window: clips to 1 question height -->
       <div class="q-window" id="qwindow">
-        <div class="q-track" id="qtrack">
-          <!-- questions injected by JS -->
-        </div>
+        <div class="q-track" id="qtrack"></div>
       </div>
-
-      <!-- dot progress indicators -->
-      <div class="q-dots" id="qdots">
-        <!-- dots injected by JS -->
-      </div>
+      <div class="q-dots" id="qdots"></div>
     </div>
 
-    <!-- ══════════════════════════════
-         EMPTY STATE
-         Canvas = home decoration only, NOT entry container (Team 3)
-    ══════════════════════════════ -->
-    <div id="emptyState">
+    <!-- 2. MAIN CTA — most prominent, above all else -->
+     <div class="main-cta">
+        <button class="cta-main" id="ctaMain">
+          <span class="cta-main-ico">✏️</span> เขียนบันทึกวันนี้
+        </button>
+     </div>
+   
 
+    <!-- 3. Empty State -->
+    <div id="emptyState">
       <div class="canvas-bg">
-        <div class="canvas-easel">🖼️</div>
+        <div class="img-history">
+          <img src="https://i.pinimg.com/736x/a0/bf/39/a0bf392c595db35dd9b6f3f4881dfd23.jpg" alt="ความทรงจำ 1">
+          <img src="https://i.pinimg.com/736x/1a/ec/a0/1aeca0e90fcbceb832342f7b2661ec96.jpg" alt="ความทรงจำ 2">
+          <img src="https://i.pinimg.com/736x/e0/b8/7c/e0b87cf298f804a3de97bfbbf8fefdbd.jpg" alt="ความทรงจำ 3">
+        </div>
         <div class="canvas-title">ยังไม่มีบันทึกของวันนี้</div>
         <div class="canvas-sub">
-          เริ่มเก็บเรื่องราว ความรู้สึก รูปภาพ<br>หรือสถานที่ของคุณสักนิดดีไหม
+          เริ่มเก็บความรู้สึกเล็กๆ ของวันนี้ไว้กันเถอะ<br>
+          เรื่องราว รูปภาพ หรือช่วงเวลาที่อยากจำ
         </div>
-
-        <!-- Phase 1 KEY FIX: ปุ่ม CTA กลางจอ (Team 1 + 2) -->
-        <button class="cta-canvas" id="ctaEmpty">
-          <span>✏️</span> เขียนบันทึกแรกของวันนี้
-        </button>
       </div>
-
-      <p class="or-hint">หรือแตะ <b>อารมณ์</b> ด้านบนเพื่อเริ่มจากความรู้สึกได้เลย</p>
-
     </div>
 
-    <!-- ══════════════════════════════
-         POPULATED STATE
-         Shows when user has existing entries
-    ══════════════════════════════ -->
+    <!-- 4. Populated State -->
     <div id="populatedState">
 
-      <!-- Mood × Money Insight — differentiator (Team 3) -->
       <div class="insight">
         <div class="i-tag">✨ Insight ประจำเดือน</div>
         <h3>เดือนนี้คุณใช้เงิน<b>มากกว่าปกติ</b>ตอนรู้สึกเหนื่อย</h3>
@@ -649,7 +691,6 @@
 
       <div class="section-h">บันทึกล่าสุด</div>
 
-      <!-- entry: วันนี้ -->
       <div class="entry">
         <div class="entry-bar" style="background:linear-gradient(90deg,#A8C3A0,#E1ECDC)"></div>
         <div class="entry-body">
@@ -659,9 +700,7 @@
             <span class="entry-place">ตลาดเซฟวัน โคราช</span>
           </div>
           <div class="entry-title">ไปตลาดตอนเย็น รู้สึกสบายใจ</div>
-          <div class="entry-preview">
-            ซื้อของเข้าร้านนิดหน่อย อากาศร้อนแต่ขายดี รู้สึกดีขึ้นเยอะ — <b>ใช้จ่าย ฿280</b>
-          </div>
+          <div class="entry-preview">ซื้อของเข้าร้านนิดหน่อย อากาศร้อนแต่ขายดี รู้สึกดีขึ้นเยอะ — <b>ใช้จ่าย ฿280</b></div>
         </div>
         <div class="entry-foot">
           <span class="chip chip-sage">📍 ตลาด</span>
@@ -670,7 +709,6 @@
         </div>
       </div>
 
-      <!-- entry: เมื่อวาน -->
       <div class="entry">
         <div class="entry-bar" style="background:linear-gradient(90deg,#C9A0A8,#EFDDE0)"></div>
         <div class="entry-body">
@@ -680,9 +718,7 @@
             <span class="entry-place">บ้าน</span>
           </div>
           <div class="entry-title">ฝนตกทั้งวัน แต่ได้พักผ่อน</div>
-          <div class="entry-preview">
-            นอนดูซีรีส์ทั้งวัน สั่งข้าวกล่องมากิน รู้สึกเหนื่อยๆ แต่โอเค
-          </div>
+          <div class="entry-preview">นอนดูซีรีส์ทั้งวัน สั่งข้าวกล่องมากิน รู้สึกเหนื่อยๆ แต่โอเค</div>
         </div>
         <div class="entry-foot">
           <span class="chip chip-rose">😴 เหนื่อย</span>
@@ -691,7 +727,6 @@
         </div>
       </div>
 
-      <!-- entry: 2 วันที่แล้ว -->
       <div class="entry">
         <div class="entry-bar" style="background:linear-gradient(90deg,#E9C46A,#F6E9C6)"></div>
         <div class="entry-body">
@@ -701,9 +736,7 @@
             <span class="entry-place">ร้านกาแฟ The Coffee</span>
           </div>
           <div class="entry-title">วันหยุดดีๆ กับครอบครัว</div>
-          <div class="entry-preview">
-            ออกไปกินข้าวเช้ากับครอบครัว อากาศดีมาก มีความสุขมากๆ
-          </div>
+          <div class="entry-preview">ออกไปกินข้าวเช้ากับครอบครัว อากาศดีมาก มีความสุขมากๆ</div>
         </div>
         <div class="entry-foot">
           <span class="chip chip-rose">😄 ดีมาก</span>
@@ -714,7 +747,7 @@
 
       <div style="text-align:center;margin-top:4px;">
         <button style="border:none;background:none;font-family:'Mali',cursive;font-size:13.5px;
-          color:var(--rose-soft);cursor:pointer;font-weight:600;">
+          color:var(--rose);cursor:pointer;font-weight:600;opacity:.7;">
           ดูบันทึกทั้งหมด →
         </button>
       </div>
@@ -723,13 +756,16 @@
 
   </div><!-- /body -->
 
-  <!-- ── bottom navigation bar ── -->
+  <!-- ── bottom nav ── -->
   <nav class="bottom-nav">
     <button class="bnav-tab active">
       <span class="bnav-ico">🏠</span><span class="bnav-lbl">หน้าแรก</span>
     </button>
     <button class="bnav-tab" onclick="location.href='life-diary-timeline.html'">
       <span class="bnav-ico">📅</span><span class="bnav-lbl">ไทม์ไลน์</span>
+    </button>
+    <button class="bnav-tab" onclick="location.href='life-diary-composer.html'">
+      <span class="bnav-ico">➕</span><span class="bnav-lbl">เพิ่ม</span>
     </button>
     <button class="bnav-tab" onclick="location.href='life-diary-search.html'">
       <span class="bnav-ico">🔍</span><span class="bnav-lbl">ค้นหา</span>
@@ -739,28 +775,13 @@
     </button>
   </nav>
 
-  <!-- ══ SINGLE FAB — Phase 1 KEY FIX: 1 ปุ่ม + label ชัด (Team 2 + 3) ══ -->
-  <div class="fab-wrap">
-    <button class="fab" id="fabBtn" aria-label="เริ่มบันทึกวันนี้">
-      <span class="fab-ico">✏️</span>บันทึกวันนี้
-    </button>
-  </div>
-
-
-  <!-- ══════════════════════════════════════════
-       BOTTOM SHEET — Phase 2
-       เปิดเมื่อกด FAB หรือ CTA กลางจอ
-  ══════════════════════════════════════════ -->
+  <!-- ── bottom sheet ── -->
   <div class="sheet-backdrop" id="backdrop"></div>
-
   <div class="sheet" id="sheet" role="dialog" aria-hidden="true" aria-label="เลือกวิธีบันทึก">
     <div class="sheet-handle"></div>
     <div class="sheet-title">วันนี้จะบันทึกแบบไหน?</div>
     <div class="sheet-sub">เลือกวิธีที่ง่ายที่สุดสำหรับวันนี้</div>
-
     <div class="sheet-opts">
-
-      <!-- Mode 1: เขียนบันทึก (full composer) -->
       <button class="sopt" id="soptWrite">
         <span class="sopt-ico">✏️</span>
         <div class="sopt-body">
@@ -769,8 +790,6 @@
         </div>
         <span class="sopt-arr">›</span>
       </button>
-
-      <!-- Mode 2: บันทึกด้วยรูปภาพ (photo-first) -->
       <button class="sopt" id="soptPhoto">
         <span class="sopt-ico">📷</span>
         <div class="sopt-body">
@@ -779,8 +798,6 @@
         </div>
         <span class="sopt-arr">›</span>
       </button>
-
-      <!-- Mode 3: บันทึกสั้นๆ (quick feel — inline expand) -->
       <button class="sopt quick" id="soptFeel">
         <span class="sopt-ico">⚡</span>
         <div class="sopt-body">
@@ -789,32 +806,23 @@
         </div>
         <span class="sopt-arr" id="feelArr">›</span>
       </button>
-
-    </div><!-- /sheet-opts -->
-
-    <!-- Quick-feel inline form (toggle on mode 3 tap) -->
+    </div>
     <div class="quick-feel" id="quickFeel">
       <div class="qf-label">วันนี้รู้สึกยังไง?</div>
-      <div class="qf-moods" id="qfMoods">
-        <!-- injected by JS -->
-      </div>
+      <div class="qf-moods" id="qfMoods"></div>
       <textarea class="qf-text" id="qfText"
-        placeholder="เขียนสั้นๆ ก็ได้... 1–2 บรรทัด ก็พอ"
-        rows="3"></textarea>
+        placeholder="เขียนสั้นๆ ก็ได้... 1–2 บรรทัด ก็พอ" rows="3"></textarea>
       <div class="qf-row">
         <button class="qf-cancel" id="qfCancel">ยกเลิก</button>
         <button class="qf-save"   id="qfSave">⚡ บันทึกเลย</button>
       </div>
     </div>
+  </div>
 
-  </div><!-- /sheet -->
-
-  <!-- Toast notification -->
   <div class="home-toast" id="homeToast"></div>
 
 </div><!-- /phone -->
 
-<!-- demo state toggle — for design review only -->
 <div class="demo-bar">
   <button class="dbtn on" id="dEmpty">Empty State</button>
   <button class="dbtn"    id="dFull">Populated State</button>
@@ -822,31 +830,89 @@
 
 <script>
 /* ══════════════════════════════════════
-   MOOD PICKER → header wash
+   REFS
 ══════════════════════════════════════ */
-const head  = document.getElementById('head');
-const moods = document.querySelectorAll('#moods .mood');
+const head        = document.getElementById('head');
+const moodTrigger = document.getElementById('moodTrigger');
+const moodPanel   = document.getElementById('moodPanel');
+const mcEmoji     = document.getElementById('mcEmoji');
+const mcLabel     = document.getElementById('mcLabel');
+const mcBadge     = document.getElementById('mcBadge');
+const actTrigger  = document.getElementById('actTrigger');
+const actPanel    = document.getElementById('actPanel');
+const acEmoji     = document.getElementById('acEmoji');
+const acLabel     = document.getElementById('acLabel');
+const acChange    = document.getElementById('acChange');
 
-moods.forEach(btn => {
+/* ══════════════════════════════════════
+   MOOD CHIP — toggle + select
+══════════════════════════════════════ */
+moodTrigger.addEventListener('click', () => {
+  const isOpen = moodPanel.classList.toggle('open');
+  moodTrigger.classList.toggle('open', isOpen);
+  moodTrigger.setAttribute('aria-expanded', String(isOpen));
+  if (isOpen) closeActPanel();
+});
+
+document.querySelectorAll('#moodPanel .mood').forEach(btn => {
   btn.addEventListener('click', () => {
-    moods.forEach(b => b.setAttribute('aria-pressed', 'false'));
-    btn.setAttribute('aria-pressed', 'true');
+    document.querySelectorAll('#moodPanel .mood').forEach(b => b.setAttribute('aria-pressed','false'));
+    btn.setAttribute('aria-pressed','true');
+    mcEmoji.textContent = btn.dataset.emoji;
+    mcLabel.textContent = 'รู้สึก ' + btn.dataset.label;
+    mcBadge.textContent = btn.dataset.label;
+    mcBadge.classList.add('on');
     head.style.background =
       `linear-gradient(165deg, ${btn.dataset.a} 0%, ${btn.dataset.b} 62%, var(--paper) 100%)`;
-    /* mood tap → open sheet with mood already in context */
-    setTimeout(() => openSheet(), 340);
+    closeMoodPanel();
+    setTimeout(openSheet, 320);
   });
 });
 
+function closeMoodPanel() {
+  moodPanel.classList.remove('open');
+  moodTrigger.classList.remove('open');
+  moodTrigger.setAttribute('aria-expanded','false');
+}
+
 /* ══════════════════════════════════════
-   ACTIVITY MODE PICKER (toggle single)
+   ACTIVITY CHIP — toggle + select
 ══════════════════════════════════════ */
+actTrigger.addEventListener('click', () => {
+  const isOpen = actPanel.classList.toggle('open');
+  actTrigger.classList.toggle('open', isOpen);
+  actTrigger.setAttribute('aria-expanded', String(isOpen));
+  if (isOpen) closeMoodPanel();
+});
+
 document.querySelectorAll('#actRow .act').forEach(btn => {
   btn.addEventListener('click', () => {
     const wasOn = btn.getAttribute('aria-pressed') === 'true';
     document.querySelectorAll('#actRow .act').forEach(b => b.setAttribute('aria-pressed','false'));
-    btn.setAttribute('aria-pressed', wasOn ? 'false' : 'true');
+    if (!wasOn) {
+      btn.setAttribute('aria-pressed','true');
+      acEmoji.textContent = btn.dataset.ico;
+      acLabel.textContent = 'วันนี้ ' + btn.dataset.label;
+      acChange.textContent = 'เปลี่ยน ›';
+    } else {
+      acEmoji.textContent = '🌟';
+      acLabel.textContent = 'วันนี้ทำอะไรอยู่น๊า?';
+      acChange.textContent = '';
+    }
+    closeActPanel();
   });
+});
+
+function closeActPanel() {
+  actPanel.classList.remove('open');
+  actTrigger.classList.remove('open');
+  actTrigger.setAttribute('aria-expanded','false');
+}
+
+/* close chips on outside click */
+document.addEventListener('click', e => {
+  if (!e.target.closest('.mood-chip-wrap')) closeMoodPanel();
+  if (!e.target.closest('.act-chip-wrap'))  closeActPanel();
 });
 
 /* ══════════════════════════════════════
@@ -863,16 +929,14 @@ const dailyQs = [
   'วันนี้ทำอะไรเพื่อตัวเองบ้างไหม?',
   'วันนี้อยากบอกอะไรกับตัวเองในอนาคต?',
 ];
-const ITEM_H = 58;
+const ITEM_H = 50;
 let qi = 0, autoTimer;
-
 const qtrack = document.getElementById('qtrack');
 const qdots  = document.getElementById('qdots');
 
 dailyQs.forEach((q, i) => {
   const item = document.createElement('div');
-  item.className = 'q-item';
-  item.textContent = q;
+  item.className = 'q-item'; item.textContent = q;
   qtrack.appendChild(item);
   const dot = document.createElement('span');
   dot.className = 'q-dot' + (i === 0 ? ' on' : '');
@@ -889,15 +953,13 @@ function scheduleAuto() {
   autoTimer = setInterval(() => goToQ(qi + 1), 5000);
 }
 document.getElementById('qnext').addEventListener('click', e => {
-  e.stopPropagation();
-  goToQ(qi + 1); scheduleAuto();
+  e.stopPropagation(); goToQ(qi + 1); scheduleAuto();
 });
-/* tap question → open sheet with that question as prompt */
 document.getElementById('qwindow').addEventListener('click', openSheet);
 scheduleAuto();
 
 /* ══════════════════════════════════════
-   BOTTOM SHEET — Phase 2
+   BOTTOM SHEET
 ══════════════════════════════════════ */
 const sheet    = document.getElementById('sheet');
 const backdrop = document.getElementById('backdrop');
@@ -906,7 +968,6 @@ function openSheet() {
   sheet.classList.add('on');
   backdrop.classList.add('on');
   sheet.setAttribute('aria-hidden','false');
-  /* reset quick-feel to collapsed */
   document.getElementById('quickFeel').classList.remove('on');
   document.getElementById('qfText').value = '';
   document.querySelectorAll('.qf-mood').forEach(b => b.setAttribute('aria-pressed','false'));
@@ -918,18 +979,8 @@ function closeSheet() {
   sheet.setAttribute('aria-hidden','true');
 }
 backdrop.addEventListener('click', closeSheet);
-
-/* Mode 1: full composer */
-document.getElementById('soptWrite').addEventListener('click', () => {
-  closeSheet(); openComposer();
-});
-
-/* Mode 2: photo-first (opens composer; real app = photo picker first) */
-document.getElementById('soptPhoto').addEventListener('click', () => {
-  closeSheet(); openComposer();
-});
-
-/* Mode 3: quick-feel — expand inline form */
+document.getElementById('soptWrite').addEventListener('click', () => { closeSheet(); openComposer(); });
+document.getElementById('soptPhoto').addEventListener('click', () => { closeSheet(); openComposer(); });
 document.getElementById('soptFeel').addEventListener('click', e => {
   e.stopPropagation();
   const qf  = document.getElementById('quickFeel');
@@ -938,19 +989,15 @@ document.getElementById('soptFeel').addEventListener('click', e => {
   arr.textContent = on ? '∨' : '›';
 });
 
-/* quick-feel: build mini mood buttons */
+/* quick-feel mini moods */
 const qfMoodsData = [
-  { ico:'😄', lbl:'ดีมาก' },
-  { ico:'😊', lbl:'ดี' },
-  { ico:'😐', lbl:'เฉยๆ' },
-  { ico:'😔', lbl:'เหนื่อย' },
-  { ico:'😞', lbl:'แย่' },
+  { ico:'😄', lbl:'ดีมาก' }, { ico:'😊', lbl:'ดี' },
+  { ico:'😐', lbl:'สบายๆ' }, { ico:'😔', lbl:'เหนื่อย' }, { ico:'😞', lbl:'สู้' },
 ];
 const qfMoodsEl = document.getElementById('qfMoods');
 qfMoodsData.forEach(m => {
   const btn = document.createElement('button');
-  btn.className = 'qf-mood';
-  btn.setAttribute('aria-pressed','false');
+  btn.className = 'qf-mood'; btn.setAttribute('aria-pressed','false');
   btn.innerHTML = `<span class="qfm-ico">${m.ico}</span><span class="qfm-lbl">${m.lbl}</span>`;
   btn.addEventListener('click', () => {
     qfMoodsEl.querySelectorAll('.qf-mood').forEach(b => b.setAttribute('aria-pressed','false'));
@@ -958,32 +1005,22 @@ qfMoodsData.forEach(m => {
   });
   qfMoodsEl.appendChild(btn);
 });
-
-/* quick-feel: cancel */
 document.getElementById('qfCancel').addEventListener('click', e => {
   e.stopPropagation();
   document.getElementById('quickFeel').classList.remove('on');
   document.getElementById('feelArr').textContent = '›';
 });
-
-/* quick-feel: save */
 document.getElementById('qfSave').addEventListener('click', () => {
   const txt = document.getElementById('qfText').value.trim();
   if (!txt) { document.getElementById('qfText').focus(); return; }
-  closeSheet();
-  showToast('บันทึกสั้นๆ แล้ว ✓');
+  closeSheet(); showToast('บันทึกสั้นๆ แล้ว ✓');
 });
 
 /* ══════════════════════════════════════
-   NAVIGATE TO COMPOSER
+   CTA + NAVIGATOR
 ══════════════════════════════════════ */
-function openComposer() {
-  window.open('life-diary-composer.html', '_blank');
-}
-
-/* FAB + CTA → open sheet (not composer directly) */
-document.getElementById('fabBtn').addEventListener('click', openSheet);
-document.getElementById('ctaEmpty').addEventListener('click', openSheet);
+function openComposer() { window.open('life-diary-composer.html', '_blank'); }
+document.getElementById('ctaMain').addEventListener('click', openSheet);
 document.getElementById('navWrite').addEventListener('click', openSheet);
 
 /* ══════════════════════════════════════
@@ -991,19 +1028,17 @@ document.getElementById('navWrite').addEventListener('click', openSheet);
 ══════════════════════════════════════ */
 function showToast(msg) {
   const t = document.getElementById('homeToast');
-  t.textContent = msg;
-  t.classList.add('on');
+  t.textContent = msg; t.classList.add('on');
   setTimeout(() => t.classList.remove('on'), 2200);
 }
 
 /* ══════════════════════════════════════
-   DEMO STATE TOGGLE (prototype only)
+   DEMO STATE TOGGLE
 ══════════════════════════════════════ */
 const emptyEl = document.getElementById('emptyState');
 const fullEl  = document.getElementById('populatedState');
 const dE = document.getElementById('dEmpty');
 const dF = document.getElementById('dFull');
-
 dE.addEventListener('click', () => {
   emptyEl.style.display = ''; fullEl.style.display = 'none';
   dE.classList.add('on'); dF.classList.remove('on');
@@ -1012,6 +1047,40 @@ dF.addEventListener('click', () => {
   emptyEl.style.display = 'none'; fullEl.style.display = '';
   dF.classList.add('on'); dE.classList.remove('on');
 });
+</script>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   BACKGROUND SLIDESHOW — crossfade
+══════════════════════════════════════════════════════════════════ */
+const BG_IMAGES = [
+  'https://i.pinimg.com/1200x/e9/22/bf/e922bf3f3e800c78bcd1ef1bf562ce84.jpg',
+  'https://i.pinimg.com/736x/23/49/f0/2349f095ded223ef68187f73d4a9efc3.jpg',
+  'https://i.pinimg.com/736x/14/04/ea/1404eaf85bff6c491d7718124e0d5516.jpg',
+  'https://i.pinimg.com/736x/d0/cf/1f/d0cf1ffc69ce15b4bee0a4f5b3a133bb.jpg',
+  'https://i.pinimg.com/736x/e4/39/14/e4391455bf1ac7156257697b376ff457.jpg',
+  'https://i.pinimg.com/736x/1a/9d/8c/1a9d8c86489ac81f6318744da23d1ae1.jpg',
+  'https://i.pinimg.com/736x/9b/36/2b/9b362b873b9cb74cd1fae234a3d47da0.jpg',
+  'https://i.pinimg.com/736x/38/6b/c8/386bc806a19f28989a6e80f44711d8ad.jpg',
+  'https://i.pinimg.com/736x/97/bf/f9/97bff9029f0f9f4f94d25f6088d93832.jpg',
+];
+const INTERVAL_MS = 0.2 * 60 * 1000;
+const bgA = document.getElementById('bgA');
+const bgB = document.getElementById('bgB');
+let currentIdx = 0, useA = true;
+bgA.src = BG_IMAGES[0];
+function nextBg() {
+  currentIdx = (currentIdx + 1) % BG_IMAGES.length;
+  const incoming = useA ? bgB : bgA;
+  const outgoing  = useA ? bgA : bgB;
+  incoming.src = BG_IMAGES[currentIdx];
+  incoming.onload = () => {
+    incoming.classList.add('active');
+    outgoing.classList.remove('active');
+    useA = !useA;
+  };
+}
+setInterval(nextBg, INTERVAL_MS);
 </script>
 </body>
 </html>

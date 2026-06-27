@@ -2,761 +2,688 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Life Diary — Composer (Pro)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Life Diary — เขียนบันทึก</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Mali:ital,wght@0,400;0,600;0,700;1,400;1,600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+  :root {
+    --paper:      #FBF8F3;
+    --paper-deep: #F3EEE5;
+    --ink:        #3D3548;
+    --ink-soft:   #7A7186;
+    --ink-faint:  #B8B0C2;
+    --line:       #EDE5DC;
+    --rose:       #D14F86;
+    --rose-mid:   #C93E7A;
+    --rose-soft:  rgba(209,79,134,.15);
+    --rose-tint:  #FBEAF1;
+    --sage:       #7E9E7C;
+    --sage-tint:  #EAF0E7;
+    --gold:       #CC9A3A;
+    --gold-tint:  #FAF1DC;
+    --radius:     20px;
+    --shadow:     0 20px 56px -20px rgba(61,53,72,.42);
+  }
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+  html, body { height:100%; }
   body {
-    font-family: 'IBM Plex Sans Thai', sans-serif;
+    font-family:'IBM Plex Sans Thai', sans-serif;
+    color:var(--ink);
     background:
       radial-gradient(1200px 600px at 80% -10%, #EAE0EC 0%, transparent 55%),
       radial-gradient(1000px 700px at -10% 110%, #DCE7EC 0%, transparent 55%),
       #ECE7E0;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    min-height: 100vh;
-    padding: 32px 16px 60px;
-    gap: 24px;
-    flex-wrap: wrap;
-    -webkit-font-smoothing: antialiased;
+    display:flex; align-items:center; justify-content:center;
+    min-height:100vh; padding:32px 16px;
+    -webkit-font-smoothing:antialiased;
   }
 
-  /* ─── Design tokens ────────────────────────────────────────────── */
-  :root {
-    --paper:     #FBF8F3;
-    --paperDeep: #F3EEE5;
-    --ink:       #3D3548;
-    --inkSoft:   #7A7186;
-    --inkFaint:  #A9A1B3;
-    --line:      #E7DFD3;
-    --rose:      #D14F86;
-    --roseTint:  #FBEAF1;
-    --gold:      #CC9A3A;
-  }
-
-  /* ─── Phone frame ───────────────────────────────────────────────── */
+  /* ── Phone frame ── */
   .phone {
-    width: 392px;
-    height: 812px;
-    background: var(--paper);
-    border-radius: 44px;
-    box-shadow: 0 32px 80px rgba(61,53,72,0.28), 0 0 0 8px #fff, 0 0 0 9px #E1D9CD;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    flex-shrink: 0;
+    width:392px; max-width:100%; height:812px; max-height:92vh;
+    background:var(--paper);
+    border-radius:40px; overflow:hidden; position:relative;
+    box-shadow:var(--shadow), 0 0 0 8px #fff, 0 0 0 9px #E1D9CD;
+    display:flex; flex-direction:column;
   }
 
-  .status {
-    height: 44px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 22px; font-size: 12px; font-weight: 700; color: var(--ink);
+  /* ════════════════════════════════
+     COMPOSER HEADER
+  ════════════════════════════════ */
+  .cmp-head {
+    flex:none;
+    background:linear-gradient(160deg, #ff00ff6b 0%, #1e83ff87 55%, #00ffff85 100%);
+    padding:16px 20px 14px;
+    border-bottom:1px solid var(--line);
+  }
+  .cmp-head-row {
+    display:flex; align-items:center; gap:8px;
+  }
+  .btn-back {
+    width:36px; height:36px; flex:none;
+    border:none; border-radius:50%; background:rgba(61,53,72,.08);
+    font-size:18px; cursor:pointer; display:grid; place-items:center;
+    color:var(--ink); transition:background .18s, transform .15s;
+  }
+  .btn-back:hover  { background:rgba(61,53,72,.14); }
+  .btn-back:active { transform:scale(.91); }
+  .cmp-title {
+    flex:1; text-align:center;
+    font-family:'Mali', cursive; font-size:17px; font-weight:700;
+    color:var(--ink);
+  }
+  .btn-save {
+    height:34px; min-width:72px; padding:0 16px;
+    border:none; border-radius:18px; cursor:pointer;
+    font-family:'IBM Plex Sans Thai', sans-serif;
+    font-size:13px; font-weight:700;
+    background:var(--ink-faint); color:rgba(255,255,255,.7);
+    transition:background .2s, color .2s, transform .15s, box-shadow .15s;
+    pointer-events:none;
+  }
+  .btn-save.ready {
+    background:linear-gradient(145deg, #E0609A, var(--rose-mid));
+    color:#fff; pointer-events:all;
+    box-shadow:0 8px 20px -6px rgba(209,79,134,.45);
+  }
+  .btn-save.ready:hover  { transform:translateY(-1px); box-shadow:0 12px 24px -6px rgba(209,79,134,.55); }
+  .btn-save.ready:active { transform:scale(.97); }
+
+  .cmp-date {
+    margin-top:8px;
+    font-size:12px; color:var(--ink-soft); letter-spacing:.3px;
   }
 
-  /* ─── Mood themes ────────────────────────────────────────────────── */
-  :root {
-    --mA: #C7D8E4; --mB: #E2ECF1; --dot: #AFC5D8; /* default: ok */
+  /* ════════════════════════════════
+     SCROLLABLE FORM BODY
+  ════════════════════════════════ */
+  .cmp-body {
+    flex:1; overflow-y:auto; padding:14px 16px 32px;
+     background:linear-gradient(160deg, #9e93ff23 0%, #1e83ff23 55%, #00ffff1f 100%);
   }
-  .mood-great { --mA:#F0DBA0; --mB:#F6E9C6; --dot:#E9C46A; }
-  .mood-good  { --mA:#C8DCC2; --mB:#E1ECDC; --dot:#A8C3A0; }
-  .mood-ok    { --mA:#C7D8E4; --mB:#E2ECF1; --dot:#AFC5D8; }
-  .mood-tired { --mA:#D6CBE2; --mB:#E8E0F0; --dot:#B9A8C9; }
-  .mood-bad   { --mA:#E0C7CC; --mB:#EFDDE0; --dot:#C9A0A8; }
+  .cmp-body::-webkit-scrollbar { width:0; }
 
-  /* ─── Composer header ────────────────────────────────────────────── */
-  .cmp-header {
-    background: linear-gradient(135deg, var(--mA), var(--mB));
-    padding: 10px 16px 14px;
-    flex-shrink: 0;
+  /* ── Section label ── */
+  .sec-lbl {
+    font-size:10.5px; font-weight:700; letter-spacing:.5px;
+    color:var(--ink-faint); text-transform:uppercase;
+    margin-bottom:8px; margin-top:18px;
+    display:flex; align-items:center; gap:6px;
   }
-  .hrow { display: flex; align-items: center; gap: 8px; }
-  .hbtn {
-    height: 36px; border-radius: 18px;
-    background: rgba(61,53,72,0.10); border: none; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 15px; padding: 0 14px; font-family: inherit;
+  .sec-lbl:first-child { margin-top:4px; }
+  .sec-req {
+    font-size:9px; background:var(--rose-soft);
+    color:var(--rose); border-radius:6px; padding:1px 5px;
+    font-weight:700; text-transform:none; letter-spacing:0;
   }
-  .hbtn.back { width: 36px; padding: 0; }
-  .hbtn.save {
-    background: var(--inkFaint); color: #fff;
-    font-weight: 800; font-size: 13px; min-width: 72px;
-    color: rgba(255,255,255,0.7); cursor: default;
-  }
-  .hbtn.save.on { background: var(--rose); color: #fff; cursor: pointer; }
-  .htitle { flex: 1; font-size: 15px; font-weight: 700; color: var(--ink); text-align: center; }
-  .date-row { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
-  .date-chip {
-    background: rgba(61,53,72,0.08); border-radius: 10px;
-    padding: 4px 10px; font-size: 11px; font-weight: 600; color: var(--ink);
-    display: flex; align-items: center; gap: 4px; cursor: pointer;
-  }
-  .mood-badge {
-    margin-left: auto; display: flex; align-items: center; gap: 5px;
-  }
-  .mood-dot-sm {
-    width: 10px; height: 10px; border-radius: 5px; background: var(--dot);
-  }
-  .mood-label-sm { font-size: 11px; font-weight: 700; color: var(--ink); }
-  .act-badge {
-    background: rgba(61,53,72,0.08); border-radius: 8px;
-    padding: 2px 8px; font-size: 10px; font-weight: 700; color: var(--ink);
-    margin-left: 4px;
+  .sec-opt {
+    font-size:9px; background:rgba(61,53,72,.07);
+    color:var(--ink-soft); border-radius:6px; padding:1px 5px;
+    font-weight:600; text-transform:none; letter-spacing:0;
   }
 
-  /* ─── STEP 1: Mood + Activity ───────────────────────────────────── */
-  .s1-scroll { flex: 1; overflow-y: auto; padding-bottom: 8px; }
-  .s1-scroll::-webkit-scrollbar { display: none; }
+  /* ════════════════════════════════
+     MOOD ROW (inline, pre-filled)
+  ════════════════════════════════ */
+  .mood-row {
+    display:flex; gap:8px; padding:2px 0 4px;
+  }
+  .mood-btn {
+    flex:1; border:2px solid var(--line); border-radius:16px;
+    background:#fff; padding:9px 4px 7px;
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    cursor:pointer; font-family:inherit;
+    transition:border-color .18s, background .18s, transform .15s, box-shadow .15s;
+    touch-action:manipulation;
+  }
+  .mood-btn:hover  { border-color:var(--rose-soft); background:var(--rose-tint); transform:translateY(-1px); }
+  .mood-btn:active { transform:scale(.94); }
+  .mood-btn .mb-ico { font-size:26px; line-height:1.1; }
+  .mood-btn .mb-lbl { font-size:9.5px; color:var(--ink-soft); font-weight:500; }
+  .mood-btn[aria-pressed="true"] {
+    border-color:var(--rose); background:var(--rose-tint);
+    box-shadow:0 4px 14px -4px rgba(209,79,134,.35);
+    transform:translateY(-2px);
+  }
+  .mood-btn[aria-pressed="true"] .mb-lbl { color:var(--rose); font-weight:700; }
+  .mood-btn[aria-pressed="true"] .mb-ico  { filter:drop-shadow(0 2px 4px rgba(209,79,134,.25)); }
 
-  .section-lbl {
-    font-size: 11px; font-weight: 800; color: var(--inkFaint);
-    letter-spacing: 0.7px; text-transform: uppercase;
-    padding: 0 16px; margin: 16px 0 10px;
+  /* ════════════════════════════════
+     ACTIVITY CHIPS (wrap)
+  ════════════════════════════════ */
+  .act-wrap {
+    display:flex; gap:7px; flex-wrap:wrap; padding:2px 0 4px;
   }
-
-  /* 5 mood circles */
-  .mood-picker { display: flex; justify-content: space-between; padding: 0 16px; gap: 6px; }
-  .mpick {
-    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
-    padding: 10px 4px 8px; border-radius: 16px; cursor: pointer;
-    border: 2px solid transparent; background: transparent; font-family: inherit;
-    transition: all .15s;
+  .act-chip {
+    flex:none; border:1.5px solid var(--line); border-radius:18px;
+    background:#fff; padding:7px 11px;
+    display:flex; align-items:center; gap:5px;
+    font-family:'IBM Plex Sans Thai', sans-serif; font-size:12.5px;
+    color:var(--ink); font-weight:500; cursor:pointer;
+    transition:border-color .18s, background .18s, transform .15s;
+    white-space:nowrap; touch-action:manipulation;
   }
-  .mpick.on {
-    background: rgba(255,255,255,0.7);
-    border-color: var(--dot);
-    box-shadow: 0 2px 10px rgba(61,53,72,0.10);
-  }
-  .mcircle {
-    width: 40px; height: 40px; border-radius: 20px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px; box-shadow: 0 2px 8px rgba(61,53,72,0.12);
-  }
-  .mpick.on .mcircle { box-shadow: 0 0 0 3px rgba(255,255,255,0.8), 0 0 0 5px var(--dot); }
-  .mlbl { font-size: 10px; font-weight: 700; color: var(--inkFaint); white-space: nowrap; }
-  .mpick.on .mlbl { color: var(--ink); }
-
-  /* 4×3 activity grid */
-  .act-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; padding: 0 16px; }
-  .achip {
-    display: flex; flex-direction: column; align-items: center; gap: 3px;
-    background: rgba(255,255,255,0.65); border-radius: 12px;
-    padding: 8px 4px; cursor: pointer;
-    border: 1.5px solid transparent; font-family: inherit;
-    transition: all .15s;
-  }
-  .achip.on { background: #fff; border-color: var(--rose); box-shadow: 0 2px 8px rgba(209,79,134,0.12); }
-  .ai { font-size: 18px; line-height: 1; }
-  .al { font-size: 9.5px; font-weight: 600; color: var(--inkFaint); white-space: nowrap; }
-  .achip.on .al { color: var(--rose); font-weight: 800; }
-
-  /* Daily question ticker */
-  .q-box {
-    margin: 14px 16px 0; background: rgba(255,255,255,0.6); border-radius: 14px;
-    padding: 12px 14px; display: flex; align-items: center; gap: 10px; cursor: pointer;
-  }
-  .q-dot { width: 6px; height: 6px; border-radius: 3px; background: var(--rose); flex-shrink: 0; }
-  .q-text { flex: 1; font-size: 13px; color: var(--inkSoft); font-style: italic; line-height: 1.5; }
-
-  /* Step 1 CTA */
-  .s1-cta { flex-shrink: 0; padding: 14px 16px; background: rgba(251,248,243,0.97); border-top: 1px solid var(--line); }
-  .cta-btn {
-    width: 100%; height: 50px; border-radius: 18px;
-    background: linear-gradient(135deg, var(--rose), #E0689A); color: #fff;
-    font-family: inherit; font-size: 15px; font-weight: 800;
-    border: none; cursor: pointer; display: flex;
-    align-items: center; justify-content: center; gap: 8px;
+  .act-chip:hover  { border-color:var(--rose-soft); background:var(--rose-tint); transform:translateY(-1px); }
+  .act-chip:active { transform:scale(.95); }
+  .act-chip .ac-ico { font-size:15px; line-height:1; }
+  .act-chip[aria-pressed="true"] {
+    border-color:var(--rose); background:var(--rose-tint);
+    color:var(--rose); font-weight:700;
+    box-shadow:0 4px 12px -4px rgba(209,79,134,.3);
   }
 
-  /* ─── CANVAS WRITE AREA ──────────────────────────────────────────── */
-  .canvas-scroll { flex: 1; overflow-y: auto; padding: 12px 14px 8px; }
-  .canvas-scroll::-webkit-scrollbar { display: none; }
+  /* ════════════════════════════════
+     TEXT FIELDS
+  ════════════════════════════════ */
+  .field-wrap {
+    background:#fff; border:1.5px solid var(--line);
+    border-radius:var(--radius); overflow:hidden;
+    transition:border-color .2s, box-shadow .2s;
+  }
+  .field-wrap:focus-within {
+    border-color:rgba(209,79,134,.4);
+    box-shadow:0 0 0 3px rgba(209,79,134,.08);
+  }
+  .field-title {
+    width:100%; border:none; outline:none; padding:14px 16px;
+    font-family:'Mali', cursive; font-size:16px; font-weight:600;
+    color:var(--ink);
+     background:#a0aff263;
+    line-height:1.4;
+  }
+  .field-title::placeholder { color:var(--ink-faint); font-weight:400; }
 
-  .canvas-card {
-    background: #fff; border-radius: 20px; overflow: hidden;
-    box-shadow: 0 2px 16px rgba(61,53,72,0.08); margin-bottom: 8px;
-  }
-  .canvas-bar {
-    height: 4px;
-    background: linear-gradient(90deg, var(--mA), var(--dot), var(--mB));
-  }
-  .canvas-body {
-    padding: 16px;
-    background-image: repeating-linear-gradient(
-      0deg, transparent, transparent 27px,
-      rgba(61,53,72,0.035) 27px, rgba(61,53,72,0.035) 28px
-    );
-  }
-  .ctitle {
-    width: 100%; border: none; outline: none; background: transparent;
-    font-family: 'Mali', cursive; font-size: 18px; font-weight: 700; font-style: italic;
-    color: var(--ink); margin-bottom: 10px; padding: 2px 0; line-height: 1.4;
-  }
-  .ctitle::placeholder { color: var(--inkFaint); font-weight: 400; font-style: italic; }
-  .ctextarea {
-    width: 100%; border: none; outline: none; background: transparent;
-    font-family: 'IBM Plex Sans Thai', sans-serif;
-    font-size: 14px; color: var(--inkSoft); line-height: 1.9;
-    resize: none; min-height: 100px;
-  }
-  .ctextarea::placeholder { color: var(--inkFaint); }
-  .cursor { display:inline-block; width:2px; height:16px; background:var(--rose);
-    margin-left:1px; vertical-align:middle; animation:blink 1.1s step-end infinite; }
-  @keyframes blink { 0%,100%{opacity:1}50%{opacity:0} }
+  .field-divider { height:1px; background:var(--line); margin:0 16px; }
 
-  /* Photo strip */
-  .photo-strip {
-    display: flex; gap: 8px; padding: 12px 16px 14px;
-    border-top: 1px solid var(--line); overflow-x: auto;
+  .field-desc {
+    width:100%; border:none; outline:none;
+    padding:12px 16px 14px; resize:none;
+    font-family:'IBM Plex Sans Thai', sans-serif; font-size:14px;
+    color:var(--ink);
+     background:#d1d4fa63;
+      min-height:120px;
+    line-height:1.7;
   }
-  .photo-strip::-webkit-scrollbar { display: none; }
-  .pthumb {
-    width: 68px; height: 68px; border-radius: 12px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 26px; position: relative; overflow: hidden; cursor: pointer;
-  }
-  .pthumb::after {
-    content: ''; position: absolute; inset: 0;
-    background: linear-gradient(135deg, rgba(209,79,134,0.08), transparent);
-  }
-  .prem {
-    position: absolute; top: 3px; right: 3px; width: 18px; height: 18px;
-    border-radius: 9px; background: rgba(20,15,30,0.65);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 9px; color: #fff; z-index: 1;
-  }
-  .padd {
-    width: 68px; height: 68px; border-radius: 12px; flex-shrink: 0;
-    border: 2px dashed var(--line); background: rgba(255,255,255,0.5);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 24px; cursor: pointer; color: var(--inkFaint);
-  }
+  .field-desc::placeholder { color:var(--ink-faint); }
 
-  /* Expense row */
-  .exp-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 16px; border-top: 1px solid var(--line);
+  /* char counter */
+  .field-footer {
+    display:flex; align-items:center; justify-content:flex-end;
+    padding:6px 14px 10px; gap:10px;
   }
-  .exp-name { flex: 1; font-size: 13px; color: var(--ink); font-weight: 600; }
-  .exp-amt { font-size: 14px; font-weight: 800; color: var(--gold); }
-  .exp-del { font-size: 14px; color: var(--inkFaint); cursor: pointer; margin-left: 6px; }
-  .exp-add {
-    display: flex; align-items: center; gap: 8px;
-    padding: 10px 16px; border-top: 1px solid var(--line); cursor: pointer;
-  }
-  .exp-add-lbl { font-size: 13px; color: var(--inkFaint); font-weight: 600; }
+  .char-count { font-size:10.5px; color:var(--ink-faint); }
 
-  /* Bottom toolbar */
-  .toolbar {
-    flex-shrink: 0;
-    background: rgba(251,248,243,0.97);
-    backdrop-filter: blur(12px);
-    border-top: 1px solid var(--line);
-    padding: 10px 16px 14px;
+  /* ════════════════════════════════
+     OPTIONAL ACTIONS ROW
+  ════════════════════════════════ */
+  .opt-row {
+    display:flex; gap:8px; margin-top:4px;
   }
-  .trow { display: flex; align-items: center; gap: 6px; }
-  .tbtn {
-    display: flex; flex-direction: column; align-items: center; gap: 2px;
-    background: rgba(255,255,255,0.7); border: 1.5px solid var(--line);
-    border-radius: 12px; padding: 7px 10px; cursor: pointer;
-    font-family: inherit; min-width: 52px;
+  .opt-btn {
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:5px;
+    background:#fff; border:1.5px solid var(--line); border-radius:16px;
+    padding:12px 8px; cursor:pointer; font-family:inherit;
+    transition:border-color .18s, background .18s, transform .15s;
+    touch-action:manipulation;
   }
-  .tbtn.on { background: var(--roseTint); border-color: var(--rose); }
-  .tico { font-size: 17px; line-height: 1; }
-  .tlbl { font-size: 9px; font-weight: 700; color: var(--inkFaint); white-space: nowrap; }
-  .tbtn.on .tlbl { color: var(--rose); }
-  .tspace { flex: 1; }
-  .char-n { font-size: 11px; color: var(--inkFaint); font-weight: 600; }
+  .opt-btn:hover  { border-color:rgba(209,79,134,.3); background:var(--rose-tint); transform:translateY(-1px); }
+  .opt-btn:active { transform:scale(.96); }
+  .opt-btn.active { border-color:var(--rose); background:var(--rose-tint); }
+  .opt-ico { font-size:22px; line-height:1; }
+  .opt-lbl { font-size:10px; font-weight:600; color:var(--ink-soft); text-align:center; line-height:1.3; }
+  .opt-btn.active .opt-lbl { color:var(--rose); }
 
-  /* Simulated keyboard */
-  .kb {
-    flex-shrink: 0; height: 260px;
-    background: #CDD0D9; border-top: 1px solid rgba(0,0,0,0.18);
-    display: flex; flex-direction: column; padding: 8px 6px 6px; gap: 5px;
+  /* ── location pill (shown after check-in) ── */
+  .loc-pill {
+    display:none; align-items:center; gap:7px;
+    background:var(--sage-tint); border:1.5px solid #C5DEC2;
+    border-radius:20px; padding:8px 14px; margin-top:8px;
+    font-size:12.5px; color:var(--sage); font-weight:600;
+    cursor:pointer; transition:background .18s;
   }
-  .krow { display: flex; gap: 4px; justify-content: center; }
-  .kkey {
-    background: #fff; border-radius: 5px; padding: 5px 8px;
-    font-size: 13px; font-weight: 500; color: #222;
-    box-shadow: 0 1px 0 rgba(0,0,0,0.38); min-width: 28px; text-align: center;
-  }
-  .kkey.act { background: #ADB5C4; font-size: 11px; }
-  .kkey.space { min-width: 150px; font-size: 11px; color: #555; }
-  .kkey.ret { background: #ADB5C4; min-width: 50px; font-size: 10px; color: #fff; }
+  .loc-pill.on { display:flex; }
+  .loc-pill:hover { background:#D8EDD6; }
+  .loc-pill-ico { font-size:16px; }
+  .loc-pill-txt { flex:1; }
+  .loc-pill-x { font-size:14px; opacity:.55; }
 
-  /* Quick Feel bottom sheet overlay */
-  .qs-backdrop {
-    position: absolute; inset: 0;
-    background: rgba(61,53,72,0.42); backdrop-filter: blur(4px);
+  /* ── photo grid ── */
+  .photo-grid {
+    display:none; flex-wrap:wrap; gap:8px; margin-top:8px;
   }
-  .qs-sheet {
-    position: absolute; bottom: 0; left: 0; right: 0;
-    background: #fff; border-radius: 24px 24px 0 0;
-    box-shadow: 0 -8px 32px rgba(61,53,72,0.18);
-    padding: 20px 20px 32px;
+  .photo-grid.on { display:flex; }
+  .photo-thumb {
+    width:72px; height:72px; border-radius:12px;
+    object-fit:cover; border:2.5px solid #fff;
+    box-shadow:0 4px 12px -4px rgba(61,53,72,.2);
   }
-  .qs-handle { width: 36px; height: 4px; background: #E7DFD3; border-radius: 2px; margin: 0 auto 18px; }
-  .qs-row { display: flex; gap: 6px; margin-bottom: 16px; }
-  .qm-btn {
-    flex: 1; border-radius: 14px; padding: 9px 4px;
-    cursor: pointer; font-family: inherit; border: 2px solid transparent;
-    background: var(--paperDeep); display: flex; flex-direction: column; align-items: center; gap: 3px;
+  .photo-add {
+    width:72px; height:72px; border-radius:12px;
+    border:2px dashed var(--line); background:var(--paper-deep);
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px; cursor:pointer; color:var(--ink-faint);
+    transition:border-color .18s, background .18s;
   }
-  .qm-btn.on { border-color: var(--dot); background: rgba(255,255,255,0.9); }
-  .qm-lbl { font-size: 10px; font-weight: 700; color: var(--inkFaint); }
-  .qm-btn.on .qm-lbl { color: var(--ink); }
+  .photo-add:hover { border-color:var(--rose-soft); background:var(--rose-tint); }
 
-  .screen-label {
-    background: rgba(61,53,72,0.75); color: #fff;
-    font-size: 11px; font-weight: 700; padding: 4px 10px;
-    border-radius: 8px; text-align: center; margin-bottom: 8px; display: inline-block;
+  /* ── expense field ── */
+  .expense-field {
+    display:none; margin-top:8px;
+    background:#fff; border:1.5px solid var(--line);
+    border-radius:16px; padding:12px 16px;
+    align-items:center; gap:10px;
+    transition:border-color .2s, box-shadow .2s;
+  }
+  .expense-field.on { display:flex; }
+  .expense-field:focus-within { border-color:rgba(204,154,58,.4); box-shadow:0 0 0 3px rgba(204,154,58,.08); }
+  .exp-ico  { font-size:20px; }
+  .exp-symbol { font-size:16px; font-weight:700; color:var(--gold); }
+  .exp-input {
+    flex:1; border:none; outline:none; background:transparent;
+    font-family:'IBM Plex Sans Thai', sans-serif; font-size:16px;
+    font-weight:700; color:var(--ink);
+  }
+  .exp-input::placeholder { color:var(--ink-faint); font-weight:400; font-size:14px; }
+  .exp-unit { font-size:12px; color:var(--ink-faint); font-weight:500; }
+
+  /* ════════════════════════════════
+     BOTTOM SAVE BUTTON
+  ════════════════════════════════ */
+  .cmp-footer {
+    flex:none; padding:10px 16px 20px;
+    background:linear-gradient(to top, var(--paper) 70%, transparent);
+    border-top:1px solid var(--line);
+  }
+  .btn-save-main {
+    width:100%; border:none; cursor:pointer; border-radius:22px;
+    padding:15px 24px;
+    font-family:'Mali', cursive; font-size:17px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    transition:transform .15s, box-shadow .15s, background .25s;
+  }
+  .btn-save-main.disabled {
+    background:var(--line); color:var(--ink-faint); pointer-events:none;
+  }
+  .btn-save-main.ready {
+    background:linear-gradient(145deg, #E0609A, var(--rose-mid));
+    color:#fff;
+    box-shadow:0 14px 30px -8px rgba(209,79,134,.5);
+  }
+  .btn-save-main.ready:hover  { transform:translateY(-2px); box-shadow:0 18px 36px -8px rgba(209,79,134,.62); }
+  .btn-save-main.ready:active { transform:scale(.97); }
+  .save-ico { font-size:20px; }
+
+  /* ── success overlay ── */
+  .success-overlay {
+    position:absolute; inset:0; z-index:30;
+    background:linear-gradient(160deg, #FBEAF1, #EEE4F8);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:16px; opacity:0; pointer-events:none;
+    transition:opacity .4s ease;
+  }
+  .success-overlay.on { opacity:1; pointer-events:all; }
+  .success-ico  { font-size:64px; animation:popIn .4s cubic-bezier(.2,1.5,.5,1); }
+  .success-title { font-family:'Mali',cursive; font-size:22px; font-weight:700; color:var(--ink); }
+  .success-sub   { font-size:14px; color:var(--ink-soft); }
+  .success-btn {
+    margin-top:8px; border:none; cursor:pointer;
+    background:linear-gradient(145deg, #E0609A, var(--rose-mid));
+    color:#fff; border-radius:20px; padding:12px 28px;
+    font-family:'Mali',cursive; font-size:16px; font-weight:700;
+    box-shadow:0 10px 24px -6px rgba(209,79,134,.45);
+    transition:transform .15s;
+  }
+  .success-btn:hover  { transform:translateY(-2px); }
+  .success-btn:active { transform:scale(.97); }
+  @keyframes popIn {
+    from { transform:scale(.4); opacity:0; }
+    to   { transform:scale(1);  opacity:1; }
   }
 </style>
 </head>
 <body>
 
-<!-- ══════════════════════════════════════════════════════════════════
-     SCREEN A — Step 1: เลือก Mood + กิจกรรม (ยังไม่ได้เลือก)
-═══════════════════════════════════════════════════════════════════ -->
-<div style="display:flex;flex-direction:column;align-items:center">
-  <span class="screen-label">A — Step 1: เลือก Mood + กิจกรรม</span>
-  <div class="phone mood-ok" id="phoneA">
+<div class="phone">
 
-    <div class="status" style="background:#E2ECF1"><span>10:30</span><span>● ◐ ▲ ⬛</span></div>
+  <!-- ════════════ HEADER ════════════ -->
+  <header class="cmp-head">
+    <div class="cmp-head-row">
+      <button class="btn-back" id="btnBack" onclick="history.back()" title="กลับ">‹</button>
+      <span class="cmp-title">เขียนบันทึก</span>
+      <button class="btn-save" id="btnSaveTop">บันทึก</button>
+    </div>
+    <div class="cmp-date" id="cmpDate"></div>
+  </header>
 
-    <!-- Header -->
-    <div class="cmp-header" id="headerA">
-      <div class="hrow">
-        <button class="hbtn back" onclick="history.back()">←</button>
-        <span class="htitle">บันทึกใหม่</span>
-        <button class="hbtn save" id="saveA">✓ บันทึก</button>
-      </div>
-      <div class="date-row">
-        <div class="date-chip">📅 วันอาทิตย์ที่ 15 มิ.ย. 2569</div>
-        <div class="date-chip" style="margin-left:auto">⏰ 10:30 น.</div>
+  <!-- ════════════ FORM BODY ════════════ -->
+  <div class="cmp-body" id="cmpBody">
+
+    <!-- ── 1. ความรู้สึกวันนี้ (required) ── -->
+    <div class="sec-lbl">
+      ความรู้สึกวันนี้
+      <span class="sec-req">จำเป็น</span>
+    </div>
+    <div class="mood-row" id="moodRow" role="group" aria-label="เลือกความรู้สึก">
+      <button class="mood-btn" data-mood="great" data-emoji="😄" data-label="ดีมาก" aria-pressed="false">
+        <span class="mb-ico">😄</span><span class="mb-lbl">ดีมาก</span>
+      </button>
+      <button class="mood-btn" data-mood="good"  data-emoji="😊" data-label="ดี" aria-pressed="false">
+        <span class="mb-ico">😊</span><span class="mb-lbl">ดี</span>
+      </button>
+      <button class="mood-btn" data-mood="ok"    data-emoji="😐" data-label="สบายๆ" aria-pressed="false">
+        <span class="mb-ico">😐</span><span class="mb-lbl">สบายๆ</span>
+      </button>
+      <button class="mood-btn" data-mood="tired" data-emoji="😔" data-label="เหนื่อย" aria-pressed="false">
+        <span class="mb-ico">😔</span><span class="mb-lbl">เหนื่อย</span>
+      </button>
+      <button class="mood-btn" data-mood="fight" data-emoji="😞" data-label="สู้ๆ" aria-pressed="false">
+        <span class="mb-ico">😞</span><span class="mb-lbl">สู้ๆ</span>
+      </button>
+    </div>
+
+    <!-- ── 2. วันนี้ทำอะไร (required) ── -->
+    <div class="sec-lbl" style="margin-top:16px;">
+      วันนี้ทำอะไร
+      <span class="sec-req">จำเป็น</span>
+    </div>
+    <div class="act-wrap" id="actWrap" role="group" aria-label="เลือกกิจกรรม">
+      <button class="act-chip" data-ico="🏢" data-label="ทำงาน"       aria-pressed="false"><span class="ac-ico">🏢</span>ทำงาน</button>
+      <button class="act-chip" data-ico="🏪" data-label="เปิดร้าน"    aria-pressed="false"><span class="ac-ico">🏪</span>เปิดร้าน</button>
+      <button class="act-chip" data-ico="🌴" data-label="วันหยุด"     aria-pressed="false"><span class="ac-ico">🌴</span>วันหยุด</button>
+      <button class="act-chip" data-ico="👨‍👩‍👧" data-label="พาครอบครัว" aria-pressed="false"><span class="ac-ico">👨‍👩‍👧</span>พาครอบครัว</button>
+      <button class="act-chip" data-ico="✈️" data-label="ไปทริป"      aria-pressed="false"><span class="ac-ico">✈️</span>ไปทริป</button>
+      <button class="act-chip" data-ico="🎉" data-label="เทศกาล"     aria-pressed="false"><span class="ac-ico">🎉</span>เทศกาล</button>
+      <button class="act-chip" data-ico="📚" data-label="เรียน/อบรม" aria-pressed="false"><span class="ac-ico">📚</span>เรียน/อบรม</button>
+      <button class="act-chip" data-ico="🏠" data-label="อยู่บ้าน"   aria-pressed="false"><span class="ac-ico">🏠</span>อยู่บ้าน</button>
+      <button class="act-chip" data-ico="💪" data-label="ออกกำลัง"   aria-pressed="false"><span class="ac-ico">💪</span>ออกกำลัง</button>
+      <button class="act-chip" data-ico="🏥" data-label="นัดหมอ"     aria-pressed="false"><span class="ac-ico">🏥</span>นัดหมอ</button>
+      <button class="act-chip" data-ico="🛒" data-label="ช็อปปิ้ง"   aria-pressed="false"><span class="ac-ico">🛒</span>ช็อปปิ้ง</button>
+      <button class="act-chip" data-ico="🍽️" data-label="กินข้าวนอก" aria-pressed="false"><span class="ac-ico">🍽️</span>กินข้าวนอก</button>
+    </div>
+
+    <!-- ── 3+4. หัวข้อ + เรื่องราว (required) ── -->
+    <div class="sec-lbl" style="margin-top:16px;">
+      เรื่องราววันนี้
+      <span class="sec-req">จำเป็น</span>
+    </div>
+    <div class="field-wrap">
+      <input  class="field-title" id="fTitle"
+              placeholder="หัวข้อ — วันนี้เป็นอย่างไรบ้าง?"
+              maxlength="80" autocomplete="off" spellcheck="false">
+      <div class="field-divider"></div>
+      <textarea class="field-desc" id="fDesc"
+                placeholder="เล่าเรื่องราว ความรู้สึก หรือสิ่งที่อยากจำไว้...&#10;ไม่ต้องสวยหรู เขียนตามใจได้เลย 💬"
+                rows="5"></textarea>
+      <div class="field-footer">
+        <span class="char-count" id="charCount">0 / 1000</span>
       </div>
     </div>
 
-    <!-- Scrollable step content -->
-    <div class="s1-scroll">
-
-      <!-- Mood picker -->
-      <div class="section-lbl">💫 วันนี้รู้สึกเป็นอย่างไร?</div>
-      <div class="mood-picker">
-
-        <button class="mpick" id="mpA-great" onclick="pickMoodA('great')"
-          style="--dot:#E9C46A">
-          <div class="mcircle" style="background:#E9C46A">🤩</div>
-          <span class="mlbl">ดีมาก</span>
-        </button>
-
-        <button class="mpick" id="mpA-good" onclick="pickMoodA('good')"
-          style="--dot:#A8C3A0">
-          <div class="mcircle" style="background:#A8C3A0">😊</div>
-          <span class="mlbl">ดี</span>
-        </button>
-
-        <button class="mpick on" id="mpA-ok" onclick="pickMoodA('ok')"
-          style="--dot:#AFC5D8">
-          <div class="mcircle" style="background:#AFC5D8">😌</div>
-          <span class="mlbl">เฉยๆ</span>
-        </button>
-
-        <button class="mpick" id="mpA-tired" onclick="pickMoodA('tired')"
-          style="--dot:#B9A8C9">
-          <div class="mcircle" style="background:#B9A8C9">😤</div>
-          <span class="mlbl">เหนื่อย</span>
-        </button>
-
-        <button class="mpick" id="mpA-bad" onclick="pickMoodA('bad')"
-          style="--dot:#C9A0A8">
-          <div class="mcircle" style="background:#C9A0A8">😢</div>
-          <span class="mlbl">แย่</span>
-        </button>
-
-      </div>
-
-      <!-- Activity grid -->
-      <div class="section-lbl" style="margin-top:20px">🎯 ทำอะไรวันนี้? (เลือกได้หลายอย่าง)</div>
-      <div class="act-grid">
-        <button class="achip" onclick="this.classList.toggle('on')"><span class="ai">🏢</span><span class="al">ทำงาน</span></button>
-        <button class="achip" onclick="this.classList.toggle('on')"><span class="ai">🏪</span><span class="al">เปิดร้าน</span></button>
-        <button class="achip" onclick="this.classList.toggle('on')"><span class="ai">🏖️</span><span class="al">วันหยุด</span></button>
-        <button class="achip" onclick="this.classList.toggle('on')"><span class="ai">👨‍👩‍👧</span><span class="al">ครอบครัว</span></button>
-        <button class="achip" onclick="this.classList.toggle('on')"><span class="ai">✈️</span><span class="al">ไปทริป</span></button>
-        <button class="achip" onclick="this.classList.toggle('on')"><span class="ai">🎉</span><span class="al">เทศกาล</span></button>
-        <button class="achip" onclick="this.classList.toggle('on')"><span class="ai">📚</span><span class="al">เรียน</span></button>
-        <button class="achip" onclick="this.classList.toggle('on')"><span class="ai">🏠</span><span class="al">อยู่บ้าน</span></button>
-        <button class="achip" onclick="this.classList.toggle('on')"><span class="ai">🏃</span><span class="al">ออกกำลัง</span></button>
-        <button class="achip" onclick="this.classList.toggle('on')"><span class="ai">🏥</span><span class="al">พบแพทย์</span></button>
-        <button class="achip" onclick="this.classList.toggle('on')"><span class="ai">🛍️</span><span class="al">ช็อปปิ้ง</span></button>
-        <button class="achip on" onclick="this.classList.toggle('on')"><span class="ai">🍜</span><span class="al">ออกไปกิน</span></button>
-      </div>
-
-      <!-- Daily question -->
-      <div class="q-box" style="margin-bottom:16px">
-        <div class="q-dot"></div>
-        <div class="q-text" id="qA">วันนี้มีอะไรที่ทำให้ยิ้มได้บ้าง?</div>
-        <div style="font-size:14px;color:var(--inkFaint)">›</div>
-      </div>
-
-    </div><!-- /s1-scroll -->
-
-    <!-- CTA -->
-    <div class="s1-cta">
-      <button class="cta-btn">✏️ เริ่มเขียนบันทึก</button>
+    <!-- ── 5–7. Optional actions ── -->
+    <div class="sec-lbl" style="margin-top:16px;">
+      เพิ่มเติม
+      <span class="sec-opt">ไม่บังคับ</span>
+    </div>
+    <div class="opt-row">
+      <button class="opt-btn" id="optLoc">
+        <span class="opt-ico">📍</span>
+        <span class="opt-lbl">เช็คอิน<br>สถานที่</span>
+      </button>
+      <button class="opt-btn" id="optPhoto">
+        <span class="opt-ico">📷</span>
+        <span class="opt-lbl">เพิ่ม<br>รูปภาพ</span>
+      </button>
+      <button class="opt-btn" id="optExp">
+        <span class="opt-ico">💰</span>
+        <span class="opt-lbl">บันทึก<br>ค่าใช้จ่าย</span>
+      </button>
     </div>
 
-  </div><!-- /phoneA -->
-</div>
-
-<!-- ══════════════════════════════════════════════════════════════════
-     SCREEN B — Canvas กำลังพิมพ์ (keyboard แสดง, content เริ่มต้น)
-═══════════════════════════════════════════════════════════════════ -->
-<div style="display:flex;flex-direction:column;align-items:center">
-  <span class="screen-label">B — Canvas กำลังพิมพ์ + keyboard</span>
-  <div class="phone mood-great">
-
-    <div class="status" style="background:#F0DBA0"><span>10:35</span><span>● ◐ ▲ ⬛</span></div>
-
-    <!-- Compact header (mood confirmed) -->
-    <div class="cmp-header" style="background:linear-gradient(135deg,#F0DBA0,#F6E9C6)">
-      <div class="hrow">
-        <button class="hbtn back">←</button>
-        <span class="htitle">บันทึกใหม่</span>
-        <button class="hbtn save on">✓ บันทึก</button>
-      </div>
-      <div class="date-row">
-        <div class="date-chip">📅 วันอาทิตย์ที่ 15 มิ.ย. 2569</div>
-        <div class="mood-badge" style="--dot:#E9C46A">
-          <div class="mood-dot-sm"></div>
-          <span class="mood-label-sm">ดีมาก 🤩</span>
-          <div class="act-badge">🍜 ออกไปกิน</div>
-        </div>
-      </div>
+    <!-- Location pill -->
+    <div class="loc-pill" id="locPill">
+      <span class="loc-pill-ico">📍</span>
+      <span class="loc-pill-txt" id="locText">โคราช, ไทย</span>
+      <span class="loc-pill-x" id="locRemove">✕</span>
     </div>
 
-    <!-- Canvas (shrunk because keyboard is open) -->
-    <div class="canvas-scroll" style="padding-bottom:4px">
-      <div class="canvas-card">
-        <div class="canvas-bar" style="background:linear-gradient(90deg,#F0DBA0,#E9C46A,#F6E9C6)"></div>
-        <div class="canvas-body">
-          <input class="ctitle" placeholder="ชื่อบันทึก (ไม่บังคับ)" value="ไปกินหมูกะทะกับหมูนุ่น">
-          <div style="font-size:14px;color:#7A7186;line-height:1.9">
-            แดดร่มลมตกอากาศดีมาก ออกไปกินหมูกะทะ<span class="cursor"></span>
-          </div>
-        </div>
-      </div>
+    <!-- Photo grid -->
+    <div class="photo-grid" id="photoGrid">
+      <div class="photo-add" id="photoAddBtn" title="เพิ่มรูป">＋</div>
     </div>
 
-    <!-- Toolbar (just above keyboard) -->
-    <div class="toolbar">
-      <div class="trow">
-        <button class="tbtn"><span class="tico">📷</span><span class="tlbl">รูปภาพ</span></button>
-        <button class="tbtn"><span class="tico">💰</span><span class="tlbl">รายจ่าย</span></button>
-        <button class="tbtn"><span class="tico">📍</span><span class="tlbl">สถานที่</span></button>
-        <button class="tbtn"><span class="tico">🏷️</span><span class="tlbl">แท็ก</span></button>
-        <div class="tspace"></div>
-        <span class="char-n">42 ตัว</span>
-      </div>
+    <!-- Expense field -->
+    <div class="expense-field" id="expField">
+      <span class="exp-ico">💰</span>
+      <span class="exp-symbol">฿</span>
+      <input class="exp-input" id="expInput" type="number" min="0" step="1"
+             placeholder="ระบุค่าใช้จ่าย" inputmode="decimal">
+      <span class="exp-unit">บาท</span>
     </div>
 
-    <!-- Keyboard simulation -->
-    <div class="kb">
-      <div class="krow">
-        <div class="kkey">ๆ</div><div class="kkey">ไ</div><div class="kkey">ำ</div>
-        <div class="kkey">พ</div><div class="kkey">ะ</div><div class="kkey">ั</div>
-        <div class="kkey">ี</div><div class="kkey">ร</div><div class="kkey">น</div>
-        <div class="kkey">ย</div><div class="kkey">บ</div>
-      </div>
-      <div class="krow">
-        <div class="kkey">ฟ</div><div class="kkey">ห</div><div class="kkey">ก</div>
-        <div class="kkey">ด</div><div class="kkey">เ</div><div class="kkey">้</div>
-        <div class="kkey">่</div><div class="kkey">า</div><div class="kkey">ส</div>
-        <div class="kkey">ว</div><div class="kkey">ง</div>
-      </div>
-      <div class="krow">
-        <div class="kkey act" style="min-width:42px">⬆</div>
-        <div class="kkey">ผ</div><div class="kkey">ป</div><div class="kkey">แ</div>
-        <div class="kkey">อ</div><div class="kkey">ิ</div><div class="kkey">ื</div>
-        <div class="kkey">ท</div><div class="kkey">ม</div><div class="kkey">ใ</div>
-        <div class="kkey act" style="min-width:42px;font-size:14px">⌫</div>
-      </div>
-      <div class="krow">
-        <div class="kkey act" style="min-width:52px;font-size:10px">123</div>
-        <div class="kkey" style="font-size:16px">🌐</div>
-        <div class="kkey space">ช่องว่าง</div>
-        <div class="kkey ret">ส่ง</div>
-      </div>
-    </div>
+  </div><!-- /cmp-body -->
 
+  <!-- ════════════ FOOTER SAVE ════════════ -->
+  <footer class="cmp-footer">
+    <button class="btn-save-main disabled" id="btnSaveMain">
+      <span class="save-ico">💾</span> บันทึกไว้ในสมุด
+    </button>
+  </footer>
+
+  <!-- ── Success overlay ── -->
+  <div class="success-overlay" id="successOverlay">
+    <div class="success-ico">🎉</div>
+    <div class="success-title">บันทึกเรียบร้อยแล้ว!</div>
+    <div class="success-sub">เรื่องราววันนี้ถูกเก็บไว้ในสมุดชีวิตแล้วครับ</div>
+    <button class="success-btn" onclick="goHome()">กลับหน้าแรก</button>
   </div>
-</div>
 
-<!-- ══════════════════════════════════════════════════════════════════
-     SCREEN C — Canvas ครบสมบูรณ์ (รูปภาพ + ค่าใช้จ่าย + พร้อม save)
-═══════════════════════════════════════════════════════════════════ -->
-<div style="display:flex;flex-direction:column;align-items:center">
-  <span class="screen-label">C — Canvas ครบ: รูป 3 + ค่าใช้จ่าย + พร้อม save</span>
-  <div class="phone mood-great">
-
-    <div class="status" style="background:#F0DBA0"><span>10:52</span><span>● ◐ ▲ ⬛</span></div>
-
-    <div class="cmp-header" style="background:linear-gradient(135deg,#F0DBA0,#F6E9C6)">
-      <div class="hrow">
-        <button class="hbtn back">←</button>
-        <span class="htitle">บันทึกใหม่</span>
-        <button class="hbtn save on">✓ บันทึก</button>
-      </div>
-      <div class="date-row">
-        <div class="date-chip">📅 วันอาทิตย์ที่ 15 มิ.ย. 2569</div>
-        <div class="mood-badge" style="--dot:#E9C46A">
-          <div class="mood-dot-sm"></div>
-          <span class="mood-label-sm">ดีมาก 🤩</span>
-          <div class="act-badge">🍜 ออกไปกิน</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="canvas-scroll">
-
-      <div class="canvas-card">
-        <div class="canvas-bar" style="background:linear-gradient(90deg,#F0DBA0,#E9C46A,#F6E9C6)"></div>
-        <div class="canvas-body">
-          <div style="font-family:'Mali',cursive;font-size:18px;font-weight:700;font-style:italic;
-            color:#3D3548;margin-bottom:10px;line-height:1.4">
-            ไปกินหมูกะทะกับหมูนุ่น
-          </div>
-          <div style="font-size:14px;color:#7A7186;line-height:1.9">
-            แดดร่มลมตกอากาศดีมากซับบมอเตอร์ไซค์<br>
-            หาอะไรกินตอนเย็น กินเยอะมากน่ากินทั้งนั้น<br>
-            เลยตัดสินใจว่าต้องมม่วนมูลกระทะ 1 กิโลกรัม ไปนั่งที่บ้านกีพอ
-          </div>
-        </div>
-
-        <!-- Photo strip (3 photos + add) -->
-        <div class="photo-strip">
-          <div class="pthumb" style="background:linear-gradient(135deg,#D4C9E2,#C3B8D1)">
-            🍖 <div class="prem">✕</div>
-          </div>
-          <div class="pthumb" style="background:linear-gradient(135deg,#C3D6BE,#A8C3A0)">
-            🌿 <div class="prem">✕</div>
-          </div>
-          <div class="pthumb" style="background:linear-gradient(135deg,#F0DBA0,#E9C46A)">
-            🌅 <div class="prem">✕</div>
-          </div>
-          <div class="padd">＋</div>
-        </div>
-
-        <!-- Expense items -->
-        <div class="exp-item">
-          <span style="font-size:16px">🥩</span>
-          <span class="exp-name">หมูกะทะ 1 กก. + โค๊ก 2 ขวด</span>
-          <span class="exp-amt">฿250</span>
-          <span class="exp-del">✕</span>
-        </div>
-
-        <!-- Add expense -->
-        <div class="exp-add">
-          <span style="font-size:16px;color:var(--inkFaint)">＋</span>
-          <span class="exp-add-lbl">เพิ่มรายการค่าใช้จ่าย</span>
-        </div>
-      </div>
-
-      <!-- Location + tag chips (below canvas) -->
-      <div style="display:flex;gap:8px;padding:2px 2px 10px">
-        <div style="background:#fff;border:1.5px solid #E7DFD3;border-radius:12px;
-          padding:6px 12px;display:flex;align-items:center;gap:5px;cursor:pointer">
-          <span style="font-size:14px">📍</span>
-          <span style="font-size:12px;font-weight:600;color:#7A7186">เพิ่มสถานที่</span>
-        </div>
-        <div style="background:#fff;border:1.5px solid #E7DFD3;border-radius:12px;
-          padding:6px 12px;display:flex;align-items:center;gap:5px;cursor:pointer">
-          <span style="font-size:14px">🏷️</span>
-          <span style="font-size:12px;font-weight:600;color:#7A7186">เพิ่มแท็ก</span>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Toolbar -->
-    <div class="toolbar">
-      <div class="trow">
-        <button class="tbtn on"><span class="tico">📷</span><span class="tlbl">รูปภาพ (3)</span></button>
-        <button class="tbtn on"><span class="tico">💰</span><span class="tlbl">฿250</span></button>
-        <button class="tbtn"><span class="tico">📍</span><span class="tlbl">สถานที่</span></button>
-        <button class="tbtn"><span class="tico">🏷️</span><span class="tlbl">แท็ก</span></button>
-        <div class="tspace"></div>
-        <span class="char-n">98 ตัว</span>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════════════════════════════
-     SCREEN D — Quick Feel Sheet (bottom sheet mini composer)
-═══════════════════════════════════════════════════════════════════ -->
-<div style="display:flex;flex-direction:column;align-items:center">
-  <span class="screen-label">D — Quick Feel Sheet (บันทึกสั้นๆ)</span>
-  <div class="phone mood-ok" style="position:relative">
-
-    <div class="status" style="background:#F3EEE5"><span>21:14</span><span>● ◐ ▲ ⬛</span></div>
-
-    <!-- Blurred home content underneath -->
-    <div style="flex:1;padding:20px;opacity:0.3;pointer-events:none">
-      <div style="font-family:'Mali',cursive;font-size:20px;font-weight:700;color:#3D3548;margin-bottom:12px">
-        สมุดชีวิต
-      </div>
-      <div style="height:10px;background:#E7DFD3;border-radius:5px;margin-bottom:8px;width:55%"></div>
-      <div style="height:90px;background:#fff;border-radius:16px;margin-bottom:8px"></div>
-      <div style="height:120px;background:#fff;border-radius:16px;margin-bottom:8px"></div>
-      <div style="height:70px;background:#fff;border-radius:16px"></div>
-    </div>
-
-    <!-- Backdrop -->
-    <div class="qs-backdrop"></div>
-
-    <!-- Bottom sheet -->
-    <div class="qs-sheet">
-      <div class="qs-handle"></div>
-
-      <div style="font-size:11px;font-weight:800;color:#A9A1B3;letter-spacing:0.7px;
-        text-transform:uppercase;margin-bottom:14px">⚡ บันทึกสั้นๆ</div>
-
-      <!-- Mini 5-mood row -->
-      <div class="qs-row" style="--dot:#AFC5D8">
-        <button class="qm-btn" style="--dot:#E9C46A;background:#FAF1DC">
-          <span style="font-size:22px">🤩</span>
-          <span class="qm-lbl" style="color:#CC9A3A">ดีมาก</span>
-        </button>
-        <button class="qm-btn" style="--dot:#A8C3A0;background:#EAF0E7">
-          <span style="font-size:22px">😊</span>
-          <span class="qm-lbl" style="color:#7E9E7C">ดี</span>
-        </button>
-        <button class="qm-btn on" style="--dot:#AFC5D8;background:#E2ECF1;border-color:#AFC5D8">
-          <span style="font-size:22px">😌</span>
-          <span class="qm-lbl" style="color:#5C7F94">เฉยๆ</span>
-        </button>
-        <button class="qm-btn" style="--dot:#B9A8C9;background:#E8E0F0">
-          <span style="font-size:22px">😤</span>
-          <span class="qm-lbl" style="color:#8A7799">เหนื่อย</span>
-        </button>
-        <button class="qm-btn" style="--dot:#C9A0A8;background:#EFDDE0">
-          <span style="font-size:22px">😢</span>
-          <span class="qm-lbl" style="color:#9A7078">แย่</span>
-        </button>
-      </div>
-
-      <!-- Mini text area -->
-      <div style="background:#F5F3F8;border-radius:16px;padding:14px;margin-bottom:14px;
-        border:1.5px solid #E7DFD3;min-height:70px">
-        <div style="font-size:14px;color:#7A7186;line-height:1.8;font-style:italic">
-          วันนี้ผ่านไปเฉยๆ ไม่มีอะไรพิเศษ<span class="cursor"></span>
-        </div>
-      </div>
-
-      <!-- Action buttons -->
-      <div style="display:flex;gap:8px">
-        <button style="flex:1;height:46px;border-radius:14px;border:1.5px solid #E7DFD3;
-          background:#fff;font-family:inherit;font-size:13px;font-weight:700;
-          color:#7A7186;cursor:pointer">ยกเลิก</button>
-        <button style="flex:2;height:46px;border-radius:14px;border:none;
-          background:linear-gradient(135deg,#D14F86,#E0689A);
-          font-family:inherit;font-size:14px;font-weight:800;
-          color:#fff;cursor:pointer">✓ บันทึก</button>
-      </div>
-
-      <!-- Full composer link -->
-      <div style="text-align:center;margin-top:14px">
-        <span style="font-size:12px;color:#A9A1B3">หรือ </span>
-        <a href="#" style="font-size:12px;font-weight:700;color:#D14F86;text-decoration:none">
-          เขียนบันทึกเต็ม →
-        </a>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- Navigation legend -->
-<div style="width:100%;text-align:center;margin-top:24px;padding:0 16px;
-  font-size:12px;color:rgba(61,53,72,0.5);font-family:'IBM Plex Sans Thai',sans-serif;line-height:2">
-  <strong style="color:rgba(61,53,72,0.7)">Life Diary Mockup Navigation:</strong><br>
-  <a href="life-diary-home.html" style="margin:0 8px;color:#D14F86;text-decoration:none">🏠 Home</a>
-  <a href="life-diary-timeline.html" style="margin:0 8px;color:#D14F86;text-decoration:none">📅 Timeline</a>
-  <a href="life-diary-search.html" style="margin:0 8px;color:#D14F86;text-decoration:none">🔍 Search</a>
-  <a href="life-diary-entry.html" style="margin:0 8px;color:#D14F86;text-decoration:none">📖 Entry Detail</a>
-  <span style="margin:0 8px;color:#D14F86;font-weight:800">✏️ Composer ← คุณอยู่ที่นี่</span>
-</div>
+</div><!-- /phone -->
 
 <script>
-// ── Mood picker (Screen A) ────────────────────────────────────────────────
-const moodCfg = {
-  great: { mA:'#F0DBA0', mB:'#F6E9C6', dot:'#E9C46A', st:'#F0DBA0' },
-  good:  { mA:'#C8DCC2', mB:'#E1ECDC', dot:'#A8C3A0', st:'#C8DCC2' },
-  ok:    { mA:'#C7D8E4', mB:'#E2ECF1', dot:'#AFC5D8', st:'#E2ECF1' },
-  tired: { mA:'#D6CBE2', mB:'#E8E0F0', dot:'#B9A8C9', st:'#E8E0F0' },
-  bad:   { mA:'#E0C7CC', mB:'#EFDDE0', dot:'#C9A0A8', st:'#EFDDE0' },
-};
+/* ══════════════════════════════════════
+   DATE DISPLAY
+══════════════════════════════════════ */
+const DAYS  = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+const MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const now = new Date();
+const buddhistYear = now.getFullYear() + 543;
+const timeStr = now.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
+document.getElementById('cmpDate').textContent =
+  `วัน${DAYS[now.getDay()]}ที่ ${now.getDate()} ${MONTHS[now.getMonth()]} ${buddhistYear} · ${timeStr} น.`;
 
-let selMoodA = 'ok';
+/* ══════════════════════════════════════
+   PRE-FILL FROM HOME (URL params)
+══════════════════════════════════════ */
+const params = new URLSearchParams(location.search);
+const preMood = params.get('mood');  /* e.g. ?mood=good&act=shop */
+const preAct  = params.get('act');
 
-function pickMoodA(key) {
-  selMoodA = key;
-  // deselect all
-  ['great','good','ok','tired','bad'].forEach(k => {
-    document.getElementById('mpA-' + k).classList.remove('on');
+if (preMood) {
+  const mBtn = document.querySelector(`[data-mood="${preMood}"]`);
+  if (mBtn) mBtn.setAttribute('aria-pressed','true');
+}
+if (preAct) {
+  const aBtn = document.querySelector(`[data-label="${decodeURIComponent(preAct)}"]`);
+  if (aBtn) aBtn.setAttribute('aria-pressed','true');
+}
+
+/* ══════════════════════════════════════
+   MOOD PICKER — single select
+══════════════════════════════════════ */
+const moodBtns = document.querySelectorAll('#moodRow .mood-btn');
+moodBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    moodBtns.forEach(b => b.setAttribute('aria-pressed','false'));
+    btn.setAttribute('aria-pressed','true');
+    checkReady();
   });
-  document.getElementById('mpA-' + key).classList.add('on');
+});
 
-  // update phone theme via CSS class
-  const ph = document.getElementById('phoneA');
-  ph.className = 'phone mood-' + key;
+/* ══════════════════════════════════════
+   ACTIVITY CHIPS — single select
+══════════════════════════════════════ */
+const actChips = document.querySelectorAll('#actWrap .act-chip');
+actChips.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const wasOn = btn.getAttribute('aria-pressed') === 'true';
+    actChips.forEach(b => b.setAttribute('aria-pressed','false'));
+    btn.setAttribute('aria-pressed', wasOn ? 'false' : 'true');
+    checkReady();
+  });
+});
 
-  // update header gradient
-  const cfg = moodCfg[key];
-  document.getElementById('headerA').style.background =
-    `linear-gradient(135deg, ${cfg.mA}, ${cfg.mB})`;
+/* ══════════════════════════════════════
+   TEXT FIELDS — char count + ready check
+══════════════════════════════════════ */
+const fTitle   = document.getElementById('fTitle');
+const fDesc    = document.getElementById('fDesc');
+const charCount = document.getElementById('charCount');
 
-  // enable save button
-  document.getElementById('saveA').classList.add('on');
+fTitle.addEventListener('input', checkReady);
+fDesc.addEventListener('input', () => {
+  const len = fDesc.value.length;
+  charCount.textContent = `${len} / 1000`;
+  if (len > 900) charCount.style.color = 'var(--rose)';
+  else charCount.style.color = 'var(--ink-faint)';
+  if (len > 1000) fDesc.value = fDesc.value.slice(0, 1000);
+  checkReady();
+});
+
+/* ══════════════════════════════════════
+   READY CHECK — all required fields
+══════════════════════════════════════ */
+function isReady() {
+  const moodOk = !!document.querySelector('#moodRow .mood-btn[aria-pressed="true"]');
+  const actOk  = !!document.querySelector('#actWrap .act-chip[aria-pressed="true"]');
+  const titleOk = fTitle.value.trim().length > 0;
+  const descOk  = fDesc.value.trim().length > 0;
+  return moodOk && actOk && titleOk && descOk;
 }
+function checkReady() {
+  const ready = isReady();
+  const topBtn  = document.getElementById('btnSaveTop');
+  const mainBtn = document.getElementById('btnSaveMain');
+  topBtn.classList.toggle('ready', ready);
+  mainBtn.classList.toggle('ready', !ready ? false : true);
+  mainBtn.classList.toggle('disabled', !ready);
+}
+/* run once on load (pre-fill might already satisfy mood/act) */
+checkReady();
 
-// ── Daily question ticker ─────────────────────────────────────────────────
-const QS = [
-  'วันนี้มีอะไรที่ทำให้ยิ้มได้บ้าง?',
-  'สิ่งที่ดีที่สุดของวันนี้คืออะไร?',
-  'วันนี้ได้เรียนรู้อะไรใหม่?',
-  'อะไรที่อยากขอบคุณตัวเองในวันนี้?',
-  'วันนี้รู้สึกยังไงตอนตื่นนอน?',
-  'คนที่ทำให้วันนี้ดีขึ้นคือใคร?',
-  'วันนี้มีอะไรที่อยากเปลี่ยนไหม?',
-  'วันนี้ดูแลตัวเองดีแค่ไหน?',
-  'อะไรที่อยากเปลี่ยนในพรุ่งนี้?',
+/* ══════════════════════════════════════
+   OPTIONAL: LOCATION
+══════════════════════════════════════ */
+const optLoc  = document.getElementById('optLoc');
+const locPill = document.getElementById('locPill');
+const locRemove = document.getElementById('locRemove');
+
+optLoc.addEventListener('click', () => {
+  optLoc.classList.toggle('active');
+  const on = optLoc.classList.contains('active');
+  locPill.classList.toggle('on', on);
+  optLoc.querySelector('.opt-ico').textContent = on ? '📍' : '📍';
+});
+locRemove.addEventListener('click', e => {
+  e.stopPropagation();
+  locPill.classList.remove('on');
+  optLoc.classList.remove('active');
+});
+
+/* simulate geolocation fill */
+optLoc.addEventListener('click', () => {
+  if (optLoc.classList.contains('active')) {
+    document.getElementById('locText').textContent = 'กำลังหาตำแหน่ง...';
+    setTimeout(() => {
+      document.getElementById('locText').textContent = 'โคราช, ไทย';
+    }, 900);
+  }
+});
+
+/* ══════════════════════════════════════
+   OPTIONAL: PHOTO
+══════════════════════════════════════ */
+const optPhoto   = document.getElementById('optPhoto');
+const photoGrid  = document.getElementById('photoGrid');
+const photoAddBtn = document.getElementById('photoAddBtn');
+
+/* demo photo URLs */
+const DEMO_PHOTOS = [
+  'https://i.pinimg.com/736x/a0/bf/39/a0bf392c595db35dd9b6f3f4881dfd23.jpg',
+  'https://i.pinimg.com/736x/1a/ec/a0/1aeca0e90fcbceb832342f7b2661ec96.jpg',
+  'https://i.pinimg.com/736x/e0/b8/7c/e0b87cf298f804a3de97bfbbf8fefdbd.jpg',
 ];
-let qi = 0;
-const qEl = document.getElementById('qA');
+let photoCount = 0;
 
-function tickQ() {
-  qi = (qi + 1) % QS.length;
-  qEl.style.opacity = '0';
-  qEl.style.transform = 'translateY(-6px)';
-  setTimeout(() => {
-    qEl.textContent = QS[qi];
-    qEl.style.transition = 'opacity .35s, transform .35s';
-    qEl.style.opacity = '1';
-    qEl.style.transform = 'translateY(0)';
-  }, 220);
+optPhoto.addEventListener('click', () => {
+  if (!photoGrid.classList.contains('on')) {
+    photoGrid.classList.add('on');
+    optPhoto.classList.add('active');
+  }
+});
+photoAddBtn.addEventListener('click', () => {
+  if (photoCount >= DEMO_PHOTOS.length) return;
+  const img = document.createElement('img');
+  img.className = 'photo-thumb';
+  img.src = DEMO_PHOTOS[photoCount++];
+  img.alt = `รูปภาพ ${photoCount}`;
+  photoGrid.insertBefore(img, photoAddBtn);
+  if (photoCount >= DEMO_PHOTOS.length) photoAddBtn.style.display = 'none';
+});
+
+/* ══════════════════════════════════════
+   OPTIONAL: EXPENSE
+══════════════════════════════════════ */
+const optExp   = document.getElementById('optExp');
+const expField = document.getElementById('expField');
+const expInput = document.getElementById('expInput');
+
+optExp.addEventListener('click', () => {
+  const on = expField.classList.toggle('on');
+  optExp.classList.toggle('active', on);
+  if (on) setTimeout(() => expInput.focus(), 100);
+});
+
+/* ══════════════════════════════════════
+   SAVE
+══════════════════════════════════════ */
+function doSave() {
+  if (!isReady()) return;
+
+  const mood    = document.querySelector('#moodRow .mood-btn[aria-pressed="true"]');
+  const act     = document.querySelector('#actWrap .act-chip[aria-pressed="true"]');
+  const entry   = {
+    date:     new Date().toISOString(),
+    mood:     { emoji: mood?.dataset.emoji, label: mood?.dataset.label },
+    activity: act?.dataset.label,
+    title:    fTitle.value.trim(),
+    content:  fDesc.value.trim(),
+    location: locPill.classList.contains('on') ? document.getElementById('locText').textContent : null,
+    expense:  expInput.value ? parseFloat(expInput.value) : null,
+    photos:   photoCount,
+  };
+
+  /* prototype: log to console, show success screen */
+  console.log('[Life Diary] บันทึกแล้ว:', entry);
+  document.getElementById('successOverlay').classList.add('on');
 }
 
-qEl.style.transition = 'opacity .35s, transform .35s';
-setInterval(tickQ, 4500);
+document.getElementById('btnSaveTop').addEventListener('click',  doSave);
+document.getElementById('btnSaveMain').addEventListener('click', doSave);
+
+function goHome() {
+  location.href = 'life-diary-home.html';
+}
+
+/* back button */
+document.getElementById('btnBack').addEventListener('click', () => {
+  if (isReady()) {
+    if (confirm('ออกโดยไม่บันทึก?')) history.back();
+  } else {
+    history.back();
+  }
+});
 </script>
 </body>
 </html>

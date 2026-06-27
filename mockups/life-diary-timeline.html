@@ -3,194 +3,474 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Life Diary — สมุดชีวิต (Timeline)</title>
+<title>Life Diary — ไทม์ไลน์</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --paper:#FBF8F3; --paper-deep:#F3EEE5;
-    --ink:#3D3548; --ink-soft:#7A7186; --ink-faint:#A9A1B3;
-    --line:#E7DFD3;
-    --rose:#D14F86; --rose-soft:#E0689A; --rose-tint:#FBEAF1;
-    --sage:#7E9E7C; --gold:#CC9A3A; --gold-tint:#FAF1DC;
-    --radius:22px; --shadow:0 18px 50px -22px rgba(61,53,72,.45);
+  :root {
+    --bg:        #F0F4FB;
+    --surface:   #FFFFFF;
+    --ink:       #1A1630;
+    --ink-soft:  #6B6585;
+    --ink-faint: #AFAABB;
+    --line:      #EDEAF5;
+    --rose:      #D14F86;
+    --rose-tint: #FBEAF1;
+    --rose-mid:  #C93E7A;
+    --sage:      #4FAD86;
+    --sage-tint: #E6F7F0;
+    --gold:      #CC9A3A;
+    --gold-tint: #FBF3E2;
+    --blue:      #3D8EF0;
+    --blue-tint: #EDF4FE;
+    --purple:    #7C5CBF;
+    --purple-tint:#F0EBFF;
+    --radius:    18px;
+    --shadow-sm: 0 4px 16px -4px rgba(26,22,48,.10);
+    --shadow-md: 0 10px 28px -8px rgba(26,22,48,.15);
   }
-  *{box-sizing:border-box;margin:0;padding:0;}
-  html,body{height:100%;}
-  body{
-    font-family:'IBM Plex Sans Thai',sans-serif;color:var(--ink);
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+  html, body { height:100%; }
+  body {
+    font-family:'IBM Plex Sans Thai', sans-serif;
     background:
-      radial-gradient(1200px 600px at 80% -10%, #EAE0EC 0%, transparent 55%),
-      radial-gradient(1000px 700px at -10% 110%, #DCE7EC 0%, transparent 55%),
-      #ECE7E0;
-    display:flex;align-items:center;justify-content:center;min-height:100vh;padding:32px 16px;
+      radial-gradient(900px 600px at 70% -5%, #D8E6F8 0%, transparent 60%),
+      radial-gradient(800px 600px at 0% 110%, #E0D8F8 0%, transparent 60%),
+      #EBF0FB;
+    display:flex; align-items:center; justify-content:center;
+    min-height:100vh; padding:32px 16px;
     -webkit-font-smoothing:antialiased;
   }
-  .phone{
-    width:392px;max-width:100%;height:812px;max-height:92vh;background:var(--paper);
-    border-radius:40px;overflow:hidden;position:relative;
-    box-shadow:var(--shadow), 0 0 0 8px #fff, 0 0 0 9px #E1D9CD;
-    display:flex;flex-direction:column;
+
+  /* ── Phone ── */
+  .phone {
+    width:392px; max-width:100%; height:812px; max-height:92vh;
+    background:var(--bg);
+    border-radius:40px; overflow:hidden; position:relative;
+    box-shadow:0 28px 72px -16px rgba(26,22,48,.30), 0 0 0 8px #fff, 0 0 0 9px #DDD8EE;
+    display:flex; flex-direction:column;
   }
 
-  /* ---------- HOME / TIMELINE ---------- */
-  .head{
-    flex:none;padding:16px 20px 14px;position:relative;overflow:hidden;
-    background:linear-gradient(165deg,#D7E2E8 0%,#EBE0EC 60%,var(--paper) 100%);
+  /* ════════════════════════════
+     HEADER
+  ════════════════════════════ */
+  .tl-head {
+    flex:none;
+    background:var(--bg);
+    padding:14px 20px 12px;
+    display:flex; align-items:center; justify-content:space-between;
+    border-bottom:1px solid var(--line);
+    position:relative; z-index:5;
   }
-  .head::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:26px;
-    background:linear-gradient(to bottom,transparent,var(--paper));}
-  .head-top{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:2;}
-  .brand{font-family:'Mali',cursive;font-weight:700;font-size:21px;color:var(--ink);}
-  .brand small{display:block;font-family:'IBM Plex Sans Thai';font-weight:400;font-size:11px;color:var(--ink-soft);letter-spacing:.5px;margin-top:-2px;}
-  .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(145deg,#E9C46A,#E0689A);
-    display:grid;place-items:center;color:#fff;font-weight:600;font-size:15px;}
-
-  /* mood ribbon — the month as a river of color */
-  .ribbon-wrap{position:relative;z-index:2;margin-top:16px;}
-  .ribbon-lbl{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px;}
-  .ribbon-lbl b{font-size:13px;font-weight:600;color:var(--ink);}
-  .ribbon-lbl span{font-size:11px;color:var(--ink-soft);}
-  .ribbon{display:flex;gap:3px;}
-  .ribbon i{flex:1;height:30px;border-radius:5px;opacity:.9;transition:transform .15s;}
-  .ribbon i.today{outline:2px solid #fff;outline-offset:1px;transform:scaleY(1.18);}
-
-  .body{flex:1;overflow-y:auto;padding:6px 16px 156px;}
-  .body::-webkit-scrollbar{width:0;}
-
-  /* Mood x Money insight — the differentiator */
-  .insight{
-    margin:14px 4px 4px;border-radius:var(--radius);padding:15px 16px;position:relative;overflow:hidden;
-    background:linear-gradient(135deg,#FBEAF1 0%,#FAF1DC 100%);border:1px solid #F0DDD0;
+  .tl-title {
+    font-family:'Mali', cursive; font-size:20px; font-weight:700; color:var(--ink);
   }
-  .insight .tag{font-size:10.5px;font-weight:700;letter-spacing:.6px;color:var(--rose);text-transform:uppercase;}
-  .insight h2{font-family:'Mali',cursive;font-weight:600;font-size:16.5px;line-height:1.45;margin-top:5px;color:var(--ink);}
-  .insight h2 b{color:var(--rose);font-weight:700;}
-  .insight .more{margin-top:9px;font-size:12px;color:var(--ink-soft);display:flex;align-items:center;gap:4px;}
-  .insight .more b{color:var(--gold);font-weight:600;}
-
-  .month-h{font-size:12px;font-weight:600;color:var(--ink-soft);letter-spacing:.4px;
-    margin:22px 6px 10px;display:flex;align-items:center;gap:8px;}
-  .month-h::after{content:"";flex:1;height:1px;background:var(--line);}
-
-  /* entry card */
-  .entry{
-    background:#fff;border:1px solid var(--line);border-radius:var(--radius);
-    margin:0 2px 13px;overflow:hidden;cursor:pointer;position:relative;
-    box-shadow:0 6px 16px -12px rgba(61,53,72,.4);transition:transform .15s, box-shadow .2s;
+  .head-btns { display:flex; gap:8px; }
+  .head-icon-btn {
+    width:38px; height:38px; border-radius:50%;
+    background:var(--surface); border:none; cursor:pointer;
+    display:grid; place-items:center; font-size:17px;
+    box-shadow:var(--shadow-sm); color:var(--ink-soft);
+    transition:background .18s, transform .15s;
   }
-  .entry:hover{transform:translateY(-2px);box-shadow:0 12px 26px -14px rgba(61,53,72,.5);}
-  .entry:active{transform:scale(.995);}
-  .entry .moodbar{height:5px;width:100%;}
-  .entry .pad{padding:14px 15px 15px;}
-  .entry .row1{display:flex;align-items:center;gap:9px;}
-  .entry .day{width:46px;flex:none;text-align:center;line-height:1;}
-  .entry .day b{font-family:'Mali',cursive;font-size:23px;font-weight:700;color:var(--ink);display:block;}
-  .entry .day small{font-size:10.5px;color:var(--ink-faint);}
-  .entry .meta{flex:1;min-width:0;}
-  .entry .place{font-size:12.5px;color:var(--ink);font-weight:500;display:flex;align-items:center;gap:4px;}
-  .entry .sub{font-size:11px;color:var(--ink-faint);margin-top:1px;}
-  .entry .mchip{flex:none;width:24px;height:24px;border-radius:50%;box-shadow:inset 0 -2px 4px rgba(0,0,0,.08);}
-  .entry .story{font-family:'Mali',cursive;font-size:14px;line-height:1.65;color:var(--ink);
-    margin-top:11px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-  .entry .thumbs{display:flex;gap:6px;margin-top:11px;}
-  .entry .thumbs img{width:54px;height:54px;border-radius:11px;object-fit:cover;border:1px solid var(--line);}
-  .entry .thumbs .more{width:54px;height:54px;border-radius:11px;background:var(--paper-deep);
-    display:grid;place-items:center;font-size:12px;color:var(--ink-soft);font-weight:600;}
-  .entry .foot{display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:11px;border-top:1px dashed var(--line);}
-  .entry .spend{display:flex;align-items:center;gap:5px;background:var(--gold-tint);border:1px solid #EFE0C0;
-    border-radius:20px;padding:4px 11px;font-size:12px;font-weight:600;color:#9C7424;}
-  .entry .spend i{font-style:normal;font-weight:400;color:var(--gold);}
-  .entry .synced{margin-left:auto;font-size:10.5px;color:var(--ink-faint);display:flex;align-items:center;gap:3px;}
+  .head-icon-btn:hover  { background:var(--purple-tint); color:var(--purple); }
+  .head-icon-btn:active { transform:scale(.91); }
 
-  /* single FAB (fixes the 4-FAB problem) */
-  .fab{
-    position:absolute;right:18px;bottom:74px;width:60px;height:60px;border-radius:50%;border:none;cursor:pointer;
-    background:linear-gradient(145deg,var(--rose-soft),var(--rose));color:#fff;font-size:30px;font-weight:300;
-    display:grid;place-items:center;box-shadow:0 14px 28px -10px var(--rose);z-index:6;transition:transform .15s;
+  /* ════════════════════════════
+     MONTH STRIP — stats summary
+  ════════════════════════════ */
+  .month-strip {
+    flex:none; background:var(--surface);
+    padding:14px 20px;
+    border-bottom:1px solid var(--line);
+    box-shadow:var(--shadow-sm);
   }
-  .fab:active{transform:scale(.93);}
-  .fab small{position:absolute;bottom:-19px;font-size:10px;color:var(--ink-soft);font-weight:500;width:80px;text-align:center;}
-
-  /* ---------- ENTRY DETAIL OVERLAY ---------- */
-  .detail{
-    position:absolute;inset:0;background:var(--paper);z-index:20;display:flex;flex-direction:column;
-    transform:translateX(100%);transition:transform .32s cubic-bezier(.4,0,.2,1);
+  .month-nav {
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;
   }
-  .detail.open{transform:translateX(0);}
-  .d-wash{flex:none;padding:14px 20px 26px;position:relative;overflow:hidden;transition:background .5s;}
-  .d-wash::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:30px;
-    background:linear-gradient(to bottom,transparent,var(--paper));}
-  .d-top{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:2;}
-  .iconbtn{width:38px;height:38px;border:none;border-radius:50%;background:rgba(255,255,255,.6);
-    color:var(--ink);font-size:18px;cursor:pointer;display:grid;place-items:center;transition:background .2s,transform .15s;}
-  .iconbtn:hover{background:rgba(255,255,255,.9);} .iconbtn:active{transform:scale(.92);}
-  .d-date{font-family:'Mali',cursive;font-weight:600;font-size:15px;color:var(--ink);opacity:.85;}
-  .d-hero{position:relative;z-index:2;margin-top:16px;display:flex;align-items:center;gap:11px;}
-  .d-hero .mchip{width:40px;height:40px;border-radius:50%;box-shadow:inset 0 -3px 6px rgba(0,0,0,.1);flex:none;}
-  .d-hero .h-meta b{font-family:'Mali',cursive;font-size:19px;font-weight:600;color:var(--ink);display:block;line-height:1.2;}
-  .d-hero .h-meta small{font-size:12px;color:var(--ink);opacity:.75;}
+  .month-nav-btn {
+    width:30px; height:30px; border:none; background:var(--bg);
+    border-radius:50%; cursor:pointer; font-size:16px; color:var(--ink-soft);
+    display:grid; place-items:center; transition:background .15s;
+  }
+  .month-nav-btn:hover { background:var(--purple-tint); color:var(--purple); }
+  .month-name {
+    font-family:'Mali', cursive; font-size:16px; font-weight:700; color:var(--ink);
+  }
 
-  .d-body{flex:1;overflow-y:auto;padding:4px 20px 40px;}
-  .d-body::-webkit-scrollbar{width:0;}
-  .d-place{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);
-    border-radius:20px;padding:6px 13px;font-size:12.5px;color:var(--ink);margin-top:14px;}
-  .d-place .pin{color:var(--sage);}
-  .d-story{font-family:'Mali',cursive;font-size:16px;line-height:1.9;color:var(--ink);margin-top:16px;}
-  .d-photos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:18px;}
-  .d-photos img{width:100%;height:130px;object-fit:cover;border-radius:14px;border:1px solid var(--line);}
-  .d-photos img:first-child:nth-last-child(1){grid-column:1/-1;height:190px;}
+  /* Mood bar chart (7 cols for current week / month mini view) */
+  .mood-week {
+    display:flex; gap:4px; align-items:flex-end;
+    height:36px;
+  }
+  .mood-bar-wrap {
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
+    cursor:pointer;
+  }
+  .mood-bar {
+    width:100%; border-radius:4px 4px 0 0;
+    min-height:4px;
+    transition:opacity .15s;
+  }
+  .mood-bar-wrap:hover .mood-bar { opacity:.75; }
+  .mood-bar-day {
+    font-size:9px; color:var(--ink-faint); font-weight:600; letter-spacing:.3px;
+  }
 
-  .d-spend{margin-top:20px;background:var(--gold-tint);border:1px solid #EFE0C0;border-radius:var(--radius);padding:16px;}
-  .d-spend .sh{display:flex;align-items:center;justify-content:space-between;}
-  .d-spend .sh b{font-size:13px;font-weight:600;color:var(--ink);}
-  .d-spend .sh .tot{font-family:'Mali',cursive;font-size:19px;font-weight:700;color:#9C7424;}
-  .d-spend ul{list-style:none;margin-top:11px;}
-  .d-spend li{display:flex;justify-content:space-between;padding:7px 0;font-size:13px;color:var(--ink);border-top:1px dashed #EAD9B4;}
-  .d-spend li span:last-child{font-weight:600;}
-  .d-spend .sync{margin-top:12px;display:flex;align-items:center;gap:7px;font-size:11px;color:var(--ink-soft);
-    border-top:1px dashed #EAD9B4;padding-top:11px;}
-  .d-spend .sync b{color:var(--gold);font-weight:700;}
+  /* month stat chips */
+  .month-stats {
+    display:flex; gap:8px; margin-top:12px; overflow-x:auto;
+    padding-bottom:2px;
+  }
+  .month-stats::-webkit-scrollbar { display:none; }
+  .stat-chip {
+    flex:none; display:flex; align-items:center; gap:5px;
+    background:var(--bg); border-radius:12px; padding:5px 10px;
+    font-size:11.5px; font-weight:600;
+  }
+  .stat-chip-ico  { font-size:14px; }
+  .stat-chip-val  { color:var(--ink); }
+  .stat-chip-lbl  { color:var(--ink-soft); }
 
-  .note{max-width:392px;margin:18px auto 0;font-size:12px;color:#6f6a7d;text-align:center;line-height:1.6;}
-  .bottom-nav{flex:none;height:60px;background:var(--paper);border-top:1px solid var(--line);display:flex;align-items:stretch;}
-  .bnav-tab{flex:1;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--ink-faint);transition:color .2s;}
-  .bnav-tab.active{color:var(--rose);}
-  .bnav-tab:hover:not(.active){color:var(--ink-soft);}
-  .bnav-ico{font-size:20px;line-height:1;}
-  .bnav-lbl{font-size:9.5px;font-weight:500;}
-  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+  /* ════════════════════════════
+     TIMELINE SCROLL
+  ════════════════════════════ */
+  .tl-scroll {
+    flex:1; overflow-y:auto; padding:16px 16px 80px;
+  }
+  .tl-scroll::-webkit-scrollbar { width:0; }
+
+  /* Month group header */
+  .month-group-head {
+    display:flex; align-items:center; gap:10px; margin-bottom:12px;
+  }
+  .month-group-head + .month-group-head { margin-top:24px; }
+  .mg-line { flex:1; height:1px; background:var(--line); }
+  .mg-label {
+    font-size:11px; font-weight:700; color:var(--ink-faint);
+    letter-spacing:.5px; text-transform:uppercase;
+    background:var(--bg); padding:0 4px;
+  }
+
+  /* Entry card */
+  .entry-row {
+    display:flex; gap:12px; margin-bottom:10px; position:relative;
+  }
+  /* date column */
+  .entry-date-col {
+    flex:none; width:36px;
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    padding-top:10px;
+  }
+  .date-num {
+    font-family:'Mali', cursive; font-size:18px; font-weight:700;
+    color:var(--ink); line-height:1;
+  }
+  .date-day {
+    font-size:9.5px; color:var(--ink-faint); font-weight:600;
+    letter-spacing:.3px;
+  }
+  /* vertical connector */
+  .entry-row:not(:last-child) .entry-date-col::after {
+    content:""; display:block; width:2px; background:var(--line);
+    flex:1; min-height:16px; margin-top:6px; border-radius:2px;
+  }
+
+  /* card */
+  .entry-card {
+    flex:1; background:var(--surface); border-radius:var(--radius);
+    box-shadow:var(--shadow-sm); overflow:hidden;
+    cursor:pointer; transition:transform .15s, box-shadow .18s;
+    text-decoration:none; color:inherit;
+    display:block;
+  }
+  .entry-card:hover { transform:translateY(-2px); box-shadow:var(--shadow-md); }
+  .entry-card:active { transform:scale(.98); }
+
+  .card-accent { height:4px; }
+
+  .card-body { padding:11px 14px 10px; }
+  .card-row1 { display:flex; align-items:center; gap:7px; margin-bottom:5px; }
+  .mood-dot { width:8px; height:8px; border-radius:50%; flex:none; }
+  .card-time  { font-size:10.5px; color:var(--ink-soft); font-weight:500; }
+  .card-title {
+    font-family:'Mali', cursive; font-size:14.5px; font-weight:700;
+    color:var(--ink); line-height:1.35; margin-bottom:4px;
+    display:-webkit-box; -webkit-box-orient:vertical;
+    -webkit-line-clamp:1; line-clamp:1; overflow:hidden;
+  }
+  .card-preview {
+    font-size:12px; color:var(--ink-soft); line-height:1.5;
+    display:-webkit-box; -webkit-box-orient:vertical;
+    -webkit-line-clamp:2; line-clamp:2; overflow:hidden;
+  }
+  .card-foot {
+    display:flex; align-items:center; gap:6px;
+    padding:7px 14px 10px; border-top:1px solid var(--line);
+    flex-wrap:wrap;
+  }
+  .chip {
+    font-size:10px; font-weight:600; padding:3px 8px; border-radius:10px;
+    display:flex; align-items:center; gap:3px;
+  }
+  .chip-loc  { background:var(--sage-tint); color:var(--sage); }
+  .chip-act  { background:var(--blue-tint); color:var(--blue); }
+  .chip-gold { background:var(--gold-tint); color:var(--gold); }
+  .chip-mood { background:var(--rose-tint); color:var(--rose); }
+  .card-spend { margin-left:auto; font-size:11.5px; font-weight:700; color:var(--gold); }
+
+  /* photo thumbnail strip in card */
+  .card-photos {
+    display:flex; gap:4px; padding:0 14px 10px;
+  }
+  .card-thumb {
+    width:52px; height:52px; border-radius:10px;
+    object-fit:cover; flex:none;
+    box-shadow:0 2px 8px -2px rgba(26,22,48,.15);
+  }
+  .card-thumb-more {
+    width:52px; height:52px; border-radius:10px;
+    background:var(--bg); display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:700; color:var(--ink-soft); flex:none;
+    border:1.5px solid var(--line);
+  }
+
+  /* ════════════════════════════
+     BOTTOM NAV
+  ════════════════════════════ */
+  .bottom-nav {
+    position:absolute; left:0; right:0; bottom:0; z-index:5;
+    height:64px;
+    background:rgba(240,244,251,.94);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border-top:1px solid rgba(255,255,255,.8);
+    display:flex; align-items:stretch;
+  }
+  .bnav-tab {
+    flex:1; border:none; background:none; cursor:pointer; font-family:inherit;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:3px; color:var(--ink-faint); transition:color .2s;
+  }
+  .bnav-tab.active { color:var(--rose); }
+  .bnav-tab:hover:not(.active) { color:var(--ink-soft); }
+  .bnav-ico { font-size:22px; line-height:1; }
+  .bnav-lbl { font-size:9.5px; font-weight:600; }
+  .bnav-add {
+    flex:none; width:52px; height:52px; margin:auto;
+    background:linear-gradient(145deg, #E0609A, var(--rose-mid));
+    border-radius:50%; border:none; cursor:pointer; font-size:24px;
+    color:#fff; display:grid; place-items:center;
+    box-shadow:0 8px 20px -6px rgba(209,79,134,.5);
+    transition:transform .15s, box-shadow .15s;
+  }
+  .bnav-add:hover  { transform:translateY(-2px); box-shadow:0 12px 24px -6px rgba(209,79,134,.6); }
+  .bnav-add:active { transform:scale(.93); }
 </style>
 </head>
 <body>
 
 <div class="phone">
-  <!-- HOME -->
-  <header class="head">
-    <div class="head-top">
-      <div class="brand">สมุดชีวิต<small>Life Diary</small></div>
-      <div class="avatar">ปู</div>
-    </div>
-    <div class="ribbon-wrap">
-      <div class="ribbon-lbl"><b>มิถุนายน</b><span>อารมณ์ของเดือนนี้</span></div>
-      <div class="ribbon" id="ribbon"></div>
+
+  <!-- HEADER -->
+  <header class="tl-head">
+    <div class="tl-title">ไทม์ไลน์</div>
+    <div class="head-btns">
+      <button class="head-icon-btn" title="ปฏิทิน">📅</button>
+      <button class="head-icon-btn" title="กรอง">⚙️</button>
     </div>
   </header>
 
-  <div class="body">
-    <!-- Mood x Money insight -->
-    <div class="insight">
-      <div class="tag">อารมณ์ × การใช้จ่าย</div>
-      <h2>วันที่รู้สึก <b>เหนื่อย</b> คุณใช้จ่ายมากกว่าวันอารมณ์ดี <b>เกือบ 2 เท่า</b></h2>
-      <div class="more"><b>ดูรายงานเต็มในเป๋าตุง</b> &rarr;</div>
+  <!-- MONTH STRIP -->
+  <div class="month-strip">
+    <div class="month-nav">
+      <button class="month-nav-btn">‹</button>
+      <span class="month-name">มิถุนายน 2569</span>
+      <button class="month-nav-btn">›</button>
     </div>
-
-    <div class="month-h">บันทึกล่าสุด</div>
-    <div id="feed"></div>
+    <!-- Mood mini bar — 7 days this week -->
+    <div class="mood-week" id="moodWeek"></div>
+    <!-- Stats -->
+    <div class="month-stats">
+      <div class="stat-chip"><span class="stat-chip-ico">📝</span><span class="stat-chip-val">14</span><span class="stat-chip-lbl">บันทึก</span></div>
+      <div class="stat-chip"><span class="stat-chip-ico">😄</span><span class="stat-chip-val">8</span><span class="stat-chip-lbl">วันดี</span></div>
+      <div class="stat-chip"><span class="stat-chip-ico">💰</span><span class="stat-chip-val">฿4,820</span><span class="stat-chip-lbl">รวม</span></div>
+      <div class="stat-chip"><span class="stat-chip-ico">📍</span><span class="stat-chip-val">6</span><span class="stat-chip-lbl">สถานที่</span></div>
+    </div>
   </div>
 
-  <!-- bottom navigation -->
+  <!-- TIMELINE SCROLL -->
+  <div class="tl-scroll">
+
+    <!-- ── June 2569 ── -->
+    <div class="month-group-head">
+      <span class="mg-line"></span>
+      <span class="mg-label">มิถุนายน 2569</span>
+      <span class="mg-line"></span>
+    </div>
+
+    <!-- 17 Jun -->
+    <div class="entry-row">
+      <div class="entry-date-col">
+        <span class="date-num">17</span>
+        <span class="date-day">อัง</span>
+      </div>
+      <a class="entry-card" href="life-diary-entry.html">
+        <div class="card-accent" style="background:linear-gradient(90deg,#E9C46A,#F6E9C6)"></div>
+        <div class="card-body">
+          <div class="card-row1">
+            <div class="mood-dot" style="background:#E9C46A;"></div>
+            <span class="card-time">19:45 น.</span>
+          </div>
+          <div class="card-title">วันนี้พาหมูนุ่นไปกินหมูกระทะ 🐷</div>
+          <div class="card-preview">อิ่มมากๆ ทั้งคู่นอนหลับสบายเลย น้ำจิ้มร้านนี้อร่อยเป็นพิเศษ</div>
+        </div>
+        <div class="card-photos">
+          <img class="card-thumb" src="https://i.pinimg.com/736x/a0/bf/39/a0bf392c595db35dd9b6f3f4881dfd23.jpg" alt="">
+          <img class="card-thumb" src="https://i.pinimg.com/736x/1a/ec/a0/1aeca0e90fcbceb832342f7b2661ec96.jpg" alt="">
+          <div class="card-thumb-more">+1</div>
+        </div>
+        <div class="card-foot">
+          <span class="chip chip-mood">😄 ดีมาก</span>
+          <span class="chip chip-act">🍖 กินข้าวนอก</span>
+          <span class="card-spend">฿620</span>
+        </div>
+      </a>
+    </div>
+
+    <!-- 16 Jun -->
+    <div class="entry-row">
+      <div class="entry-date-col">
+        <span class="date-num">16</span>
+        <span class="date-day">จัน</span>
+      </div>
+      <a class="entry-card" href="life-diary-entry.html">
+        <div class="card-accent" style="background:linear-gradient(90deg,#A8C3A0,#E1ECDC)"></div>
+        <div class="card-body">
+          <div class="card-row1">
+            <div class="mood-dot" style="background:#A8C3A0;"></div>
+            <span class="card-time">21:00 น.</span>
+          </div>
+          <div class="card-title">ฝนตกทั้งวัน แต่ได้พักผ่อน</div>
+          <div class="card-preview">นอนดูซีรีส์ทั้งวัน สั่งข้าวกล่องมากิน รู้สึกเหนื่อยๆ แต่โอเค</div>
+        </div>
+        <div class="card-foot">
+          <span class="chip chip-mood">😊 ดี</span>
+          <span class="chip chip-act">🏠 อยู่บ้าน</span>
+          <span class="card-spend">฿120</span>
+        </div>
+      </a>
+    </div>
+
+    <!-- 14 Jun -->
+    <div class="entry-row">
+      <div class="entry-date-col">
+        <span class="date-num">14</span>
+        <span class="date-day">ส</span>
+      </div>
+      <a class="entry-card" href="life-diary-entry.html">
+        <div class="card-accent" style="background:linear-gradient(90deg,#C9A0A8,#EFDDE0)"></div>
+        <div class="card-body">
+          <div class="card-row1">
+            <div class="mood-dot" style="background:#C9A0A8;"></div>
+            <span class="card-time">10:15 น.</span>
+          </div>
+          <div class="card-title">วันหยุดดีๆ กับครอบครัว ☕</div>
+          <div class="card-preview">ออกไปกินข้าวเช้ากับครอบครัว อากาศดีมาก มีความสุขมากๆ</div>
+        </div>
+        <div class="card-foot">
+          <span class="chip chip-mood">😄 ดีมาก</span>
+          <span class="chip chip-loc">📍 ร้านกาแฟ</span>
+          <span class="card-spend">฿450</span>
+        </div>
+      </a>
+    </div>
+
+    <!-- 12 Jun -->
+    <div class="entry-row">
+      <div class="entry-date-col">
+        <span class="date-num">12</span>
+        <span class="date-day">พฤ</span>
+      </div>
+      <a class="entry-card" href="life-diary-entry.html">
+        <div class="card-accent" style="background:linear-gradient(90deg,#7EC8A8,#C5EDD6)"></div>
+        <div class="card-body">
+          <div class="card-row1">
+            <div class="mood-dot" style="background:#7EC8A8;"></div>
+            <span class="card-time">18:00 น.</span>
+          </div>
+          <div class="card-title">ประชุมทีมเสร็จเร็ว แถมได้กาแฟฟรี ✨</div>
+          <div class="card-preview">วันนี้ลุ้นมากแต่ก็ผ่านไปได้ด้วยดี ทีมเข้าใจกันดีมาก</div>
+        </div>
+        <div class="card-foot">
+          <span class="chip chip-mood">😊 ดี</span>
+          <span class="chip chip-act">🏢 ทำงาน</span>
+          <span class="card-spend">฿0</span>
+        </div>
+      </a>
+    </div>
+
+    <!-- 10 Jun -->
+    <div class="entry-row">
+      <div class="entry-date-col">
+        <span class="date-num">10</span>
+        <span class="date-day">อา</span>
+      </div>
+      <a class="entry-card" href="life-diary-entry.html">
+        <div class="card-accent" style="background:linear-gradient(90deg,#B0A8E9,#DDD8F8)"></div>
+        <div class="card-body">
+          <div class="card-row1">
+            <div class="mood-dot" style="background:#B0A8E9;"></div>
+            <span class="card-time">14:30 น.</span>
+          </div>
+          <div class="card-title">วันพักผ่อน ไปเดินตลาดนัดเย็น</div>
+          <div class="card-preview">ซื้อต้นไม้มา 2 ต้น สวยมากเลย บรรยากาศดีมีลมพัด</div>
+        </div>
+        <div class="card-photos">
+          <img class="card-thumb" src="https://i.pinimg.com/736x/e0/b8/7c/e0b87cf298f804a3de97bfbbf8fefdbd.jpg" alt="">
+        </div>
+        <div class="card-foot">
+          <span class="chip chip-mood">😐 สบายๆ</span>
+          <span class="chip chip-loc">📍 ตลาดนัด</span>
+          <span class="card-spend">฿380</span>
+        </div>
+      </a>
+    </div>
+
+    <!-- ── May 2569 ── -->
+    <div class="month-group-head" style="margin-top:20px;">
+      <span class="mg-line"></span>
+      <span class="mg-label">พฤษภาคม 2569</span>
+      <span class="mg-line"></span>
+    </div>
+
+    <!-- 31 May -->
+    <div class="entry-row">
+      <div class="entry-date-col">
+        <span class="date-num">31</span>
+        <span class="date-day">ส</span>
+      </div>
+      <a class="entry-card" href="life-diary-entry.html">
+        <div class="card-accent" style="background:linear-gradient(90deg,#F0C080,#FAE4C0)"></div>
+        <div class="card-body">
+          <div class="card-row1">
+            <div class="mood-dot" style="background:#F0C080;"></div>
+            <span class="card-time">20:00 น.</span>
+          </div>
+          <div class="card-title">ปิดเดือนกับยอดขายที่เกินเป้า 🎉</div>
+          <div class="card-preview">เดือนนี้ทำได้ดีมาก ทีมงานทุกคนเก่งมาก ขอบคุณทุกคน</div>
+        </div>
+        <div class="card-foot">
+          <span class="chip chip-mood">😄 ดีมาก</span>
+          <span class="chip chip-act">🏪 เปิดร้าน</span>
+          <span class="card-spend">฿0</span>
+        </div>
+      </a>
+    </div>
+
+  </div><!-- /tl-scroll -->
+
+  <!-- BOTTOM NAV -->
   <nav class="bottom-nav">
     <button class="bnav-tab" onclick="location.href='life-diary-home.html'">
       <span class="bnav-ico">🏠</span><span class="bnav-lbl">หน้าแรก</span>
@@ -198,147 +478,36 @@
     <button class="bnav-tab active">
       <span class="bnav-ico">📅</span><span class="bnav-lbl">ไทม์ไลน์</span>
     </button>
+    <button class="bnav-add" onclick="location.href='life-diary-composer.html'" title="เพิ่มบันทึก">＋</button>
     <button class="bnav-tab" onclick="location.href='life-diary-search.html'">
       <span class="bnav-ico">🔍</span><span class="bnav-lbl">ค้นหา</span>
     </button>
-    <button class="bnav-tab" onclick="location.href='life-diary-composer.html'">
+    <button class="bnav-tab">
       <span class="bnav-ico">✏️</span><span class="bnav-lbl">บันทึก</span>
     </button>
   </nav>
 
-  <button class="fab" id="fab">+<small>บันทึกวันนี้</small></button>
-
-  <!-- DETAIL OVERLAY -->
-  <div class="detail" id="detail">
-    <div class="d-wash" id="dWash">
-      <div class="d-top">
-        <button class="iconbtn" id="dBack">&larr;</button>
-        <div class="d-date" id="dDate"></div>
-        <button class="iconbtn">&#8943;</button>
-      </div>
-      <div class="d-hero">
-        <div class="mchip" id="dChip"></div>
-        <div class="h-meta">
-          <b id="dMood"></b>
-          <small id="dTime"></small>
-        </div>
-      </div>
-    </div>
-    <div class="d-body">
-      <span class="d-place"><span class="pin">&#128205;</span><span id="dPlace"></span></span>
-      <p class="d-story" id="dStory"></p>
-      <div class="d-photos" id="dPhotos"></div>
-      <div class="d-spend" id="dSpendBox">
-        <div class="sh"><b>รายจ่ายวันนี้</b><span class="tot" id="dTotal"></span></div>
-        <ul id="dItems"></ul>
-        <div class="sync">&#10003; ซิงค์เข้า <b>เป๋าตุง</b> แล้ว · จัดหมวดอัตโนมัติ</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<p class="note">Life Diary — Populated Home + Entry Detail (concept) · แถบสีบนสุด = อารมณ์ทั้งเดือน · แตะการ์ดเพื่ออ่านเต็ม</p>
+</div><!-- /phone -->
 
 <script>
-  const MOOD = {
-    great:{name:'วันที่ดีมาก', dot:'#E9C46A', a:'#F0DBA0', b:'#F6E9C6'},
-    good: {name:'วันที่ดี',    dot:'#A8C3A0', a:'#C8DCC2', b:'#E1ECDC'},
-    ok:   {name:'วันธรรมดา',   dot:'#AFC5D8', a:'#C7D8E4', b:'#E2ECF1'},
-    tired:{name:'วันที่เหนื่อย',dot:'#B9A8C9', a:'#D6CBE2', b:'#E8E0F0'},
-    bad:  {name:'วันที่แย่',    dot:'#C9A0A8', a:'#E0C7CC', b:'#EFDDE0'}
-  };
-
-  const entries = [
-    { id:1, d:'14', wd:'อา.', date:'อาทิตย์ 14 มิ.ย.', mood:'good', place:'ตลาดเซฟวัน โคราช',
-      time:'บ่าย 2 โมง · 34° แดดออก',
-      story:'ไปเดินตลาดเซฟวัน ซื้อของเข้าร้านนิดหน่อย แวะกินก๋วยเตี๋ยว อากาศร้อนแต่วันนี้ขายดี อารมณ์ดีขึ้นเยอะ',
-      photos:['https://images.unsplash.com/photo-1542838132-92c53300491e?w=300&q=70','https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=300&q=70'],
-      items:[['ของเข้าร้าน',200],['ก๋วยเตี๋ยว',50]] },
-    { id:2, d:'13', wd:'ส.', date:'เสาร์ 13 มิ.ย.', mood:'great', place:'หน้าร้าน',
-      time:'เช้า 8 โมง · 31° ฟ้าใส',
-      story:'ของหมดตั้งแต่เช้า! ลูกค้าเยอะกว่าทุกวัน เหนื่อยแต่คุ้ม วันนี้ยิ้มทั้งวันเลย',
-      photos:['https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=300&q=70'],
-      items:[['วัตถุดิบ',180]] },
-    { id:3, d:'12', wd:'ศ.', date:'ศุกร์ 12 มิ.ย.', mood:'tired', place:'หน้าร้าน',
-      time:'บ่าย 4 โมง · 28° ฝนตก',
-      story:'ฝนตกทั้งวัน คนน้อยมาก ของเหลือเยอะ ลงทุนของไปเยอะแต่ขายไม่ค่อยออก เหนื่อยใจนิดหน่อย',
-      photos:['https://images.unsplash.com/photo-1438978280647-f3df2c6e1e91?w=300&q=70','https://images.unsplash.com/photo-1519996529931-28324d5a630e?w=300&q=70'],
-      items:[['ของเข้าร้าน',350],['ถุง/อุปกรณ์',70]] },
-    { id:4, d:'11', wd:'พฤ.', date:'พฤหัส 11 มิ.ย.', mood:'ok', place:'หน้าร้าน',
-      time:'เที่ยง · 33° เมฆบางส่วน',
-      story:'วันธรรมดาๆ ขายได้เรื่อยๆ ไม่หวือหวา กลับบ้านพักผ่อนเร็วหน่อย',
-      photos:['https://images.unsplash.com/photo-1466637574441-749b8f19452f?w=300&q=70'],
-      items:[['วัตถุดิบ',120]] }
-  ];
-
-  // mood ribbon (whole month, last entries highlighted)
-  const monthMoods = ['ok','good','tired','ok','great','good','bad','ok','good','great',
-                      'tired','ok','good','good','tired','great','good','ok','great','tired',
-                      'good','ok','good','great','tired','ok','good','good','tired','good','good'];
-  // overwrite tail to match real entries (day 11..14)
-  monthMoods[10]='ok'; monthMoods[11]='tired'; monthMoods[12]='great'; monthMoods[13]='good';
-  const ribbon=document.getElementById('ribbon');
-  monthMoods.forEach((m,i)=>{
-    const el=document.createElement('i');
-    el.style.background=MOOD[m].dot;
-    if(i===13) el.classList.add('today');
-    ribbon.appendChild(el);
-  });
-
-  // render feed
-  const feed=document.getElementById('feed');
-  entries.forEach(e=>{
-    const m=MOOD[e.mood];
-    const total=e.items.reduce((s,it)=>s+it[1],0);
-    const thumbs=e.photos.slice(0,3).map(p=>`<img src="${p}" alt="">`).join('')
-      + (e.photos.length>3?`<div class="more">+${e.photos.length-3}</div>`:'');
-    const card=document.createElement('div');
-    card.className='entry';
-    card.innerHTML=`
-      <div class="moodbar" style="background:linear-gradient(90deg,${m.a},${m.b})"></div>
-      <div class="pad">
-        <div class="row1">
-          <div class="day"><b>${e.d}</b><small>${e.wd}</small></div>
-          <div class="meta">
-            <div class="place">&#128205; ${e.place}</div>
-            <div class="sub">${e.time}</div>
-          </div>
-          <div class="mchip" style="background:${m.dot}"></div>
-        </div>
-        <div class="story">${e.story}</div>
-        ${e.photos.length?`<div class="thumbs">${thumbs}</div>`:''}
-        <div class="foot">
-          <span class="spend">&#3647; ${total} <i>· ${e.items.length} รายการ</i></span>
-          <span class="synced">&#10003; เป๋าตุง</span>
-        </div>
-      </div>`;
-    card.addEventListener('click',()=>openDetail(e));
-    feed.appendChild(card);
-  });
-
-  // detail overlay
-  const detail=document.getElementById('detail');
-  function openDetail(e){
-    const m=MOOD[e.mood];
-    document.getElementById('dWash').style.background=`linear-gradient(160deg,${m.a},${m.b})`;
-    document.getElementById('dDate').textContent=e.date;
-    document.getElementById('dChip').style.background=m.dot;
-    document.getElementById('dMood').textContent=m.name;
-    document.getElementById('dTime').textContent=e.time;
-    document.getElementById('dPlace').textContent=e.place;
-    document.getElementById('dStory').textContent=e.story;
-    document.getElementById('dPhotos').innerHTML=e.photos.map(p=>`<img src="${p}" alt="">`).join('');
-    const total=e.items.reduce((s,it)=>s+it[1],0);
-    document.getElementById('dTotal').textContent='฿'+total;
-    document.getElementById('dItems').innerHTML=e.items.map(it=>`<li><span>${it[0]}</span><span>฿${it[1]}</span></li>`).join('');
-    detail.classList.add('open');
-  }
-  document.getElementById('dBack').addEventListener('click',()=>detail.classList.remove('open'));
-  document.getElementById('fab').addEventListener('click',()=>{
-    // would open the composer
-    const f=document.getElementById('fab'); f.style.transform='scale(.9)';
-    setTimeout(()=>f.style.transform='',150);
-  });
+/* ── Mood mini bar chart ── */
+const weekData = [
+  { day:'จ', h:28, color:'#A8C3A0' },
+  { day:'อ', h:38, color:'#E9C46A' },
+  { day:'พ', h:22, color:'#7EC8A8' },
+  { day:'พฤ',h:40, color:'#E9C46A' },
+  { day:'ศ', h:16, color:'#C9A0A8' },
+  { day:'ส', h:32, color:'#A8C3A0' },
+  { day:'อา',h:44, color:'#D14F86', today:true },
+];
+const weekWrap = document.getElementById('moodWeek');
+weekData.forEach(d => {
+  weekWrap.innerHTML += `
+    <div class="mood-bar-wrap">
+      <div class="mood-bar" style="height:${d.h}px;background:${d.color};${d.today ? 'box-shadow:0 0 0 2px #D14F86,0 0 0 3px rgba(209,79,134,.2);' : ''}"></div>
+      <span class="mood-bar-day" style="${d.today ? 'color:var(--rose);font-weight:800;' : ''}">${d.day}</span>
+    </div>`;
+});
 </script>
 </body>
 </html>

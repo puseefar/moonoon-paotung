@@ -3,276 +3,280 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Life Diary — ค้นหาบันทึก</title>
+<title>Life Diary — ค้นหา</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --paper:#FBF8F3; --paper-deep:#F3EEE5;
-    --ink:#3D3548; --ink-soft:#7A7186; --ink-faint:#A9A1B3;
-    --line:#E7DFD3;
-    --rose:#D14F86; --rose-soft:#E0689A; --rose-tint:#FBEAF1;
-    --sage:#7E9E7C; --sage-tint:#EAF0E7;
-    --gold:#CC9A3A; --gold-tint:#FAF1DC;
-    --radius:22px;
-    --shadow:0 18px 50px -22px rgba(61,53,72,.45);
+    --bg:        #F0F4FB;
+    --surface:   #FFFFFF;
+    --ink:       #1A1630;
+    --ink-soft:  #6B6585;
+    --ink-faint: #AFAABB;
+    --line:      #EDEAF5;
+    --rose:      #D14F86;
+    --rose-tint: #FBEAF1;
+    --rose-mid:  #C93E7A;
+    --sage:      #4FAD86;
+    --sage-tint: #E6F7F0;
+    --gold:      #CC9A3A;
+    --gold-tint: #FBF3E2;
+    --blue:      #3D8EF0;
+    --blue-tint: #EDF4FE;
+    --purple:    #7C5CBF;
+    --purple-tint:#F0EBFF;
+    --radius:    18px;
+    --shadow-sm: 0 4px 16px -4px rgba(26,22,48,.10);
+    --shadow-md: 0 10px 28px -8px rgba(26,22,48,.15);
   }
   *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
-  html,body { height:100%; }
+  html, body { height:100%; }
   body {
-    font-family:'IBM Plex Sans Thai',sans-serif; color:var(--ink);
+    font-family:'IBM Plex Sans Thai', sans-serif;
     background:
-      radial-gradient(1200px 600px at 80% -10%, #EAE0EC 0%, transparent 55%),
-      radial-gradient(1000px 700px at -10% 110%, #DCE7EC 0%, transparent 55%),
-      #ECE7E0;
+      radial-gradient(900px 600px at 70% -5%, #D8E6F8 0%, transparent 60%),
+      radial-gradient(800px 600px at 0% 110%, #E0D8F8 0%, transparent 60%),
+      #EBF0FB;
     display:flex; align-items:center; justify-content:center;
     min-height:100vh; padding:32px 16px;
     -webkit-font-smoothing:antialiased;
   }
 
-  /* ── phone frame ── */
+  /* ── Phone ── */
   .phone {
     width:392px; max-width:100%; height:812px; max-height:92vh;
-    background:var(--paper); border-radius:40px; overflow:hidden;
-    position:relative; display:flex; flex-direction:column;
-    box-shadow:var(--shadow), 0 0 0 8px #fff, 0 0 0 9px #E1D9CD;
+    background:var(--bg);
+    border-radius:40px; overflow:hidden; position:relative;
+    box-shadow:0 28px 72px -16px rgba(26,22,48,.30), 0 0 0 8px #fff, 0 0 0 9px #DDD8EE;
+    display:flex; flex-direction:column;
   }
 
-  /* ══ sticky top: header + search bar + filter chips + panels ══ */
-  .srch-top {
-    flex:none; background:var(--paper);
-    border-bottom:1px solid transparent;
+  /* ════════════════════════════
+     SEARCH HEADER
+  ════════════════════════════ */
+  .srch-head {
+    flex:none; padding:16px 20px 12px;
+    background:var(--bg); border-bottom:1px solid var(--line);
+    position:relative; z-index:5;
+  }
+  .srch-title-row {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:12px;
+  }
+  .srch-title {
+    font-family:'Mali', cursive; font-size:20px; font-weight:700; color:var(--ink);
+  }
+  .head-icon-btn {
+    width:38px; height:38px; border-radius:50%;
+    background:var(--surface); border:none; cursor:pointer;
+    display:grid; place-items:center; font-size:17px;
+    box-shadow:var(--shadow-sm); color:var(--ink-soft);
+    transition:background .18s, transform .15s;
+  }
+  .head-icon-btn:hover  { background:var(--purple-tint); color:var(--purple); }
+  .head-icon-btn:active { transform:scale(.91); }
+
+  /* Search input bar */
+  .search-bar {
+    display:flex; align-items:center; gap:10px;
+    background:var(--surface); border-radius:16px;
+    padding:0 16px;
+    box-shadow:var(--shadow-sm);
+    border:1.5px solid var(--line);
     transition:border-color .2s, box-shadow .2s;
   }
-  .srch-top.scrolled {
-    border-color:var(--line);
-    box-shadow:0 4px 18px -8px rgba(61,53,72,.14);
+  .search-bar:focus-within {
+    border-color:rgba(209,79,134,.35);
+    box-shadow:0 0 0 3px rgba(209,79,134,.08), var(--shadow-sm);
   }
-
-  /* header bar */
-  .srch-hd {
-    display:flex; align-items:center; gap:8px;
-    padding:18px 16px 10px;
-  }
-  .back-btn {
-    width:36px; height:36px; border:none; border-radius:50%;
-    background:rgba(61,53,72,.07); color:var(--ink);
-    font-size:16px; cursor:pointer; display:grid; place-items:center;
-    transition:background .2s; flex:none;
-  }
-  .back-btn:hover { background:rgba(61,53,72,.14); }
-  .srch-hd-title {
-    font-family:'Mali',cursive; font-size:18px; font-weight:700; color:var(--ink); flex:1;
-  }
-  .srch-hd-spacer { width:36px; flex:none; }
-
-  /* search input */
-  .srch-bar { margin:0 16px 10px; position:relative; }
-  .srch-bar-ico {
-    position:absolute; left:14px; top:50%; transform:translateY(-50%);
-    font-size:16px; color:var(--ink-faint); pointer-events:none;
-  }
+  .srch-ico { font-size:18px; color:var(--ink-soft); flex:none; }
   .srch-input {
-    width:100%; border:1.5px solid var(--line); border-radius:16px;
-    padding:11px 40px 11px 42px;
-    font-family:'IBM Plex Sans Thai',sans-serif; font-size:14px;
-    color:var(--ink); background:#fff; outline:none;
-    transition:border-color .2s, box-shadow .2s;
-  }
-  .srch-input:focus {
-    border-color:var(--rose-soft);
-    box-shadow:0 0 0 3px rgba(224,104,154,.12);
+    flex:1; border:none; outline:none; background:transparent;
+    font-family:'IBM Plex Sans Thai', sans-serif;
+    font-size:14.5px; color:var(--ink); padding:13px 0;
   }
   .srch-input::placeholder { color:var(--ink-faint); }
   .srch-clear {
-    position:absolute; right:12px; top:50%; transform:translateY(-50%);
-    width:22px; height:22px; border:none; border-radius:50%;
-    background:var(--ink-faint); color:#fff;
-    font-size:11px; cursor:pointer;
-    display:none; align-items:center; justify-content:center;
-    transition:background .2s;
+    width:24px; height:24px; border-radius:50%; background:var(--line);
+    border:none; cursor:pointer; font-size:12px; color:var(--ink-soft);
+    display:none; place-items:center; flex:none;
+    transition:background .15s;
   }
-  .srch-clear.on { display:flex; }
-  .srch-clear:hover { background:var(--ink-soft); }
+  .srch-clear.show { display:grid; }
+  .srch-clear:hover { background:var(--rose-tint); color:var(--rose); }
 
-  /* filter chips row */
-  .filter-chips {
-    display:flex; gap:7px; padding:0 16px 12px; overflow-x:auto;
+  /* ════════════════════════════
+     FILTER CHIPS ROW
+  ════════════════════════════ */
+  .filter-row {
+    flex:none; padding:10px 20px;
+    display:flex; gap:8px; overflow-x:auto;
+    border-bottom:1px solid var(--line);
+    background:var(--bg);
   }
-  .filter-chips::-webkit-scrollbar { height:0; }
-  .fchip {
-    flex:none; border:1.5px solid var(--line); background:#fff;
-    border-radius:20px; padding:6px 12px;
-    font-size:12px; font-weight:500; color:var(--ink-soft);
-    cursor:pointer; font-family:inherit;
+  .filter-row::-webkit-scrollbar { display:none; }
+  .filter-chip {
+    flex:none; height:34px; padding:0 14px;
+    border:1.5px solid var(--line); border-radius:18px;
+    background:var(--surface); cursor:pointer; font-family:inherit;
+    font-size:12.5px; font-weight:500; color:var(--ink-soft);
     display:flex; align-items:center; gap:5px;
-    transition:background .18s, border-color .18s, color .18s;
+    transition:border-color .15s, background .15s, color .15s;
     white-space:nowrap;
   }
-  .fchip:hover { background:var(--paper-deep); }
-  .fchip.active {
-    background:var(--rose-tint); border-color:var(--rose-soft);
-    color:var(--rose); font-weight:600;
+  .filter-chip:hover   { border-color:rgba(209,79,134,.3); background:var(--rose-tint); color:var(--rose); }
+  .filter-chip:active  { transform:scale(.96); }
+  .filter-chip.active  {
+    border-color:var(--rose); background:var(--rose-tint);
+    color:var(--rose); font-weight:700;
   }
-  .fchip-ico { font-size:14px; line-height:1; }
-  .fchip-arr { font-size:10px; transition:transform .22s; }
-  .fchip.open .fchip-arr { transform:rotate(180deg); }
+  .filter-chip-ico { font-size:14px; }
 
-  /* filter panels — expand below chips */
-  .filter-panel {
-    display:none;
-    padding:12px 16px 14px;
-    border-top:1px solid var(--line);
-    background:var(--paper-deep);
-    animation:panelIn .22s ease;
+  /* ════════════════════════════
+     SCROLLABLE BODY
+  ════════════════════════════ */
+  .srch-body {
+    flex:1; overflow-y:auto; padding:0 0 80px;
   }
-  .filter-panel.on { display:block; }
-  @keyframes panelIn {
-    from { opacity:0; transform:translateY(-5px); }
-    to   { opacity:1; transform:none; }
-  }
-  .panel-lbl { font-size:11px; font-weight:600; color:var(--ink-soft); margin-bottom:9px; letter-spacing:.2px; }
-
-  /* mood filter dots */
-  .mood-filter { display:flex; gap:7px; }
-  .mf-btn {
-    flex:1; border:1.5px solid var(--line); border-radius:14px;
-    background:#fff; padding:9px 4px 7px;
-    cursor:pointer; display:flex; flex-direction:column;
-    align-items:center; gap:3px; font-family:inherit;
-    transition:background .18s, border-color .18s, transform .15s;
-  }
-  .mf-btn:hover { background:var(--rose-tint); border-color:var(--rose-soft); transform:translateY(-1px); }
-  .mf-dot { width:24px; height:24px; border-radius:50%; box-shadow:inset 0 -2px 5px rgba(0,0,0,.1); }
-  .mf-lbl { font-size:9.5px; color:var(--ink-soft); font-weight:500; }
-  .mf-btn[aria-pressed="true"] {
-    background:var(--rose-tint); border-color:var(--rose-soft);
-    box-shadow:0 4px 10px -4px rgba(209,79,134,.3);
-  }
-  .mf-btn[aria-pressed="true"] .mf-lbl { color:var(--rose); font-weight:700; }
-
-  /* activity filter wrap chips */
-  .act-filter { display:flex; gap:7px; flex-wrap:wrap; }
-  .af-btn {
-    border:1.5px solid var(--line); background:#fff; border-radius:20px;
-    padding:6px 12px; font-size:12px; font-weight:500; color:var(--ink-soft);
-    cursor:pointer; font-family:inherit;
-    transition:background .18s, border-color .18s;
-  }
-  .af-btn:hover { background:var(--rose-tint); border-color:var(--rose-soft); }
-  .af-btn[aria-pressed="true"] {
-    background:var(--rose-tint); border-color:var(--rose-soft);
-    color:var(--rose); font-weight:600;
-  }
-
-  /* place filter list */
-  .place-list { display:flex; flex-direction:column; gap:6px; }
-  .pl-item {
-    display:flex; align-items:center; gap:10px;
-    padding:6px 2px; cursor:pointer; border-radius:10px;
-    transition:background .18s;
-  }
-  .pl-item:hover { background:rgba(209,79,134,.05); }
-  .pl-check {
-    width:18px; height:18px; border-radius:5px; flex:none;
-    border:1.5px solid var(--line); background:#fff;
-    display:grid; place-items:center;
-    transition:background .18s, border-color .18s;
-    font-size:11px; font-weight:700; color:#fff;
-  }
-  .pl-item[aria-pressed="true"] .pl-check {
-    background:var(--rose); border-color:var(--rose);
-  }
-  .pl-item[aria-pressed="true"] .pl-check::after { content:"✓"; }
-  .pl-name { font-size:13px; color:var(--ink); flex:1; }
-  .pl-cnt { font-size:11px; color:var(--ink-faint); }
-
-  /* ══ scrollable results body ══ */
-  .srch-body { flex:1; overflow-y:auto; padding:0 16px 8px; }
   .srch-body::-webkit-scrollbar { width:0; }
 
-  /* results header */
-  .results-hd {
+  /* ── Section header ── */
+  .sec-head {
     display:flex; align-items:center; justify-content:space-between;
-    padding:14px 2px 10px;
+    padding:16px 20px 8px;
   }
-  .results-count { font-size:12px; color:var(--ink-soft); font-weight:600; }
-  .results-count b { color:var(--rose); }
-  .sort-btn {
-    border:none; background:none; cursor:pointer; font-family:inherit;
-    font-size:12px; color:var(--ink-soft);
-    padding:4px 9px; border-radius:10px;
-    display:flex; align-items:center; gap:4px;
-    transition:background .2s, color .2s;
+  .sec-head-lbl {
+    font-size:11.5px; font-weight:700; color:var(--ink-faint);
+    letter-spacing:.4px; text-transform:uppercase;
   }
-  .sort-btn:hover { background:var(--rose-tint); color:var(--rose); }
+  .sec-head-action {
+    border:none; background:none; cursor:pointer;
+    font-size:12px; color:var(--rose); font-weight:600; font-family:inherit;
+  }
+  .sec-head-action:hover { opacity:.7; }
 
-  /* active filters summary strip */
-  .active-filters {
-    display:none; gap:6px; flex-wrap:wrap; padding:0 2px 10px;
+  /* ── Recent search tags ── */
+  .recent-wrap {
+    padding:2px 20px 12px;
+    display:flex; gap:7px; flex-wrap:wrap;
   }
-  .active-filters.on { display:flex; }
-  .af-tag {
-    display:flex; align-items:center; gap:5px;
-    background:var(--rose-tint); border:1px solid var(--rose-soft);
-    border-radius:20px; padding:4px 10px; font-size:11px;
-    color:var(--rose); font-weight:600;
+  .recent-tag {
+    display:inline-flex; align-items:center; gap:5px;
+    background:var(--surface); border:1.5px solid var(--line);
+    border-radius:20px; padding:6px 12px;
+    font-size:12.5px; color:var(--ink); font-weight:500; cursor:pointer;
+    transition:border-color .15s, background .15s;
   }
-  .af-tag-x {
-    border:none; background:none; color:var(--rose); cursor:pointer;
-    font-size:13px; line-height:1; padding:0; margin-left:2px;
-  }
-  .af-clear-all {
-    border:none; background:none; cursor:pointer; font-family:inherit;
-    font-size:11px; color:var(--ink-faint); text-decoration:underline;
-    padding:4px 0; align-self:center;
-  }
+  .recent-tag:hover { border-color:rgba(209,79,134,.3); background:var(--rose-tint); color:var(--rose); }
+  .recent-tag-ico { font-size:13px; }
 
-  /* entry card */
-  .entry {
-    background:#fff; border:1px solid var(--line); border-radius:var(--radius);
-    margin:0 2px 12px; overflow:hidden; cursor:pointer;
-    transition:transform .15s, box-shadow .15s;
+  /* ── Mood filter quick picks ── */
+  .mood-quick {
+    padding:0 20px 14px;
+    display:flex; gap:10px;
   }
-  .entry:hover { transform:translateY(-2px); box-shadow:0 8px 24px -10px rgba(61,53,72,.22); }
-  .entry-bar { height:5px; }
-  .entry-body { padding:13px 15px 10px; }
-  .entry-meta { display:flex; align-items:center; gap:7px; margin-bottom:6px; flex-wrap:wrap; }
-  .entry-mood-dot { width:9px; height:9px; border-radius:50%; flex:none; }
-  .entry-time, .entry-place { font-size:11px; color:var(--ink-soft); }
-  .entry-place::before { content:"· "; }
-  .entry-title { font-family:'Mali',cursive; font-size:15px; font-weight:600; color:var(--ink); margin-bottom:4px; line-height:1.35; }
-  .entry-preview { font-size:12.5px; color:var(--ink-soft); line-height:1.5; }
-  .entry-foot { display:flex; align-items:center; gap:6px; padding:8px 15px 12px; border-top:1px solid var(--line); flex-wrap:wrap; }
-  .chip { font-size:10px; font-weight:600; padding:3px 9px; border-radius:20px; }
-  .chip-rose { background:var(--rose-tint); color:var(--rose); }
+  .mood-qbtn {
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;
+    background:var(--surface); border:1.5px solid var(--line); border-radius:16px;
+    padding:10px 4px; cursor:pointer; font-family:inherit;
+    transition:border-color .15s, background .15s, transform .15s;
+  }
+  .mood-qbtn:hover  { border-color:rgba(209,79,134,.3); background:var(--rose-tint); transform:translateY(-1px); }
+  .mood-qbtn.active { border-color:var(--rose); background:var(--rose-tint); }
+  .mood-qbtn .mq-ico { font-size:22px; line-height:1; }
+  .mood-qbtn .mq-lbl { font-size:9.5px; font-weight:600; color:var(--ink-soft); }
+  .mood-qbtn.active .mq-lbl { color:var(--rose); }
+
+  /* ── RESULT / ENTRY CARDS ── */
+  .result-list { padding:0 16px; }
+
+  .rcard {
+    background:var(--surface); border-radius:var(--radius);
+    box-shadow:var(--shadow-sm); margin-bottom:10px; overflow:hidden;
+    cursor:pointer; text-decoration:none; color:inherit; display:block;
+    transition:transform .15s, box-shadow .18s;
+  }
+  .rcard:hover { transform:translateY(-2px); box-shadow:var(--shadow-md); }
+  .rcard:active { transform:scale(.98); }
+
+  .rcard-accent { height:4px; }
+  .rcard-body   { padding:12px 14px 10px; display:flex; gap:10px; align-items:flex-start; }
+  .rcard-thumb  {
+    width:58px; height:58px; border-radius:12px; object-fit:cover; flex:none;
+    box-shadow:0 3px 10px -3px rgba(26,22,48,.2);
+  }
+  .rcard-thumb-placeholder {
+    width:58px; height:58px; border-radius:12px; flex:none;
+    background:var(--bg); display:grid; place-items:center;
+    font-size:24px; border:1.5px solid var(--line);
+  }
+  .rcard-info { flex:1; min-width:0; }
+  .rcard-meta { display:flex; align-items:center; gap:6px; margin-bottom:4px; }
+  .rmood-dot  { width:7px; height:7px; border-radius:50%; flex:none; }
+  .rcard-date { font-size:10.5px; color:var(--ink-soft); font-weight:500; }
+  .rcard-title {
+    font-family:'Mali', cursive; font-size:14.5px; font-weight:700; color:var(--ink);
+    line-height:1.3; margin-bottom:3px;
+    display:-webkit-box; -webkit-box-orient:vertical;
+    -webkit-line-clamp:1; line-clamp:1; overflow:hidden;
+  }
+  .rcard-preview {
+    font-size:12px; color:var(--ink-soft); line-height:1.5;
+    display:-webkit-box; -webkit-box-orient:vertical;
+    -webkit-line-clamp:2; line-clamp:2; overflow:hidden;
+  }
+  .rcard-foot {
+    display:flex; align-items:center; gap:6px;
+    padding:7px 14px 10px; border-top:1px solid var(--line);
+  }
+  .chip { font-size:10px; font-weight:600; padding:3px 8px; border-radius:10px; display:flex; align-items:center; gap:3px; }
+  .chip-loc  { background:var(--sage-tint); color:var(--sage); }
+  .chip-act  { background:var(--blue-tint); color:var(--blue); }
+  .chip-mood { background:var(--rose-tint); color:var(--rose); }
   .chip-gold { background:var(--gold-tint); color:var(--gold); }
-  .chip-sage { background:var(--sage-tint); color:var(--sage); }
-  .chip-blue { background:#EAF0F5; color:#5E7A8A; }
-  .entry-spend { margin-left:auto; font-size:12px; font-weight:700; color:var(--gold); }
+  .rcard-spend { margin-left:auto; font-size:11.5px; font-weight:700; color:var(--gold); }
 
-  /* search highlight */
-  mark { background:var(--gold-tint); color:var(--gold); border-radius:3px; padding:0 2px; font-weight:600; font-style:normal; }
-
-  /* empty results */
-  .no-results {
-    display:flex; flex-direction:column; align-items:center;
-    padding:44px 20px; text-align:center; gap:10px;
-  }
-  .no-ico { font-size:52px; opacity:.55; line-height:1; }
-  .no-title { font-family:'Mali',cursive; font-size:17px; font-weight:600; color:var(--ink); }
-  .no-sub { font-size:12.5px; color:var(--ink-soft); line-height:1.6; }
-  .no-reset {
-    margin-top:6px; border:none; cursor:pointer; font-family:'Mali',cursive;
-    font-size:14px; font-weight:600; color:var(--rose);
-    background:var(--rose-tint); border-radius:20px; padding:10px 20px;
+  /* highlight matched text */
+  mark {
+    background:rgba(209,79,134,.15); color:var(--rose);
+    border-radius:3px; padding:0 2px; font-weight:700;
   }
 
-  /* ══ bottom navigation ══ */
+  /* ── Empty state ── */
+  .empty-state {
+    display:none; flex-direction:column; align-items:center;
+    padding:48px 32px; text-align:center;
+  }
+  .empty-state.show { display:flex; }
+  .empty-ico   { font-size:52px; margin-bottom:14px; }
+  .empty-title {
+    font-family:'Mali', cursive; font-size:18px; font-weight:700;
+    color:var(--ink); margin-bottom:6px;
+  }
+  .empty-sub { font-size:13px; color:var(--ink-soft); line-height:1.6; }
+
+  /* ── Loading skeleton ── */
+  .skeleton {
+    background:linear-gradient(90deg, var(--line) 25%, #f0edf8 50%, var(--line) 75%);
+    background-size:200% 100%;
+    animation:shimmer 1.4s infinite; border-radius:8px;
+  }
+  @keyframes shimmer {
+    from { background-position:200% 0; }
+    to   { background-position:-200% 0; }
+  }
+
+  /* ════════════════════════════
+     BOTTOM NAV
+  ════════════════════════════ */
   .bottom-nav {
-    flex:none; height:60px; background:var(--paper);
-    border-top:1px solid var(--line); display:flex; align-items:stretch;
+    position:absolute; left:0; right:0; bottom:0; z-index:5;
+    height:64px;
+    background:rgba(240,244,251,.94);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border-top:1px solid rgba(255,255,255,.8);
+    display:flex; align-items:stretch;
   }
   .bnav-tab {
     flex:1; border:none; background:none; cursor:pointer; font-family:inherit;
@@ -281,106 +285,123 @@
   }
   .bnav-tab.active { color:var(--rose); }
   .bnav-tab:hover:not(.active) { color:var(--ink-soft); }
-  .bnav-ico { font-size:20px; line-height:1; }
-  .bnav-lbl { font-size:9.5px; font-weight:500; }
-
-  @media(prefers-reduced-motion:reduce){
-    *, *::before, *::after { animation:none!important; transition:none!important; }
+  .bnav-ico { font-size:22px; line-height:1; }
+  .bnav-lbl { font-size:9.5px; font-weight:600; }
+  .bnav-add {
+    flex:none; width:52px; height:52px; margin:auto;
+    background:linear-gradient(145deg, #E0609A, var(--rose-mid));
+    border-radius:50%; border:none; cursor:pointer; font-size:24px;
+    color:#fff; display:grid; place-items:center;
+    box-shadow:0 8px 20px -6px rgba(209,79,134,.5);
+    transition:transform .15s, box-shadow .15s;
   }
+  .bnav-add:hover  { transform:translateY(-2px); }
+  .bnav-add:active { transform:scale(.93); }
 </style>
 </head>
 <body>
 
 <div class="phone">
 
-  <!-- ══ sticky: header + search + filter chips + panels ══ -->
-  <div class="srch-top" id="srchTop">
-
-    <div class="srch-hd">
-      <button class="back-btn" onclick="history.length>1?history.back():location.href='life-diary-home.html'" title="กลับ">←</button>
-      <h1 class="srch-hd-title">ค้นหาบันทึก</h1>
-      <div class="srch-hd-spacer"></div>
+  <!-- SEARCH HEADER -->
+  <header class="srch-head">
+    <div class="srch-title-row">
+      <span class="srch-title">ค้นหา</span>
+      <button class="head-icon-btn" id="btnSort" title="เรียงลำดับ">⚙️</button>
     </div>
-
-    <div class="srch-bar">
-      <span class="srch-bar-ico">🔍</span>
-      <input type="search" class="srch-input" id="srchInput"
-        placeholder="ค้นหาด้วยคำ สถานที่ หรือแท็ก" autocomplete="off" enterkeyhint="search">
-      <button class="srch-clear" id="srchClear" aria-label="ล้างการค้นหา">✕</button>
+    <div class="search-bar">
+      <span class="srch-ico">🔍</span>
+      <input class="srch-input" id="srchInput"
+             placeholder="ค้นหาบันทึก เรื่องราว หรือสถานที่..."
+             autocomplete="off" spellcheck="false">
+      <button class="srch-clear" id="srchClear">✕</button>
     </div>
+  </header>
 
-    <!-- filter chips -->
-    <div class="filter-chips">
-      <button class="fchip" id="fcMood"  data-panel="panelMood">
-        <span class="fchip-ico">😊</span>อารมณ์<span class="fchip-arr">▾</span>
-      </button>
-      <button class="fchip" id="fcAct"   data-panel="panelAct">
-        <span class="fchip-ico">🏃</span>กิจกรรม<span class="fchip-arr">▾</span>
-      </button>
-      <button class="fchip" id="fcPlace" data-panel="panelPlace">
-        <span class="fchip-ico">📍</span>สถานที่<span class="fchip-arr">▾</span>
-      </button>
-      <button class="fchip toggle" id="fcPhoto">
-        <span class="fchip-ico">🖼️</span>มีรูปภาพ
-      </button>
-      <button class="fchip toggle" id="fcSpend">
-        <span class="fchip-ico">💰</span>มีรายจ่าย
-      </button>
-    </div>
+  <!-- FILTER CHIPS -->
+  <div class="filter-row" id="filterRow">
+    <button class="filter-chip active" data-filter="all">
+      <span class="filter-chip-ico">📋</span> ทั้งหมด
+    </button>
+    <button class="filter-chip" data-filter="mood">
+      <span class="filter-chip-ico">😊</span> ความรู้สึก
+    </button>
+    <button class="filter-chip" data-filter="activity">
+      <span class="filter-chip-ico">🌟</span> กิจกรรม
+    </button>
+    <button class="filter-chip" data-filter="location">
+      <span class="filter-chip-ico">📍</span> สถานที่
+    </button>
+    <button class="filter-chip" data-filter="photo">
+      <span class="filter-chip-ico">📷</span> มีรูป
+    </button>
+    <button class="filter-chip" data-filter="expense">
+      <span class="filter-chip-ico">💰</span> มีค่าใช้จ่าย
+    </button>
+  </div>
 
-    <!-- mood panel -->
-    <div class="filter-panel" id="panelMood">
-      <div class="panel-lbl">เลือกอารมณ์ที่ต้องการ (เลือกได้หลายอย่าง)</div>
-      <div class="mood-filter">
-        <button class="mf-btn" data-mood="ดีมาก" aria-pressed="false">
-          <span class="mf-dot" style="background:#E9C46A"></span><span class="mf-lbl">ดีมาก</span>
-        </button>
-        <button class="mf-btn" data-mood="ดี" aria-pressed="false">
-          <span class="mf-dot" style="background:#A8C3A0"></span><span class="mf-lbl">ดี</span>
-        </button>
-        <button class="mf-btn" data-mood="เฉยๆ" aria-pressed="false">
-          <span class="mf-dot" style="background:#AFC5D8"></span><span class="mf-lbl">เฉยๆ</span>
-        </button>
-        <button class="mf-btn" data-mood="เหนื่อย" aria-pressed="false">
-          <span class="mf-dot" style="background:#B9A8C9"></span><span class="mf-lbl">เหนื่อย</span>
-        </button>
-        <button class="mf-btn" data-mood="แย่" aria-pressed="false">
-          <span class="mf-dot" style="background:#C9A0A8"></span><span class="mf-lbl">แย่</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- activity panel -->
-    <div class="filter-panel" id="panelAct">
-      <div class="panel-lbl">เลือกกิจกรรม (เลือกได้หลายอย่าง)</div>
-      <div class="act-filter" id="actFilter"></div>
-    </div>
-
-    <!-- place panel -->
-    <div class="filter-panel" id="panelPlace">
-      <div class="panel-lbl">สถานที่ที่ไป</div>
-      <div class="place-list" id="placeList"></div>
-    </div>
-
-  </div><!-- /srch-top -->
-
-  <!-- ══ results body ══ -->
+  <!-- BODY -->
   <div class="srch-body" id="srchBody">
 
-    <div class="results-hd">
-      <div class="results-count" id="resultsCount">บันทึกทั้งหมด <b>7</b> รายการ</div>
-      <button class="sort-btn" id="sortBtn">เรียงตาม: ล่าสุด ↕</button>
+    <!-- DEFAULT STATE — Recent + Quick mood filter -->
+    <div id="defaultState">
+      <div class="sec-head">
+        <span class="sec-head-lbl">ค้นหาล่าสุด</span>
+        <button class="sec-head-action" id="clearRecent">ล้างทั้งหมด</button>
+      </div>
+      <div class="recent-wrap" id="recentWrap">
+        <div class="recent-tag"><span class="recent-tag-ico">🕐</span>หมูกระทะ</div>
+        <div class="recent-tag"><span class="recent-tag-ico">🕐</span>ครอบครัว</div>
+        <div class="recent-tag"><span class="recent-tag-ico">🕐</span>โคราช</div>
+        <div class="recent-tag"><span class="recent-tag-ico">🕐</span>วันหยุด</div>
+        <div class="recent-tag"><span class="recent-tag-ico">🕐</span>ออกกำลัง</div>
+      </div>
+
+      <div class="sec-head">
+        <span class="sec-head-lbl">ค้นหาตามความรู้สึก</span>
+      </div>
+      <div class="mood-quick" id="moodQuick">
+        <button class="mood-qbtn" data-mood="great">
+          <span class="mq-ico">😄</span><span class="mq-lbl">ดีมาก</span>
+        </button>
+        <button class="mood-qbtn" data-mood="good">
+          <span class="mq-ico">😊</span><span class="mq-lbl">ดี</span>
+        </button>
+        <button class="mood-qbtn" data-mood="ok">
+          <span class="mq-ico">😐</span><span class="mq-lbl">สบายๆ</span>
+        </button>
+        <button class="mood-qbtn" data-mood="tired">
+          <span class="mq-ico">😔</span><span class="mq-lbl">เหนื่อย</span>
+        </button>
+        <button class="mood-qbtn" data-mood="fight">
+          <span class="mq-ico">😞</span><span class="mq-lbl">สู้ๆ</span>
+        </button>
+      </div>
+
+      <div class="sec-head">
+        <span class="sec-head-lbl">บันทึกล่าสุด</span>
+      </div>
+      <div class="result-list" id="recentEntries"></div>
     </div>
 
-    <!-- active filter tags -->
-    <div class="active-filters" id="activeFilters"></div>
+    <!-- RESULT STATE -->
+    <div id="resultState" style="display:none;">
+      <div class="sec-head" id="resultHead">
+        <span class="sec-head-lbl" id="resultCount"></span>
+      </div>
+      <div class="result-list" id="resultList"></div>
+    </div>
 
-    <!-- entry cards -->
-    <div id="resultsList"></div>
+    <!-- EMPTY STATE -->
+    <div class="empty-state" id="emptyState">
+      <div class="empty-ico">🔎</div>
+      <div class="empty-title">ไม่พบบันทึก</div>
+      <div class="empty-sub">ลองค้นหาด้วยคำอื่น<br>หรือใช้ตัวกรองเพื่อค้นหาแบบอื่น</div>
+    </div>
 
   </div><!-- /srch-body -->
 
-  <!-- ══ bottom nav ══ -->
+  <!-- BOTTOM NAV -->
   <nav class="bottom-nav">
     <button class="bnav-tab" onclick="location.href='life-diary-home.html'">
       <span class="bnav-ico">🏠</span><span class="bnav-lbl">หน้าแรก</span>
@@ -388,10 +409,11 @@
     <button class="bnav-tab" onclick="location.href='life-diary-timeline.html'">
       <span class="bnav-ico">📅</span><span class="bnav-lbl">ไทม์ไลน์</span>
     </button>
+    <button class="bnav-add" onclick="location.href='life-diary-composer.html'" title="เพิ่มบันทึก">＋</button>
     <button class="bnav-tab active">
       <span class="bnav-ico">🔍</span><span class="bnav-lbl">ค้นหา</span>
     </button>
-    <button class="bnav-tab" onclick="location.href='life-diary-composer.html'">
+    <button class="bnav-tab">
       <span class="bnav-ico">✏️</span><span class="bnav-lbl">บันทึก</span>
     </button>
   </nav>
@@ -400,309 +422,207 @@
 
 <script>
 /* ══════════════════════════════════════
-   DEMO DATA — 7 entries
+   DEMO DATA
 ══════════════════════════════════════ */
-const ALL = [
-  { id:1, date:'วันนี้',    time:'18:30', mood:'ดี',     moodDot:'#A8C3A0', grad:'#A8C3A0,#E1ECDC',
-    place:'ตลาดเซฟวัน โคราช',     title:'ไปตลาดตอนเย็น รู้สึกสบายใจ',
-    preview:'ซื้อของเข้าร้านนิดหน่อย อากาศร้อนแต่ขายดี รู้สึกดีขึ้นเยอะ',
-    tags:['ตลาด','ขายของ'], spend:280,  hasPhoto:true,  act:'เปิดร้าน' },
-
-  { id:2, date:'เมื่อวาน',  time:'21:00', mood:'เหนื่อย',moodDot:'#C9A0A8', grad:'#C9A0A8,#EFDDE0',
-    place:'บ้าน',                  title:'ฝนตกทั้งวัน แต่ได้พักผ่อน',
+const ENTRIES = [
+  {
+    id:1, title:'วันนี้พาหมูนุ่นไปกินหมูกระทะ 🐷',
+    preview:'อิ่มมากๆ ทั้งคู่นอนหลับสบายเลย น้ำจิ้มร้านนี้อร่อยเป็นพิเศษ',
+    date:'17 มิ.ย. 2569', time:'19:45',
+    mood:'ดีมาก', moodColor:'#E9C46A', moodIco:'😄',
+    activity:'กินข้าวนอก', actIco:'🍖',
+    location:'ร้านหมูกระทะ โคราช', spend:620,
+    accent:'linear-gradient(90deg,#E9C46A,#F6E9C6)',
+    thumb:'https://i.pinimg.com/736x/a0/bf/39/a0bf392c595db35dd9b6f3f4881dfd23.jpg',
+    tags:['หมูกระทะ','หมูนุ่น','โคราช','กินข้าวนอก'],
+  },
+  {
+    id:2, title:'ฝนตกทั้งวัน แต่ได้พักผ่อน',
     preview:'นอนดูซีรีส์ทั้งวัน สั่งข้าวกล่องมากิน รู้สึกเหนื่อยๆ แต่โอเค',
-    tags:['พักผ่อน'],      spend:120,  hasPhoto:false, act:'อยู่บ้าน' },
-
-  { id:3, date:'13 มิ.ย.', time:'10:15', mood:'ดีมาก',  moodDot:'#E9C46A', grad:'#E9C46A,#F6E9C6',
-    place:'ร้านกาแฟ The Coffee',   title:'วันหยุดดีๆ กับครอบครัว',
+    date:'16 มิ.ย. 2569', time:'21:00',
+    mood:'ดี', moodColor:'#A8C3A0', moodIco:'😊',
+    activity:'อยู่บ้าน', actIco:'🏠',
+    location:null, spend:120,
+    accent:'linear-gradient(90deg,#A8C3A0,#E1ECDC)',
+    thumb:null,
+    tags:['บ้าน','พักผ่อน','ซีรีส์','ฝนตก'],
+  },
+  {
+    id:3, title:'วันหยุดดีๆ กับครอบครัว ☕',
     preview:'ออกไปกินข้าวเช้ากับครอบครัว อากาศดีมาก มีความสุขมากๆ',
-    tags:['ครอบครัว','กาแฟ'],spend:450, hasPhoto:true,  act:'พาครอบครัว' },
-
-  { id:4, date:'12 มิ.ย.', time:'08:30', mood:'เฉยๆ',   moodDot:'#AFC5D8', grad:'#AFC5D8,#E2ECF1',
-    place:'ที่ทำงาน',              title:'วันธรรมดาๆ ทำงานวนไป',
-    preview:'ประชุมทั้งเช้า บ่ายทำเอกสาร ไม่ได้มีอะไรพิเศษมากนัก',
-    tags:['ทำงาน'],        spend:85,   hasPhoto:false, act:'ทำงาน' },
-
-  { id:5, date:'10 มิ.ย.', time:'19:00', mood:'ดี',     moodDot:'#A8C3A0', grad:'#A8C3A0,#E1ECDC',
-    place:'สนามกีฬา',              title:'วิ่งเย็นสบายๆ รู้สึกสดชื่น',
-    preview:'วิ่งครึ่งชั่วโมง เหนื่อยแต่สดชื่น อากาศดีมากช่วงเย็น',
-    tags:['ออกกำลัง'],     spend:0,    hasPhoto:true,  act:'ออกกำลัง' },
-
-  { id:6, date:'8 มิ.ย.',  time:'20:30', mood:'เหนื่อย',moodDot:'#C9A0A8', grad:'#C9A0A8,#EFDDE0',
-    place:'ห้างสรรพสินค้า',        title:'ไปซื้อของ เดินนานมาก ขาเมื่อย',
-    preview:'ขาเมื่อยมาก แต่ได้ของที่ต้องการ ใช้เงินเยอะกว่าที่คิดไว้เยอะ',
-    tags:['ช็อปปิ้ง'],    spend:1240, hasPhoto:true,  act:'ช็อปปิ้ง' },
-
-  { id:7, date:'5 มิ.ย.',  time:'12:00', mood:'ดีมาก',  moodDot:'#E9C46A', grad:'#E9C46A,#F6E9C6',
-    place:'หาดบางแสน ชลบุรี',      title:'ทริปทะเลสั้นๆ วันเดียว',
-    preview:'ไปทะเลกันวันเดียว อาหารทะเลอร่อยมาก ทะเลสวย คุ้มค่ามากๆ',
-    tags:['ทริป','ทะเล'],  spend:2800, hasPhoto:true,  act:'ไปทริป' },
+    date:'14 มิ.ย. 2569', time:'10:15',
+    mood:'ดีมาก', moodColor:'#E9C46A', moodIco:'😄',
+    activity:'พาครอบครัว', actIco:'👨‍👩‍👧',
+    location:'ร้านกาแฟ The Coffee', spend:450,
+    accent:'linear-gradient(90deg,#C9A0A8,#EFDDE0)',
+    thumb:'https://i.pinimg.com/736x/1a/ec/a0/1aeca0e90fcbceb832342f7b2661ec96.jpg',
+    tags:['ครอบครัว','กาแฟ','วันหยุด','โคราช'],
+  },
+  {
+    id:4, title:'ประชุมทีมเสร็จเร็ว แถมได้กาแฟฟรี ✨',
+    preview:'วันนี้ลุ้นมากแต่ก็ผ่านไปได้ด้วยดี ทีมเข้าใจกันดีมาก',
+    date:'12 มิ.ย. 2569', time:'18:00',
+    mood:'ดี', moodColor:'#7EC8A8', moodIco:'😊',
+    activity:'ทำงาน', actIco:'🏢',
+    location:null, spend:0,
+    accent:'linear-gradient(90deg,#7EC8A8,#C5EDD6)',
+    thumb:null,
+    tags:['ทำงาน','ประชุม','กาแฟ'],
+  },
+  {
+    id:5, title:'วันพักผ่อน ไปเดินตลาดนัดเย็น',
+    preview:'ซื้อต้นไม้มา 2 ต้น สวยมากเลย บรรยากาศดีมีลมพัด',
+    date:'10 มิ.ย. 2569', time:'14:30',
+    mood:'สบายๆ', moodColor:'#B0A8E9', moodIco:'😐',
+    activity:'วันหยุด', actIco:'🌴',
+    location:'ตลาดนัด โคราช', spend:380,
+    accent:'linear-gradient(90deg,#B0A8E9,#DDD8F8)',
+    thumb:'https://i.pinimg.com/736x/e0/b8/7c/e0b87cf298f804a3de97bfbbf8fefdbd.jpg',
+    tags:['ตลาดนัด','ต้นไม้','วันหยุด','โคราช'],
+  },
 ];
 
-/* ══════════════════════════════════════
-   FILTER STATE
-══════════════════════════════════════ */
-const S = {
-  text:'', moods:new Set(), acts:new Set(), places:new Set(),
-  hasPhoto:false, hasSpend:false,
-  openPanel:null, sortBy:'latest',
-};
-
-/* ══════════════════════════════════════
-   BUILD DYNAMIC FILTER OPTIONS
-══════════════════════════════════════ */
-// activity chips
-const allActs = [...new Set(ALL.map(e => e.act))];
-const actFilterEl = document.getElementById('actFilter');
-allActs.forEach(a => {
-  const b = document.createElement('button');
-  b.className = 'af-btn'; b.dataset.act = a; b.textContent = a;
-  b.setAttribute('aria-pressed','false');
-  b.addEventListener('click', () => {
-    const on = b.getAttribute('aria-pressed') === 'true';
-    b.setAttribute('aria-pressed', on ? 'false':'true');
-    on ? S.acts.delete(a) : S.acts.add(a);
-    refreshChip('fcAct', S.acts.size > 0);
-    render();
-  });
-  actFilterEl.appendChild(b);
-});
-
-// place list
-const allPlaces = [...new Set(ALL.map(e => e.place))];
-const placeListEl = document.getElementById('placeList');
-allPlaces.forEach(pl => {
-  const cnt = ALL.filter(e => e.place === pl).length;
-  const d = document.createElement('div');
-  d.className = 'pl-item'; d.setAttribute('aria-pressed','false');
-  d.innerHTML = `<div class="pl-check"></div><span class="pl-name">${pl}</span><span class="pl-cnt">${cnt} บันทึก</span>`;
-  d.addEventListener('click', () => {
-    const on = d.getAttribute('aria-pressed') === 'true';
-    d.setAttribute('aria-pressed', on ? 'false':'true');
-    on ? S.places.delete(pl) : S.places.add(pl);
-    refreshChip('fcPlace', S.places.size > 0);
-    render();
-  });
-  placeListEl.appendChild(d);
-});
-
-/* ══════════════════════════════════════
-   FILTER CHIP LOGIC (open/close panels)
-══════════════════════════════════════ */
-document.querySelectorAll('.fchip[data-panel]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const pid = btn.dataset.panel;
-    const isOpen = S.openPanel === pid;
-    closeAllPanels();
-    if (!isOpen) {
-      S.openPanel = pid;
-      document.getElementById(pid).classList.add('on');
-      btn.classList.add('open');
-    }
-  });
-});
-
-function closeAllPanels() {
-  S.openPanel = null;
-  document.querySelectorAll('.filter-panel').forEach(p => p.classList.remove('on'));
-  document.querySelectorAll('.fchip[data-panel]').forEach(b => b.classList.remove('open'));
-}
-
-function refreshChip(id, active) {
-  document.getElementById(id).classList.toggle('active', active);
-}
-
-/* mood buttons */
-document.querySelectorAll('.mf-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const m = btn.dataset.mood;
-    const on = btn.getAttribute('aria-pressed') === 'true';
-    btn.setAttribute('aria-pressed', on ? 'false':'true');
-    on ? S.moods.delete(m) : S.moods.add(m);
-    refreshChip('fcMood', S.moods.size > 0);
-    render();
-  });
-});
-
-/* photo toggle */
-document.getElementById('fcPhoto').addEventListener('click', function() {
-  S.hasPhoto = !S.hasPhoto;
-  this.classList.toggle('active', S.hasPhoto);
-  render();
-});
-
-/* spend toggle */
-document.getElementById('fcSpend').addEventListener('click', function() {
-  S.hasSpend = !S.hasSpend;
-  this.classList.toggle('active', S.hasSpend);
-  render();
-});
-
-/* ══════════════════════════════════════
-   SEARCH INPUT
-══════════════════════════════════════ */
-const inp = document.getElementById('srchInput');
-const clr = document.getElementById('srchClear');
-
-inp.addEventListener('input', () => {
-  S.text = inp.value.trim();
-  clr.classList.toggle('on', S.text.length > 0);
-  closeAllPanels();
-  render();
-});
-clr.addEventListener('click', () => {
-  inp.value = ''; S.text = '';
-  clr.classList.remove('on');
-  render(); inp.focus();
-});
-
-/* ══════════════════════════════════════
-   SORT
-══════════════════════════════════════ */
-const sortCycles = [
-  { key:'latest',   label:'ล่าสุด' },
-  { key:'oldest',   label:'เก่าสุด' },
-  { key:'spend-hi', label:'ใช้จ่ายสูงสุด' },
-  { key:'mood-hi',  label:'อารมณ์ดีสุด' },
-];
-let sortIdx = 0;
-document.getElementById('sortBtn').addEventListener('click', function() {
-  sortIdx = (sortIdx + 1) % sortCycles.length;
-  S.sortBy = sortCycles[sortIdx].key;
-  this.textContent = `เรียงตาม: ${sortCycles[sortIdx].label} ↕`;
-  render();
-});
-
-/* ══════════════════════════════════════
-   FILTER + SORT
-══════════════════════════════════════ */
-const moodOrder = ['ดีมาก','ดี','เฉยๆ','เหนื่อย','แย่'];
-
-function applyFilters() {
-  const q = S.text.toLowerCase();
-  return ALL.filter(e => {
-    if (q && ![e.title, e.preview, e.place, ...e.tags].some(t => t.toLowerCase().includes(q))) return false;
-    if (S.moods.size  > 0 && !S.moods.has(e.mood))   return false;
-    if (S.acts.size   > 0 && !S.acts.has(e.act))     return false;
-    if (S.places.size > 0 && !S.places.has(e.place)) return false;
-    if (S.hasPhoto && !e.hasPhoto)  return false;
-    if (S.hasSpend && e.spend <= 0) return false;
-    return true;
-  }).sort((a,b) => {
-    if (S.sortBy === 'oldest')   return b.id - a.id;
-    if (S.sortBy === 'spend-hi') return b.spend - a.spend;
-    if (S.sortBy === 'mood-hi')  return moodOrder.indexOf(a.mood) - moodOrder.indexOf(b.mood);
-    return a.id - b.id; // latest = lower id = more recent in this demo
-  });
-}
-
-/* ══════════════════════════════════════
-   ACTIVE FILTER TAGS STRIP
-══════════════════════════════════════ */
-function buildFilterTags() {
-  const tags = [];
-  S.moods.forEach(m    => tags.push({ label:`😊 ${m}`,     clear:() => { S.moods.delete(m);    syncMoodBtns();       refreshChip('fcMood',  S.moods.size>0);  render(); } }));
-  S.acts.forEach(a     => tags.push({ label:`🏃 ${a}`,     clear:() => { S.acts.delete(a);     syncActBtns();        refreshChip('fcAct',   S.acts.size>0);   render(); } }));
-  S.places.forEach(pl  => tags.push({ label:`📍 ${pl}`,    clear:() => { S.places.delete(pl);  syncPlaceBtns();      refreshChip('fcPlace', S.places.size>0); render(); } }));
-  if (S.hasPhoto) tags.push({ label:'🖼️ มีรูป',  clear:() => { S.hasPhoto=false; document.getElementById('fcPhoto').classList.remove('active'); render(); } });
-  if (S.hasSpend) tags.push({ label:'💰 มีรายจ่าย', clear:() => { S.hasSpend=false; document.getElementById('fcSpend').classList.remove('active'); render(); } });
-  return tags;
-}
-
-function syncMoodBtns()  { document.querySelectorAll('.mf-btn').forEach(b  => b.setAttribute('aria-pressed', S.moods.has(b.dataset.mood) ? 'true':'false')); }
-function syncActBtns()   { document.querySelectorAll('.af-btn').forEach(b  => b.setAttribute('aria-pressed', S.acts.has(b.dataset.act)   ? 'true':'false')); }
-function syncPlaceBtns() { document.querySelectorAll('.pl-item').forEach(d => d.setAttribute('aria-pressed', S.places.has(d.querySelector('.pl-name').textContent) ? 'true':'false')); }
-
-function clearAll() {
-  S.moods.clear(); S.acts.clear(); S.places.clear();
-  S.hasPhoto = false; S.hasSpend = false;
-  syncMoodBtns(); syncActBtns(); syncPlaceBtns();
-  ['fcMood','fcAct','fcPlace','fcPhoto','fcSpend'].forEach(id => document.getElementById(id).classList.remove('active'));
-  render();
-}
-
-/* ══════════════════════════════════════
-   HIGHLIGHT + RENDER
-══════════════════════════════════════ */
-function hl(txt) {
-  if (!S.text) return txt;
-  const re = new RegExp(`(${S.text.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
-  return txt.replace(re, '<mark>$1</mark>');
-}
-
-function buildCard(e) {
-  const photoChip = e.hasPhoto ? `<span class="chip chip-blue">🖼️ รูป</span>` : '';
-  const spend = e.spend > 0 ? `<span class="entry-spend">฿${e.spend.toLocaleString()}</span>` : '';
+/* ── Build card HTML ── */
+function buildCard(e, highlight) {
+  const hl = s => highlight ? s.replace(new RegExp(`(${highlight})`, 'gi'), '<mark>$1</mark>') : s;
   return `
-    <div class="entry">
-      <div class="entry-bar" style="background:linear-gradient(90deg,${e.grad})"></div>
-      <div class="entry-body">
-        <div class="entry-meta">
-          <div class="entry-mood-dot" style="background:${e.moodDot}"></div>
-          <span class="entry-time">${hl(e.date)} ${e.time}</span>
-          <span class="entry-place">${hl(e.place)}</span>
+    <a class="rcard" href="life-diary-entry.html">
+      <div class="rcard-accent" style="background:${e.accent}"></div>
+      <div class="rcard-body">
+        ${e.thumb
+          ? `<img class="rcard-thumb" src="${e.thumb}" alt="">`
+          : `<div class="rcard-thumb-placeholder">${e.moodIco}</div>`}
+        <div class="rcard-info">
+          <div class="rcard-meta">
+            <div class="rmood-dot" style="background:${e.moodColor}"></div>
+            <span class="rcard-date">${e.date} · ${e.time} น.</span>
+          </div>
+          <div class="rcard-title">${hl(e.title)}</div>
+          <div class="rcard-preview">${hl(e.preview)}</div>
         </div>
-        <div class="entry-title">${hl(e.title)}</div>
-        <div class="entry-preview">${hl(e.preview)}</div>
       </div>
-      <div class="entry-foot">
-        <span class="chip chip-rose">😊 ${e.mood}</span>
-        <span class="chip chip-sage">${e.act}</span>
-        ${photoChip}${spend}
+      <div class="rcard-foot">
+        <span class="chip chip-mood">${e.moodIco} ${e.mood}</span>
+        <span class="chip chip-act">${e.actIco} ${e.activity}</span>
+        ${e.location ? `<span class="chip chip-loc">📍 ${e.location.split(',')[0]}</span>` : ''}
+        ${e.spend > 0 ? `<span class="rcard-spend">฿${e.spend.toLocaleString()}</span>` : ''}
       </div>
-    </div>`;
+    </a>`;
 }
 
-const listEl   = document.getElementById('resultsList');
-const countEl  = document.getElementById('resultsCount');
-const filtersEl= document.getElementById('activeFilters');
+/* ── Render recent entries ── */
+const recentEl = document.getElementById('recentEntries');
+ENTRIES.slice(0,3).forEach(e => { recentEl.innerHTML += buildCard(e, ''); });
 
-function render() {
-  const results = applyFilters();
+/* ══════════════════════════════════════
+   FILTER CHIPS
+══════════════════════════════════════ */
+let activeFilter = 'all';
+document.querySelectorAll('.filter-chip').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.filter;
+    runSearch(document.getElementById('srchInput').value.trim());
+  });
+});
 
-  // results count
-  const total = S.text || S.moods.size || S.acts.size || S.places.size || S.hasPhoto || S.hasSpend;
-  countEl.innerHTML = total
-    ? `พบ <b>${results.length}</b> จาก ${ALL.length} รายการ`
-    : `บันทึกทั้งหมด <b>${results.length}</b> รายการ`;
+/* ══════════════════════════════════════
+   MOOD QUICK FILTER
+══════════════════════════════════════ */
+let activeMood = null;
+document.querySelectorAll('.mood-qbtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.classList.contains('active')) {
+      btn.classList.remove('active');
+      activeMood = null;
+    } else {
+      document.querySelectorAll('.mood-qbtn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeMood = btn.dataset.mood;
+    }
+    const q = btn.classList.contains('active') ? btn.querySelector('.mq-ico').textContent : '';
+    document.getElementById('srchInput').value = q;
+    runSearch(q);
+  });
+});
 
-  // active filter tags strip
-  const tags = buildFilterTags();
-  const hasFilters = tags.length > 0;
-  filtersEl.classList.toggle('on', hasFilters);
-  if (hasFilters) {
-    filtersEl.innerHTML = tags.map((t,i) =>
-      `<span class="af-tag">${t.label}<button class="af-tag-x" data-idx="${i}">×</button></span>`
-    ).join('') + `<button class="af-clear-all" id="afClearAll">ล้างทั้งหมด</button>`;
-    filtersEl.querySelectorAll('.af-tag-x').forEach(btn => {
-      btn.addEventListener('click', () => tags[+btn.dataset.idx].clear());
-    });
-    document.getElementById('afClearAll').addEventListener('click', clearAll);
-  }
+/* ══════════════════════════════════════
+   SEARCH
+══════════════════════════════════════ */
+const srchInput = document.getElementById('srchInput');
+const srchClear = document.getElementById('srchClear');
+const defaultState = document.getElementById('defaultState');
+const resultState  = document.getElementById('resultState');
+const emptyState   = document.getElementById('emptyState');
 
-  // entry list
+srchInput.addEventListener('input', () => {
+  const q = srchInput.value.trim();
+  srchClear.classList.toggle('show', q.length > 0);
+  runSearch(q);
+});
+
+srchClear.addEventListener('click', () => {
+  srchInput.value = '';
+  srchClear.classList.remove('show');
+  document.querySelectorAll('.mood-qbtn').forEach(b => b.classList.remove('active'));
+  activeMood = null;
+  showDefault();
+});
+
+function showDefault() {
+  defaultState.style.display = '';
+  resultState.style.display  = 'none';
+  emptyState.classList.remove('show');
+}
+
+function runSearch(q) {
+  if (!q) { showDefault(); return; }
+
+  const lower = q.toLowerCase();
+  const results = ENTRIES.filter(e => {
+    const matchText = e.title.toLowerCase().includes(lower)
+                   || e.preview.toLowerCase().includes(lower)
+                   || e.tags.some(t => t.toLowerCase().includes(lower))
+                   || (e.location && e.location.toLowerCase().includes(lower));
+
+    if (activeFilter === 'photo')    return matchText && !!e.thumb;
+    if (activeFilter === 'location') return matchText && !!e.location;
+    if (activeFilter === 'expense')  return matchText && e.spend > 0;
+    return matchText;
+  });
+
+  defaultState.style.display = 'none';
+
   if (results.length === 0) {
-    listEl.innerHTML = `
-      <div class="no-results">
-        <div class="no-ico">🔍</div>
-        <div class="no-title">ไม่พบบันทึกที่ตรงกัน</div>
-        <div class="no-sub">ลองเปลี่ยนคำค้นหา<br>หรือลบตัวกรองออกบางส่วน</div>
-        <button class="no-reset" onclick="clearAll();document.getElementById('srchInput').value='';document.getElementById('srchClear').classList.remove('on');">ล้างตัวกรองทั้งหมด</button>
-      </div>`;
+    resultState.style.display = 'none';
+    emptyState.classList.add('show');
     return;
   }
-  listEl.innerHTML = results.map(buildCard).join('');
+
+  emptyState.classList.remove('show');
+  resultState.style.display = '';
+  document.getElementById('resultCount').textContent = `พบ ${results.length} รายการ`;
+  const list = document.getElementById('resultList');
+  list.innerHTML = '';
+  results.forEach(e => { list.innerHTML += buildCard(e, q); });
 }
 
-/* ══════════════════════════════════════
-   SCROLL SHADOW
-══════════════════════════════════════ */
-document.getElementById('srchBody').addEventListener('scroll', function() {
-  document.getElementById('srchTop').classList.toggle('scrolled', this.scrollTop > 2);
+/* ── Clear recent ── */
+document.getElementById('clearRecent').addEventListener('click', () => {
+  document.getElementById('recentWrap').innerHTML =
+    '<span style="font-size:12px;color:var(--ink-faint);">ไม่มีประวัติการค้นหา</span>';
 });
 
-/* initial render */
-render();
+/* ── Recent tag click ── */
+document.getElementById('recentWrap').addEventListener('click', e => {
+  const tag = e.target.closest('.recent-tag');
+  if (!tag) return;
+  const q = tag.textContent.trim();
+  srchInput.value = q;
+  srchClear.classList.add('show');
+  runSearch(q);
+});
 </script>
 </body>
 </html>

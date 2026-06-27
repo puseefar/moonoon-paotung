@@ -9,38 +9,41 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { diaryService } from '@/services/diaryService';
 import type { EntryWithRelations } from '@/features/life-diary/types';
 
-// ── Design tokens ───────────────────────────────────────────────────────────────
+// ── Design tokens ────────────────────────────────────────────────────────────
 const C = {
-  paper: '#FBF8F3',
-  ink: '#3D3548',
-  inkSoft: '#7A7186',
-  inkFaint: '#A9A1B3',
-  line: '#E7DFD3',
-  rose: '#D14F86',
-  roseTint: '#FBEAF1',
-  gold: '#CC9A3A',
-  goldTint: '#FAF1DC',
+  bg:         '#F0F4FB',
+  surface:    '#FFFFFF',
+  ink:        '#1A1630',
+  inkSoft:    '#6B6585',
+  inkFaint:   '#AFAABB',
+  line:       '#EDEAF5',
+  rose:       '#D14F86',
+  roseTint:   '#FBEAF1',
+  gold:       '#CC9A3A',
+  goldTint:   '#FBF3E2',
+  blue:       '#3D8EF0',
+  blueTint:   '#EDF4FE',
 };
 
 const SERIF = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
-// ── Pro moods ───────────────────────────────────────────────────────────────────
+// ── Pro moods ─────────────────────────────────────────────────────────────────
 type MoodKey = 'great' | 'good' | 'ok' | 'tired' | 'bad';
 const PRO_MOODS: Record<MoodKey, { label: string; dot: string; emoji: string }> = {
-  great: { label: 'ดีมาก', dot: '#E9C46A', emoji: '🤩' },
-  good:  { label: 'ดี',     dot: '#A8C3A0', emoji: '😊' },
-  ok:    { label: 'เฉยๆ',   dot: '#AFC5D8', emoji: '😌' },
-  tired: { label: 'เหนื่อย', dot: '#B9A8C9', emoji: '😤' },
-  bad:   { label: 'แย่',    dot: '#C9A0A8', emoji: '😢' },
+  great: { label: 'ดีมาก',   dot: '#E9C46A', emoji: '🤩' },
+  good:  { label: 'ดี',       dot: '#A8C3A0', emoji: '😊' },
+  ok:    { label: 'สบายๆ',   dot: '#AFC5D8', emoji: '😐' },
+  tired: { label: 'เหนื่อย', dot: '#B9A8C9', emoji: '😔' },
+  bad:   { label: 'สู้ๆ',     dot: '#C9A0A8', emoji: '😞' },
 };
 const MOOD_KEYS = Object.keys(PRO_MOODS) as MoodKey[];
 
 const EMOJI_TO_MOOD: Record<string, MoodKey> = {
-  '🤩': 'great', '😆': 'great', '🥰': 'great',
+  '🤩': 'great', '😆': 'great', '🥰': 'great', '😄': 'great',
   '😊': 'good',
-  '😌': 'ok', '😮': 'ok', '😴': 'ok',
-  '😤': 'tired', '🥺': 'tired',
-  '😢': 'bad',
+  '😌': 'ok', '😮': 'ok', '😴': 'ok', '😐': 'ok',
+  '😤': 'tired', '🥺': 'tired', '😔': 'tired',
+  '😢': 'bad', '😞': 'bad',
 };
 
 function moodKeyOf(mood: string | null | undefined): MoodKey | null {
@@ -50,8 +53,10 @@ function moodKeyOf(mood: string | null | undefined): MoodKey | null {
   return null;
 }
 
-// ── Filter types ────────────────────────────────────────────────────────────────
+// ── Filter types ──────────────────────────────────────────────────────────────
 type FilterType = 'all' | 'photo' | 'expense' | MoodKey;
+
+const RECENT_TAGS = ['ออกกำลังกาย', 'ครอบครัว', 'เดินทาง', 'กาแฟ', 'ทำงาน'];
 
 export default function DiarySearchScreen() {
   const insets = useSafeAreaInsets();
@@ -60,7 +65,6 @@ export default function DiarySearchScreen() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<FilterType>('all');
   const [moodFilter, setMoodFilter] = useState<MoodKey | null>(null);
-  const [showMoodPanel, setShowMoodPanel] = useState(false);
   const [allEntries, setAllEntries] = useState<EntryWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -79,7 +83,6 @@ export default function DiarySearchScreen() {
   const filtered = useMemo(() => {
     let results = allEntries;
 
-    // Text search
     if (query.trim()) {
       const q = query.trim().toLowerCase();
       results = results.filter(item =>
@@ -90,14 +93,12 @@ export default function DiarySearchScreen() {
       );
     }
 
-    // Type filter
     if (filter === 'photo') {
       results = results.filter(item => item.media.length > 0);
     } else if (filter === 'expense') {
       results = results.filter(item => item.expenses.length > 0);
     }
 
-    // Mood filter
     if (moodFilter) {
       results = results.filter(item => moodKeyOf(item.entry.mood) === moodFilter);
     }
@@ -109,25 +110,29 @@ export default function DiarySearchScreen() {
     setQuery('');
     setFilter('all');
     setMoodFilter(null);
-    setShowMoodPanel(false);
   }
 
   const hasActiveFilter = filter !== 'all' || !!moodFilter || !!query.trim();
+  const isTyping = query.trim().length > 0;
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.paper }}>
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* ── Sticky top ───────────────────────────────────────────────────────── */}
-      <View style={{ paddingTop: insets.top + 8, backgroundColor: C.paper,
-        borderBottomWidth: 1, borderBottomColor: C.line }}>
+      {/* ── Sticky top ── */}
+      <View style={{ paddingTop: insets.top + 10, backgroundColor: C.bg,
+        borderBottomWidth: 1, borderBottomColor: C.line,
+        shadowColor: C.ink, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}>
 
         {/* Header row */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 10 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center',
+          paddingHorizontal: 16, marginBottom: 10 }}>
           <Pressable onPress={() => router.back()}
             style={{ width: 36, height: 36, borderRadius: 18,
-              backgroundColor: 'rgba(61,53,72,0.07)',
-              justifyContent: 'center', alignItems: 'center', marginRight: 10 }}>
+              backgroundColor: C.surface,
+              justifyContent: 'center', alignItems: 'center',
+              marginRight: 10,
+              shadowColor: C.ink, shadowOpacity: 0.08, shadowRadius: 5, elevation: 1 }}>
             <Text style={{ fontSize: 16, color: C.ink }}>←</Text>
           </Pressable>
           <Text style={{ fontSize: 18, fontWeight: '700', color: C.ink, flex: 1, fontFamily: SERIF }}>
@@ -145,7 +150,7 @@ export default function DiarySearchScreen() {
         {/* Search bar */}
         <View style={{ marginHorizontal: 16, marginBottom: 10 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center',
-            backgroundColor: '#fff', borderRadius: 16,
+            backgroundColor: C.surface, borderRadius: 16,
             borderWidth: 1.5, borderColor: query ? C.rose : C.line,
             paddingHorizontal: 14 }}>
             <Text style={{ fontSize: 15, color: C.inkFaint, marginRight: 8 }}>🔍</Text>
@@ -155,6 +160,7 @@ export default function DiarySearchScreen() {
               placeholder="ค้นหาในบันทึก..."
               placeholderTextColor={C.inkFaint}
               returnKeyType="search"
+              autoFocus
               style={{ flex: 1, paddingVertical: 11, fontSize: 14, color: C.ink }}
             />
             {!!query && (
@@ -168,73 +174,69 @@ export default function DiarySearchScreen() {
           </View>
         </View>
 
+        {/* Recent search tags — shown when not typing */}
+        {!isTyping && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16, gap: 7, paddingBottom: 8 }}>
+            <Text style={{ fontSize: 11, color: C.inkFaint, alignSelf: 'center', marginRight: 2 }}>
+              ล่าสุด:
+            </Text>
+            {RECENT_TAGS.map(tag => (
+              <Pressable key={tag} onPress={() => setQuery(tag)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4,
+                  paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
+                  backgroundColor: C.surface, borderWidth: 1, borderColor: C.line }}>
+                <Text style={{ fontSize: 11, color: C.inkSoft }}>🕐</Text>
+                <Text style={{ fontSize: 11.5, color: C.inkSoft }}>{tag}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
+
         {/* Filter chips */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 16, gap: 7, paddingBottom: 12 }}>
-          {/* All */}
+          contentContainerStyle={{ paddingHorizontal: 16, gap: 7, paddingBottom: 10 }}>
           <Pressable onPress={() => setFilter('all')}
             style={[chipStyle, filter === 'all' && chipActiveStyle]}>
             <Text style={[chipText, filter === 'all' && chipActiveText]}>ทั้งหมด</Text>
           </Pressable>
 
-          {/* Photo */}
           <Pressable onPress={() => setFilter(filter === 'photo' ? 'all' : 'photo')}
             style={[chipStyle, filter === 'photo' && chipActiveStyle]}>
             <Text style={{ fontSize: 13 }}>📷</Text>
             <Text style={[chipText, filter === 'photo' && chipActiveText]}>มีรูป</Text>
           </Pressable>
 
-          {/* Expense */}
           <Pressable onPress={() => setFilter(filter === 'expense' ? 'all' : 'expense')}
             style={[chipStyle, filter === 'expense' && chipActiveStyle]}>
             <Text style={{ fontSize: 13 }}>💰</Text>
             <Text style={[chipText, filter === 'expense' && chipActiveText]}>มีรายจ่าย</Text>
           </Pressable>
-
-          {/* Mood */}
-          <Pressable onPress={() => setShowMoodPanel(p => !p)}
-            style={[chipStyle, !!moodFilter && chipActiveStyle]}>
-            {moodFilter
-              ? <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: PRO_MOODS[moodFilter].dot }} />
-              : <Text style={{ fontSize: 13 }}>🎭</Text>}
-            <Text style={[chipText, !!moodFilter && chipActiveText]}>
-              {moodFilter ? PRO_MOODS[moodFilter].label : 'อารมณ์'}
-            </Text>
-            <Text style={{ fontSize: 9, color: C.inkFaint }}>{showMoodPanel ? '▲' : '▼'}</Text>
-          </Pressable>
         </ScrollView>
 
-        {/* Mood panel */}
-        {showMoodPanel && (
-          <View style={{ paddingHorizontal: 16, paddingBottom: 12,
-            borderTopWidth: 1, borderTopColor: C.line,
-            backgroundColor: '#F3EEE5' }}>
-            <Text style={{ fontSize: 11, fontWeight: '600', color: C.inkSoft,
-              marginTop: 10, marginBottom: 8 }}>เลือกอารมณ์</Text>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              {MOOD_KEYS.map(mk => {
-                const m = PRO_MOODS[mk];
-                const active = moodFilter === mk;
-                return (
-                  <Pressable key={mk}
-                    onPress={() => { setMoodFilter(active ? null : mk); setShowMoodPanel(false); }}
-                    style={{ flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 12,
-                      backgroundColor: active ? m.dot + '33' : '#fff',
-                      borderWidth: 1.5, borderColor: active ? m.dot : C.line }}>
-                    <View style={{ width: 20, height: 20, borderRadius: 10,
-                      backgroundColor: m.dot, marginBottom: 4 }} />
-                    <Text style={{ fontSize: 9, color: C.inkSoft, fontWeight: active ? '700' : '500' }}>
-                      {m.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-        )}
+        {/* Quick mood buttons row */}
+        <View style={{ flexDirection: 'row', paddingHorizontal: 16, gap: 8, paddingBottom: 12 }}>
+          {MOOD_KEYS.map(mk => {
+            const m = PRO_MOODS[mk];
+            const active = moodFilter === mk;
+            return (
+              <Pressable key={mk}
+                onPress={() => setMoodFilter(active ? null : mk)}
+                style={{ flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 14,
+                  backgroundColor: active ? m.dot + '28' : C.surface,
+                  borderWidth: 1.5, borderColor: active ? m.dot : C.line }}>
+                <Text style={{ fontSize: 20, lineHeight: 24, marginBottom: 2 }}>{m.emoji}</Text>
+                <Text style={{ fontSize: 9, fontWeight: active ? '700' : '500',
+                  color: active ? m.dot : C.inkSoft }}>
+                  {m.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
 
-      {/* ── Results ─────────────────────────────────────────────────────────── */}
+      {/* ── Results ── */}
       {loading ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color={C.rose} />
@@ -272,7 +274,7 @@ export default function DiarySearchScreen() {
   );
 }
 
-// ── SearchResultCard ────────────────────────────────────────────────────────────
+// ── SearchResultCard ──────────────────────────────────────────────────────────
 function SearchResultCard({
   item, query, onPress,
 }: {
@@ -288,7 +290,6 @@ function SearchResultCard({
     day: 'numeric', month: 'short', year: '2-digit',
   });
 
-  // Highlight matching text
   function highlight(text: string): React.ReactNode {
     if (!query.trim()) return <Text style={{ fontSize: 13, color: C.inkSoft, lineHeight: 20 }}>{text}</Text>;
     const q = query.trim();
@@ -310,24 +311,21 @@ function SearchResultCard({
   return (
     <Pressable onPress={onPress}
       style={{
-        backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden',
-        borderWidth: 1, borderColor: C.line,
-        shadowColor: C.ink, shadowOpacity: 0.05, shadowRadius: 8,
-        shadowOffset: { width: 0, height: 2 }, elevation: 1,
+        backgroundColor: C.surface, borderRadius: 18, overflow: 'hidden',
+        shadowColor: C.ink, shadowOpacity: 0.07, shadowRadius: 10,
+        shadowOffset: { width: 0, height: 2 }, elevation: 2,
       }}>
 
       {/* Mood accent bar */}
-      {mood && (
-        <View style={{ height: 3, backgroundColor: mood.dot }} />
-      )}
+      {mood && <View style={{ height: 4, backgroundColor: mood.dot }} />}
 
       <View style={{ padding: 14 }}>
-        {/* Top row: date + mood dot */}
+        {/* Top row: date + mood */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
           <Text style={{ fontSize: 11, color: C.inkFaint, flex: 1 }}>{dateStr}</Text>
           {mood && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: mood.dot }} />
+              <Text style={{ fontSize: 14 }}>{mood.emoji}</Text>
               <Text style={{ fontSize: 11, color: C.inkSoft }}>{mood.label}</Text>
             </View>
           )}
@@ -344,7 +342,7 @@ function SearchResultCard({
         {/* Snippet */}
         {highlight(snippet)}
 
-        {/* Meta: photo count + expense count + location */}
+        {/* Meta: photo + expense + location */}
         {(media.length > 0 || expenses.length > 0 || entry.locationName) && (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 }}>
             {media.length > 0 && (
@@ -370,18 +368,20 @@ function SearchResultCard({
           </View>
         )}
 
-        {/* Photo thumbnail strip (up to 3) */}
+        {/* Photo thumbnails */}
         {media.length > 0 && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ gap: 6, marginTop: 10 }}>
             {media.slice(0, 4).map((m, i) => (
               <View key={m.id} style={{ position: 'relative' }}>
                 <Image source={{ uri: m.localUri }}
-                  style={{ width: 60, height: 60, borderRadius: 10, backgroundColor: C.line }} />
+                  style={{ width: 60, height: 60, borderRadius: 10,
+                    backgroundColor: C.line }} />
                 {i === 3 && media.length > 4 && (
                   <View style={{
-                    position: 'absolute', inset: 0, borderRadius: 10,
-                    backgroundColor: 'rgba(61,53,72,0.55)',
+                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                    borderRadius: 10,
+                    backgroundColor: 'rgba(26,22,48,0.55)',
                     justifyContent: 'center', alignItems: 'center',
                   }}>
                     <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>
@@ -398,17 +398,17 @@ function SearchResultCard({
   );
 }
 
-// ── Chip styles ─────────────────────────────────────────────────────────────────
+// ── Chip styles ───────────────────────────────────────────────────────────────
 const chipStyle = {
   flexDirection: 'row' as const, alignItems: 'center' as const, gap: 5,
   paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
-  backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#E7DFD3',
+  backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#EDEAF5',
 };
 const chipActiveStyle = {
   backgroundColor: '#FBEAF1', borderColor: '#D14F86',
 };
 const chipText = {
-  fontSize: 12, fontWeight: '500' as const, color: '#7A7186',
+  fontSize: 12, fontWeight: '500' as const, color: '#6B6585',
 };
 const chipActiveText = {
   color: '#D14F86', fontWeight: '700' as const,

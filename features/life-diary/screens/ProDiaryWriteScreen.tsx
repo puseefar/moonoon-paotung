@@ -303,36 +303,51 @@ export default function ProDiaryWriteScreen() {
     <View style={{ flex: 1, backgroundColor: C.paper }}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* ── Mood-tinted Header ──────────────────────────────────────────────── */}
+      {/* ── Colorful header ──────────────────────────────────────────────────── */}
       <LinearGradient
-        colors={[headerGradA, headerGradB]}
+        colors={['#CC80FF', '#4090FF', '#00E0FF']}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-        style={{ paddingTop: insets.top + 8, paddingBottom: 16, paddingHorizontal: 20 }}>
+        style={{ paddingTop: insets.top + 8, paddingBottom: 14, paddingHorizontal: 20 }}>
+
+        {/* Overlay for text readability */}
+        <View pointerEvents="none" style={{
+          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(20,5,40,0.25)',
+        }} />
+
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Pressable onPress={() => router.back()} style={{ padding: 6, marginRight: 8 }}>
-            <Text style={{ fontSize: 20, color: C.ink }}>←</Text>
+          <Pressable onPress={() => router.back()}
+            style={{ width: 36, height: 36, borderRadius: 18,
+              backgroundColor: 'rgba(61,53,72,0.15)',
+              justifyContent: 'center', alignItems: 'center', marginRight: 8 }}>
+            <Text style={{ fontSize: 18, color: '#fff' }}>‹</Text>
           </Pressable>
-          <Text style={{ fontSize: 17, fontWeight: '800', color: C.ink, flex: 1, fontFamily: SERIF }}>
-            {isEditing ? 'แก้ไขความทรงจำ' : 'บันทึกวันนี้'}
+          <Text style={{ fontSize: 17, fontWeight: '700', color: '#fff', flex: 1, fontFamily: SERIF }}>
+            {isEditing ? 'แก้ไขความทรงจำ' : 'เขียนบันทึก'}
           </Text>
-          <Pressable onPress={handleSave} disabled={saving}
+          <Pressable onPress={handleSave} disabled={saving || !isReady}
             style={{
-              backgroundColor: saving ? 'rgba(61,53,72,0.1)' : C.rose,
-              borderRadius: 14, paddingHorizontal: 16, paddingVertical: 8,
+              borderRadius: 18, paddingHorizontal: 18, paddingVertical: 8,
+              backgroundColor: (saving || !isReady) ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.92)',
+              shadowColor: '#D14F86', shadowOpacity: isReady ? 0.45 : 0,
+              shadowRadius: 8, elevation: isReady ? 4 : 0,
             }}>
             {saving
               ? <ActivityIndicator color={C.rose} size="small" />
-              : <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>บันทึก ✓</Text>}
+              : <Text style={{
+                  fontWeight: '700', fontSize: 13,
+                  color: isReady ? C.rose : 'rgba(255,255,255,0.7)',
+                }}>
+                  บันทึก ✓
+                </Text>}
           </Pressable>
         </View>
 
         {/* Date badge */}
-        <View style={{ flexDirection: 'row', marginTop: 10 }}>
-          <View style={{ backgroundColor: 'rgba(61,53,72,0.08)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 5 }}>
-            <Text style={{ fontSize: 13, fontWeight: '600', color: C.inkSoft }}>
-              📅 {entryDate.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'long' })}
-            </Text>
-          </View>
+        <View style={{ marginTop: 10 }}>
+          <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)', letterSpacing: 0.3 }}>
+            📅 {entryDate.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'long' })}
+          </Text>
         </View>
       </LinearGradient>
 
@@ -346,8 +361,14 @@ export default function ProDiaryWriteScreen() {
           contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 200 }}>
 
           {/* ── Mood picker ─────────────────────────────────────────────────── */}
-          <Text style={s.sectionLabel}>ความรู้สึกวันนี้</Text>
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+            <Text style={s.sectionLabel}>ความรู้สึกวันนี้</Text>
+            <View style={{ backgroundColor: '#FBEAF1', borderRadius: 6,
+              paddingHorizontal: 5, paddingVertical: 1, marginLeft: 6 }}>
+              <Text style={{ fontSize: 9, color: C.rose, fontWeight: '700' }}>จำเป็น</Text>
+            </View>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
             {MOOD_KEYS.map(mk => {
               const m = PRO_MOODS[mk];
               const active = selectedMood === mk;
@@ -355,20 +376,17 @@ export default function ProDiaryWriteScreen() {
                 <Pressable key={mk}
                   onPress={() => setSelectedMood(active ? null : mk)}
                   style={{
-                    flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 16,
-                    backgroundColor: active ? m.gradA : '#fff',
-                    borderWidth: 1.5,
+                    flex: 1, alignItems: 'center', paddingVertical: 9, paddingHorizontal: 4,
+                    borderRadius: 16,
+                    backgroundColor: active ? '#fff' : '#fff',
+                    borderWidth: 2,
                     borderColor: active ? m.dot : C.line,
+                    shadowColor: m.dot, shadowOpacity: active ? 0.35 : 0,
+                    shadowRadius: 8, elevation: active ? 4 : 0,
                   }}>
-                  <View style={{
-                    width: 22, height: 22, borderRadius: 11,
-                    backgroundColor: m.dot,
-                    shadowColor: m.dot, shadowOpacity: 0.5,
-                    shadowRadius: 4, shadowOffset: { width: 0, height: 2 },
-                    elevation: active ? 4 : 0,
-                    marginBottom: 5,
-                  }} />
-                  <Text style={{ fontSize: 10, fontWeight: active ? '700' : '500', color: C.inkSoft }}>
+                  <Text style={{ fontSize: 26, lineHeight: 30, marginBottom: 4 }}>{m.emoji}</Text>
+                  <Text style={{ fontSize: 9.5, fontWeight: active ? '700' : '500',
+                    color: active ? m.dot : C.inkSoft }}>
                     {m.label}
                   </Text>
                 </Pressable>
@@ -377,7 +395,13 @@ export default function ProDiaryWriteScreen() {
           </View>
 
           {/* ── Activity chips ───────────────────────────────────────────────── */}
-          <Text style={s.sectionLabel}>กิจกรรมวันนี้</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+            <Text style={s.sectionLabel}>กิจกรรมวันนี้</Text>
+            <View style={{ backgroundColor: '#FBEAF1', borderRadius: 6,
+              paddingHorizontal: 5, paddingVertical: 1, marginLeft: 6 }}>
+              <Text style={{ fontSize: 9, color: C.rose, fontWeight: '700' }}>จำเป็น</Text>
+            </View>
+          </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ gap: 8, marginBottom: 20 }}
             keyboardShouldPersistTaps="handled">
