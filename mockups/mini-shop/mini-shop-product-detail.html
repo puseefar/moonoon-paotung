@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Mini Shop – Product Detail (Pro)</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', 'Noto Sans Thai', sans-serif;
+      background: #F3F0FF;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      padding: 24px 0 80px;
+    }
+
+    .phone {
+      width: 375px;
+      min-height: 812px;
+      background: #F8F5FF;
+      border-radius: 40px;
+      box-shadow: 0 24px 64px rgba(120, 60, 220, 0.18);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Status bar */
+    .status-bar {
+      padding: 14px 24px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #4B3A8A;
+      font-weight: 600;
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      z-index: 20;
+    }
+    .status-bar .time { font-size: 15px; font-weight: 700; }
+    .status-icons { display: flex; gap: 6px; align-items: center; font-size: 13px; }
+
+    /* Top nav overlay */
+    .top-nav {
+      position: absolute;
+      top: 38px; left: 0; right: 0;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 20;
+    }
+    .nav-btn {
+      width: 36px; height: 36px;
+      background: rgba(255,255,255,0.85);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      border: 1.5px solid rgba(255,255,255,0.9);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .nav-right-group { display: flex; gap: 8px; }
+
+    /* Image carousel */
+    .img-carousel {
+      width: 100%;
+      height: 320px;
+      background: linear-gradient(160deg, #E8D5FF 0%, #D4BBFF 50%, #F5CFFF 100%);
+      position: relative;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .img-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .img-emoji { font-size: 96px; }
+    .img-label {
+      font-size: 13px;
+      color: #9575C9;
+      font-weight: 600;
+    }
+    .img-dots {
+      position: absolute;
+      bottom: 14px;
+      left: 0; right: 0;
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+    }
+    .img-dot {
+      width: 7px; height: 7px;
+      background: rgba(255,255,255,0.5);
+      border-radius: 50%;
+    }
+    .img-dot.active {
+      background: white;
+      width: 20px;
+      border-radius: 4px;
+    }
+    .img-count-badge {
+      position: absolute;
+      bottom: 14px; right: 14px;
+      background: rgba(0,0,0,0.45);
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 8px;
+    }
+
+    /* Scrollable content */
+    .scroll-body {
+      flex: 1;
+      overflow-y: auto;
+      padding-bottom: 90px;
+    }
+
+    /* Price section */
+    .price-section {
+      background: white;
+      padding: 16px 16px 14px;
+      border-bottom: 1px solid #F0EAF8;
+    }
+    .price-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .price-current {
+      font-size: 28px;
+      font-weight: 900;
+      color: #7C3AED;
+    }
+    .price-original {
+      font-size: 15px;
+      color: #C4B5D8;
+      text-decoration: line-through;
+      padding-bottom: 3px;
+    }
+    .price-discount-tag {
+      background: linear-gradient(135deg, #EC4899, #F472B6);
+      color: white;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 8px;
+      margin-bottom: 3px;
+    }
+    .product-name {
+      font-size: 17px;
+      font-weight: 800;
+      color: #2D1B69;
+      line-height: 1.3;
+      margin-bottom: 10px;
+    }
+    .badges-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 9px;
+      border-radius: 8px;
+    }
+    .badge-green {
+      background: rgba(16,185,129,0.1);
+      color: #059669;
+      border: 1.5px solid rgba(16,185,129,0.25);
+    }
+    .badge-purple {
+      background: rgba(124,58,237,0.1);
+      color: #6D28D9;
+      border: 1.5px solid rgba(124,58,237,0.2);
+    }
+    .badge-blue {
+      background: rgba(59,130,246,0.1);
+      color: #2563EB;
+      border: 1.5px solid rgba(59,130,246,0.2);
+    }
+    .badge-orange {
+      background: rgba(249,115,22,0.1);
+      color: #C2410C;
+      border: 1.5px solid rgba(249,115,22,0.2);
+    }
+
+    /* Share row */
+    .share-row {
+      background: white;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 8px solid #F3F0FF;
+    }
+    .share-label {
+      font-size: 12px;
+      color: #9B7FC8;
+      flex: 1;
+    }
+    .share-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+    }
+    .share-line {
+      background: #06C755;
+      color: white;
+    }
+    .share-copy {
+      background: rgba(124,58,237,0.1);
+      color: #6D28D9;
+      border: 1.5px solid rgba(124,58,237,0.2);
+    }
+
+    /* Section card */
+    .section-card {
+      background: white;
+      margin-bottom: 8px;
+    }
+    .section-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid #F5F0FF;
+    }
+    .section-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #2D1B69;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .section-title-icon {
+      width: 22px; height: 22px;
+      background: linear-gradient(135deg, #7C3AED, #A855F7);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+    }
+    .section-toggle {
+      font-size: 13px;
+      color: #A89AC8;
+    }
+
+    /* Description content */
+    .desc-content {
+      padding: 12px 16px 16px;
+    }
+    .desc-row {
+      display: flex;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid #F8F5FF;
+    }
+    .desc-row:last-child { border-bottom: none; }
+    .desc-key {
+      font-size: 12px;
+      font-weight: 700;
+      color: #7C5CB8;
+      min-width: 90px;
+    }
+    .desc-val {
+      font-size: 12px;
+      color: #4B3A8A;
+      line-height: 1.5;
+    }
+
+    /* Shop mini card */
+    .shop-mini-card {
+      background: white;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .shop-avatar {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, #7C3AED, #EC4899);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+    .shop-mini-info { flex: 1; }
+    .shop-mini-name {
+      font-size: 14px;
+      font-weight: 800;
+      color: #2D1B69;
+    }
+    .shop-mini-sub {
+      font-size: 11px;
+      color: #9B7FC8;
+      margin-top: 2px;
+    }
+    .shop-meta-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 4px;
+    }
+    .shop-meta-item {
+      font-size: 11px;
+      color: #7C5CB8;
+    }
+    .shop-meta-item strong {
+      color: #2D1B69;
+      font-weight: 700;
+    }
+    .btn-visit-shop {
+      background: rgba(124,58,237,0.1);
+      color: #6D28D9;
+      border: 1.5px solid rgba(124,58,237,0.25);
+      border-radius: 10px;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* Reviews */
+    .review-section {
+      background: white;
+      margin-bottom: 8px;
+    }
+    .review-header {
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid #F5F0FF;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .review-score {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .score-big {
+      font-size: 22px;
+      font-weight: 900;
+      color: #2D1B69;
+    }
+    .stars { font-size: 14px; color: #F59E0B; }
+    .review-count { font-size: 12px; color: #9B7FC8; }
+    .review-item {
+      padding: 12px 16px;
+      border-bottom: 1px solid #F8F5FF;
+    }
+    .review-item:last-child { border-bottom: none; }
+    .reviewer-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .reviewer-avatar {
+      width: 30px; height: 30px;
+      background: linear-gradient(135deg, #C084FC, #F472B6);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .reviewer-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: #2D1B69;
+    }
+    .reviewer-date {
+      font-size: 11px;
+      color: #C4B5D8;
+      margin-top: 1px;
+    }
+    .review-stars { font-size: 11px; color: #F59E0B; margin-left: auto; }
+    .review-text {
+      font-size: 12px;
+      color: #4B3A8A;
+      line-height: 1.5;
+    }
+
+    /* Fixed bottom bar */
+    .bottom-bar {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: white;
+      border-top: 1px solid #F0EAF8;
+      padding: 12px 16px 20px;
+      display: flex;
+      gap: 10px;
+      box-shadow: 0 -8px 24px rgba(109,40,217,0.1);
+      z-index: 30;
+    }
+    .btn-cart {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 13px;
+      background: rgba(124,58,237,0.08);
+      border: 2px solid #7C3AED;
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 800;
+      color: #6D28D9;
+      cursor: pointer;
+    }
+    .btn-buy-now {
+      flex: 1.4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 13px;
+      background: linear-gradient(135deg, #7C3AED, #EC4899);
+      border: none;
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 800;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(124,58,237,0.35);
+    }
+  </style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <span class="time">22:15</span>
+    <div class="status-icons">
+      <span>▲</span>
+      <span>WiFi</span>
+      <span>🔋</span>
+    </div>
+  </div>
+
+  <!-- Top nav overlay -->
+  <div class="top-nav">
+    <div class="nav-btn">←</div>
+    <div class="nav-right-group">
+      <div class="nav-btn">♡</div>
+      <div class="nav-btn">⋯</div>
+    </div>
+  </div>
+
+  <!-- Image carousel -->
+  <div class="img-carousel">
+    <div class="img-placeholder">
+      <div class="img-emoji">👕</div>
+      <div class="img-label">รูปสินค้า 1 / 3</div>
+    </div>
+    <div class="img-dots">
+      <div class="img-dot active"></div>
+      <div class="img-dot"></div>
+      <div class="img-dot"></div>
+    </div>
+    <div class="img-count-badge">1 / 3</div>
+  </div>
+
+  <!-- Scrollable content -->
+  <div class="scroll-body">
+
+    <!-- Price + name + badges -->
+    <div class="price-section">
+      <div class="price-row">
+        <span class="price-current">฿199</span>
+        <span class="price-original">฿350</span>
+        <span class="price-discount-tag">ลด 43%</span>
+      </div>
+      <div class="product-name">เสื้อยืด Oversize สีพาสเทล คอตตอน 100%</div>
+      <div class="badges-row">
+        <div class="badge badge-green">✓ พร้อมส่ง</div>
+        <div class="badge badge-purple">เหลือ 8 ชิ้น</div>
+        <div class="badge badge-blue">🚚 ส่งฟรี</div>
+        <div class="badge badge-green">รับ COD</div>
+      </div>
+    </div>
+
+    <!-- Share row -->
+    <div class="share-row">
+      <span class="share-label">แชร์สินค้านี้ให้เพื่อน</span>
+      <button class="share-btn share-line">LINE</button>
+      <button class="share-btn share-copy">📋 คัดลอกลิงก์</button>
+    </div>
+
+    <!-- Product description -->
+    <div class="section-card">
+      <div class="section-title-row">
+        <div class="section-title">
+          <div class="section-title-icon">📋</div>
+          รายละเอียดสินค้า
+        </div>
+        <span class="section-toggle">▲</span>
+      </div>
+      <div class="desc-content">
+        <div class="desc-row">
+          <div class="desc-key">รายละเอียด</div>
+          <div class="desc-val">เสื้อยืด Oversize ผ้าคอตตอน 100% นุ่ม ใส่สบาย ระบายอากาศได้ดี เหมาะสำหรับใส่ในชีวิตประจำวัน</div>
+        </div>
+        <div class="desc-row">
+          <div class="desc-key">วิธีดูแล</div>
+          <div class="desc-val">ซักเครื่อง น้ำเย็น ไม่ใช้น้ำยาฟอกขาว ตากในร่ม</div>
+        </div>
+        <div class="desc-row">
+          <div class="desc-key">ขนาด/น้ำหนัก</div>
+          <div class="desc-val">Free Size (รอบอก 38-46 นิ้ว) · น้ำหนัก 180g</div>
+        </div>
+        <div class="desc-row">
+          <div class="desc-key">สี</div>
+          <div class="desc-val">ชมพูพาสเทล / ม่วงอ่อน / ฟ้าอ่อน / ขาว</div>
+        </div>
+        <div class="desc-row">
+          <div class="desc-key">เงื่อนไขส่ง</div>
+          <div class="desc-val">ส่งทุกวัน จ.–ศ. ก่อน 14:00 น. ได้รับสินค้าภายใน 1–3 วัน</div>
+        </div>
+        <div class="desc-row">
+          <div class="desc-key">คืนสินค้า</div>
+          <div class="desc-val">คืนได้ภายใน 7 วัน หากสินค้าชำรุดจากการผลิต</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shop mini card -->
+    <div class="shop-mini-card">
+      <div class="shop-avatar">🐷</div>
+      <div class="shop-mini-info">
+        <div class="shop-mini-name">ร้านหมูนุ่นเป๋าตุง</div>
+        <div class="shop-mini-sub">สุรินทร์ · ⭐ 4.9 · สินค้า 12 รายการ</div>
+        <div class="shop-meta-row">
+          <div class="shop-meta-item">ตอบเร็ว <strong>ภายใน 1 ชม.</strong></div>
+          <div class="shop-meta-item">ขายไปแล้ว <strong>84 ออเดอร์</strong></div>
+        </div>
+      </div>
+      <button class="btn-visit-shop">ดูร้าน</button>
+    </div>
+
+    <!-- Reviews -->
+    <div class="review-section">
+      <div class="review-header">
+        <div class="review-score">
+          <div class="score-big">4.9</div>
+          <div>
+            <div class="stars">★★★★★</div>
+            <div class="review-count">3 รีวิว</div>
+          </div>
+        </div>
+        <div style="font-size:12px; color:#9B7FC8;">รีวิวจากลูกค้า</div>
+      </div>
+
+      <div class="review-item">
+        <div class="reviewer-row">
+          <div class="reviewer-avatar">😊</div>
+          <div>
+            <div class="reviewer-name">แนน***</div>
+            <div class="reviewer-date">14 มิ.ย. 2569</div>
+          </div>
+          <div class="review-stars">★★★★★</div>
+        </div>
+        <div class="review-text">ผ้านุ่มมากเลยค่า ใส่สบาย ไม่ร้อน สีสวยตรงปก จะสั่งอีกแน่นอน!</div>
+      </div>
+
+      <div class="review-item">
+        <div class="reviewer-row">
+          <div class="reviewer-avatar" style="background: linear-gradient(135deg, #86EFAC, #34D399);">🌸</div>
+          <div>
+            <div class="reviewer-name">ฟ้า***</div>
+            <div class="reviewer-date">10 มิ.ย. 2569</div>
+          </div>
+          <div class="review-stars">★★★★★</div>
+        </div>
+        <div class="review-text">ส่งเร็วมาก 2 วันได้รับเลย บรรจุภัณฑ์น่ารักด้วย ประทับใจมากค่ะ</div>
+      </div>
+
+      <div class="review-item">
+        <div class="reviewer-row">
+          <div class="reviewer-avatar" style="background: linear-gradient(135deg, #FCD34D, #FBBF24);">💛</div>
+          <div>
+            <div class="reviewer-name">นุ่น***</div>
+            <div class="reviewer-date">5 มิ.ย. 2569</div>
+          </div>
+          <div class="review-stars">★★★★☆</div>
+        </div>
+        <div class="review-text">สวยค่ะ Free size ใส่ได้จริง ไม่คับ ลองสั่งสีม่วงมาดู พอดีมากเลย</div>
+      </div>
+    </div>
+
+    <!-- Spacer for bottom bar -->
+    <div style="height: 16px;"></div>
+  </div>
+
+  <!-- Fixed bottom bar -->
+  <div class="bottom-bar">
+    <button class="btn-cart">🛒 เพิ่มในตะกร้า</button>
+    <button class="btn-buy-now">⚡ ซื้อเลย</button>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Life Diary — ProEntryDetailScreen Mockup</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #1A0A2E;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px;
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    min-height: 100vh;
+  }
+  h1.page-title {
+    color: #FF78D4;
+    font-size: 15px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    font-weight: 700;
+  }
+  .page-subtitle {
+    color: rgba(255,255,255,0.45);
+    font-size: 12px;
+    margin-bottom: 28px;
+    text-align: center;
+  }
+
+  /* ── Phone frame ── */
+  .phone {
+    width: 375px;
+    min-height: 812px;
+    background: #fafdff;
+    border-radius: 44px;
+    overflow: hidden;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.55), 0 0 0 10px #2A1840;
+    position: relative;
+  }
+
+  /* ── Design tokens ── */
+  :root {
+    --bg:       #fafdff;
+    --surface:  #FFFFFF;
+    --ink:      #1A1630;
+    --inkSoft:  #6B6585;
+    --inkFaint: #AFAABB;
+    --line:     #EDEAF5;
+    --rose:     #D14F86;
+    --roseTint: #FBEAF1;
+    --sage:     #4FAD86;
+    --sageTint: #E6F7F0;
+    --gold:     #CC9A3A;
+    --goldTint: #FBF3E2;
+    --blue:     #3D8EF0;
+    --blueTint: #EDF4FE;
+  }
+
+  /* ── Status bar placeholder ── */
+  .status-bar {
+    background: var(--bg);
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .status-bar .time { font-size: 15px; font-weight: 700; }
+  .status-bar .icons { display: flex; gap: 5px; align-items: center; }
+
+  /* ── Minimal header ── */
+  .header {
+    background: var(--bg);
+    padding: 8px 16px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .icon-btn {
+    width: 38px; height: 38px; border-radius: 19px;
+    background: #FFFFFF;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(26,22,48,0.10);
+    font-size: 17px;
+    cursor: pointer;
+    border: none;
+    flex-shrink: 0;
+  }
+  .icon-btn.delete { background: var(--roseTint); }
+  .header-center {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .header-center .dot {
+    width: 7px; height: 7px; border-radius: 3.5px;
+    background: var(--rose);
+  }
+  .header-center span {
+    font-size: 11.5px; font-weight: 600; color: var(--inkSoft);
+  }
+  .header-actions { display: flex; gap: 8px; }
+
+  /* ── Save banner ── */
+  .save-banner {
+    background: #1A1630;
+    padding: 10px 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .save-banner span { color: #fff; font-size: 13px; font-weight: 700; flex: 1; }
+  .save-banner .close { color: rgba(255,255,255,0.5); font-size: 16px; }
+
+  /* ── Scroll content ── */
+  .scroll-content {
+    padding-bottom: 48px;
+    overflow-y: auto;
+  }
+
+  /* ── Title block ── */
+  .title-block {
+    padding: 4px 22px 14px;
+  }
+  .entry-title {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--ink);
+    letter-spacing: -0.3px;
+    font-family: Georgia, serif;
+    margin-bottom: 10px;
+  }
+  .meta-row {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .date-label {
+    font-size: 12px; color: var(--inkSoft); font-weight: 500;
+  }
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: #FFFFFF;
+    border-radius: 20px;
+    padding: 4px 11px;
+    box-shadow: 0 2px 6px rgba(26,22,48,0.08);
+    font-size: 12.5px; font-weight: 600; color: var(--ink);
+  }
+  .badge.location { background: var(--blueTint); color: var(--blue); }
+  .badge .emoji { font-size: 18px; line-height: 1.2; }
+
+  /* ── Photos ── */
+  .photos-section {
+    padding: 0 20px 16px;
+  }
+  .photo-single {
+    width: 100%;
+    aspect-ratio: 9/16;
+    max-height: 360px;
+    border-radius: 18px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 6px 16px rgba(26,22,48,0.16);
+  }
+  .photo-single img {
+    width: 100%; height: 100%; object-fit: cover;
+  }
+  .photo-overlay {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 40%;
+    background: linear-gradient(transparent, rgba(26,22,48,0.25));
+  }
+
+  /* Photo carousel */
+  .photo-carousel {
+    display: flex; gap: 10px; overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .photo-carousel::-webkit-scrollbar { display: none; }
+  .photo-card {
+    flex-shrink: 0;
+    width: 200px;
+    aspect-ratio: 9/16;
+    max-height: 320px;
+    border-radius: 18px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 4px 12px rgba(26,22,48,0.14);
+    background: #e0e8f0;
+  }
+  .photo-card img { width: 100%; height: 100%; object-fit: cover; }
+  .photo-placeholder {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #d0dff0 0%, #e8d0f0 100%);
+    gap: 8px;
+  }
+  .photo-placeholder .ph-icon { font-size: 36px; }
+  .photo-placeholder .ph-label { font-size: 11px; color: var(--inkSoft); font-weight: 600; }
+
+  .dots-row {
+    display: flex; justify-content: center; gap: 5px; margin-top: 10px;
+  }
+  .dot-ind {
+    height: 5px; border-radius: 3px;
+    background: var(--line);
+    transition: width 0.2s;
+  }
+  .dot-ind.active { width: 18px; background: var(--rose); }
+  .dot-ind.inactive { width: 5px; }
+
+  /* ── Section card ── */
+  .section-card {
+    background: #FFFFFF;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 3px 12px rgba(26,22,48,0.08);
+    margin: 0 20px;
+  }
+  .section-card + .section-card { margin-top: 12px; }
+
+  /* ── Content card ── */
+  .content-body { padding: 16px; }
+  .content-text {
+    font-size: 14.5px;
+    color: var(--ink);
+    line-height: 1.8;
+  }
+  .see-more {
+    margin-top: 8px;
+    font-size: 13px; font-weight: 700; color: var(--rose);
+    cursor: pointer;
+  }
+
+  /* Reflection quote */
+  .reflection-box {
+    padding: 14px;
+    border-left: 3px solid #E9C46A;
+    margin: 0 16px 16px;
+    background: rgba(246,233,198,0.73);
+    border-radius: 12px;
+  }
+  .reflection-label {
+    font-size: 10px; font-weight: 800; color: var(--inkFaint);
+    letter-spacing: 0.8px; text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .reflection-text {
+    font-size: 13px;
+    font-style: italic;
+    color: var(--inkSoft);
+    line-height: 1.7;
+    font-family: Georgia, serif;
+  }
+
+  /* ── Expense card ── */
+  .expense-header {
+    display: flex; align-items: center;
+    padding: 14px;
+    cursor: pointer;
+    gap: 8px;
+  }
+  .expense-header .exp-label {
+    flex: 1; font-size: 13px; font-weight: 700; color: var(--ink); margin-left: 0;
+  }
+  .expense-total-inline {
+    font-size: 16px; font-weight: 900; color: var(--gold);
+  }
+  .expense-chevron { font-size: 14px; color: var(--inkFaint); }
+
+  .expense-list { border-top: 1px solid var(--line); }
+  .expense-row {
+    display: flex; align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    gap: 8px;
+  }
+  .expense-row:last-child { border-bottom: none; }
+  .expense-row .item-name { flex: 1; font-size: 13px; color: var(--ink); }
+  .expense-row .item-amount {
+    text-align: right;
+  }
+  .expense-row .item-amount .amount {
+    font-size: 13px; font-weight: 700; color: var(--gold);
+  }
+  .expense-row .item-amount .linked {
+    font-size: 10px; color: #10B981; margin-top: 1px;
+  }
+  .expense-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 14px 14px;
+    border-top: 1px solid var(--line);
+  }
+  .expense-footer .sum-label { font-size: 13px; font-weight: 700; color: var(--inkSoft); }
+  .expense-footer .sum-total { font-size: 16px; font-weight: 900; color: var(--gold); }
+
+  /* ── Bottom CTA ── */
+  .new-entry-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: #FFFFFF;
+    border: 1.5px solid var(--line);
+    border-radius: 16px;
+    padding: 14px;
+    margin: 14px 20px 0;
+    box-shadow: 0 2px 8px rgba(26,22,48,0.06);
+    cursor: pointer;
+    font-size: 14px; font-weight: 700; color: var(--rose);
+  }
+
+  /* ── Photo Lightbox Modal ── */
+  .modal-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: #130F1E;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 100;
+  }
+  .modal-close {
+    position: absolute; top: 56px; right: 16px;
+    width: 38px; height: 38px; border-radius: 19px;
+    background: rgba(255,255,255,0.15);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 18px; font-weight: 700;
+    cursor: pointer;
+  }
+  .modal-photo {
+    width: 335px;
+    aspect-ratio: 9/16;
+    max-height: 520px;
+    object-fit: contain;
+    border-radius: 12px;
+    background: #2a2040;
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.4);
+    font-size: 52px;
+  }
+  .modal-counter {
+    color: rgba(255,255,255,0.5);
+    font-size: 12px; font-weight: 700;
+    margin-top: 8px;
+  }
+  .modal-dots {
+    display: flex; gap: 6px; margin-top: 10px;
+  }
+  .modal-dot {
+    height: 6px; border-radius: 3px; background: rgba(255,255,255,0.3);
+  }
+  .modal-dot.active { width: 18px; background: #fff; }
+  .modal-dot.inactive { width: 6px; }
+  .modal-nav {
+    display: flex; gap: 16px; margin-top: 20px;
+  }
+  .modal-nav-btn {
+    width: 48px; height: 48px; border-radius: 24px;
+    background: rgba(255,255,255,0.18);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 22px;
+    cursor: pointer;
+  }
+
+  /* ── Share Sheet ── */
+  .share-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(26,22,48,0.45);
+    z-index: 100;
+  }
+  .share-sheet {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: var(--surface);
+    border-top-left-radius: 28px;
+    border-top-right-radius: 28px;
+    padding: 20px 24px 40px;
+    z-index: 101;
+  }
+  .share-handle {
+    width: 36px; height: 4px; border-radius: 2px;
+    background: var(--line);
+    margin: 0 auto 20px;
+  }
+  .share-title {
+    font-size: 16px; font-weight: 700; color: var(--ink);
+    margin-bottom: 16px;
+  }
+  .share-option {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--bg);
+    border-radius: 16px; padding: 14px; margin-bottom: 8px;
+    cursor: pointer;
+  }
+  .share-icon-wrap {
+    width: 42px; height: 42px; border-radius: 12px;
+    background: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .share-label { flex: 1; font-size: 15px; font-weight: 600; }
+  .share-chevron { font-size: 16px; color: var(--inkFaint); }
+
+  /* ── Tab switcher ── */
+  .tabs {
+    display: flex; gap: 8px; margin-bottom: 24px;
+    justify-content: center;
+  }
+  .tab-btn {
+    padding: 6px 16px; border-radius: 14px;
+    border: 1.5px solid rgba(255,120,212,0.35);
+    background: transparent;
+    color: rgba(255,255,255,0.55);
+    font-size: 12px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .tab-btn.active {
+    background: rgba(255,120,212,0.2);
+    color: #FF78D4;
+    border-color: rgba(255,120,212,0.6);
+  }
+
+  /* ── Annotation labels ── */
+  .anno {
+    position: absolute;
+    background: rgba(255,120,212,0.18);
+    border: 1px dashed rgba(255,120,212,0.55);
+    border-radius: 6px;
+    color: #FF78D4;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 50;
+  }
+
+  /* ── Premium ideas panel ── */
+  .ideas-panel {
+    width: 375px;
+    margin-top: 24px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,120,212,0.25);
+    border-radius: 20px;
+    padding: 20px;
+  }
+  .ideas-panel h2 {
+    color: #FF78D4;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+  }
+  .idea-item {
+    display: flex; gap: 10px;
+    margin-bottom: 12px;
+    align-items: flex-start;
+  }
+  .idea-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .idea-text { color: rgba(255,255,255,0.75); font-size: 12.5px; line-height: 1.6; }
+  .idea-text strong { color: #FF78D4; font-weight: 700; }
+  .idea-text em { color: rgba(255,255,255,0.45); font-size: 11px; font-style: normal; }
+</style>
+</head>
+<body>
+
+<h1 class="page-title">📱 Life Diary Pro — Entry Detail Screen</h1>
+<p class="page-subtitle">ProEntryDetailScreen.tsx · Santorini Light-Blue Theme · v1.0 (Pro)<br>สร้างสำหรับทีมงาน Premium UI Review · 18/06/2026</p>
+
+<!-- Tab switcher for different states -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="showState('main')">📖 หน้าหลัก</button>
+  <button class="tab-btn" onclick="showState('lightbox')">🖼️ Photo Lightbox</button>
+  <button class="tab-btn" onclick="showState('share')">⤴ Share Sheet</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     STATE 1: Main entry detail
+════════════════════════════════════════════════════════ -->
+<div id="state-main" class="phone">
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <span class="time">12:22</span>
+    <div class="icons">
+      <span>📶</span><span>🔋</span>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <button class="icon-btn">‹</button>
+    <div class="header-center">
+      <div class="dot"></div>
+      <span>18 มิ.ย. 69 · 10:30 น.</span>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" title="แชร์">⤴</button>
+      <button class="icon-btn" title="แก้ไข">✏️</button>
+      <button class="icon-btn delete" title="ลบ">🗑</button>
+    </div>
+  </div>
+
+  <!-- Save banner -->
+  <div class="save-banner">
+    <span>💙</span>
+    <span>บันทึกไดอารี่สำเร็จแล้ว ✓</span>
+    <span class="close">✕</span>
+  </div>
+
+  <div class="scroll-content">
+
+    <!-- Title block -->
+    <div class="title-block">
+      <div class="entry-title">วันที่แสนสุข ณ สวนหน้าบ้าน</div>
+      <div class="meta-row">
+        <span class="date-label">วันพฤหัสบดีที่ 18 มิถุนายน 2569</span>
+        <div class="badge">
+          <span class="emoji">🤩</span>
+          <span>ดีมาก</span>
+        </div>
+        <div class="badge location">
+          <span>📍</span>
+          <span>บ้านสวน</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Photos: carousel (multiple) -->
+    <div class="photos-section">
+      <div class="photo-carousel">
+        <div class="photo-card">
+          <div class="photo-placeholder">
+            <span class="ph-icon">🌸</span>
+            <span class="ph-label">รูปที่ 1</span>
+          </div>
+          <div class="photo-overlay"></div>
+        </div>
+        <div class="photo-card">
+          <div class="photo-placeholder">
+            <span class="ph-icon">🐕</span>
+            <span class="ph-label">รูปที่ 2</span>
+          </div>
+          <div class="photo-overlay"></div>
+        </div>
+        <div class="photo-card">
+          <div class="photo-placeholder">
+            <span class="ph-icon">🌿</span>
+            <span class="ph-label">รูปที่ 3</span>
+          </div>
+          <div class="photo-overlay"></div>
+        </div>
+      </div>
+      <!-- Dot indicators -->
+      <div class="dots-row">
+        <div class="dot-ind active"></div>
+        <div class="dot-ind inactive"></div>
+        <div class="dot-ind inactive"></div>
+      </div>
+    </div>
+
+    <!-- Content card -->
+    <div class="section-card">
+      <div class="content-body">
+        <p class="content-text">
+          วันนี้อากาศดีมากครับ ลมพัดเย็นสบาย ออกไปนั่งเล่นที่สวนหน้าบ้านช่วงเช้า เห็นต้นไม้ออกดอกสีม่วงสวยงามมาก
+          น้องหมาวิ่งเล่นอยู่ในสวน ทำให้อารมณ์ดีตลอดวัน รู้สึกว่าช่วงเวลาเล็กๆ แบบนี้คือความสุขที่แท้จริง
+          ไม่ต้องการอะไรมาก แค่มีครอบครัว ต้นไม้ และแสงแดดอ่อนๆ ก็พอแล้ว...
+        </p>
+        <div class="see-more">ดูเพิ่มเติม ▼</div>
+      </div>
+      <!-- Reflection quote -->
+      <div class="reflection-box">
+        <div class="reflection-label">บางความทรงจำ</div>
+        <div class="reflection-text">"วันที่หัวใจยิ้มได้เต็มๆ ✨"</div>
+      </div>
+    </div>
+
+    <!-- Expense card (expanded) -->
+    <div class="section-card" style="margin-top: 12px;">
+      <div class="expense-header">
+        <span>💰</span>
+        <span class="exp-label">ค่าใช้จ่าย</span>
+        <span class="expense-total-inline">285.00฿</span>
+        <span class="expense-chevron">▲</span>
+      </div>
+      <div class="expense-list">
+        <div class="expense-row">
+          <span class="item-name">กาแฟเย็น + ขนมปัง</span>
+          <div class="item-amount">
+            <div class="amount">85.00฿</div>
+            <div class="linked">บันทึกรายจ่ายแล้ว ✓</div>
+          </div>
+        </div>
+        <div class="expense-row">
+          <span class="item-name">ปุ๋ยต้นไม้</span>
+          <div class="item-amount">
+            <div class="amount">120.00฿</div>
+          </div>
+        </div>
+        <div class="expense-row">
+          <span class="item-name">อาหารน้องหมา</span>
+          <div class="item-amount">
+            <div class="amount">80.00฿</div>
+            <div class="linked">บันทึกรายจ่ายแล้ว ✓</div>
+          </div>
+        </div>
+      </div>
+      <div class="expense-footer">
+        <span class="sum-label">รวม</span>
+        <span class="sum-total">285.00฿</span>
+      </div>
+    </div>
+
+    <!-- Bottom CTA -->
+    <div class="new-entry-btn">✏️ บันทึกความทรงจำใหม่</div>
+
+  </div><!-- end scroll-content -->
+</div><!-- end phone #state-main -->
+
+<!-- ═══════════════════════════════════════════════════════
+     STATE 2: Photo Lightbox
+════════════════════════════════════════════════════════ -->
+<div id="state-lightbox" class="phone" style="display:none;">
+  <div class="modal-overlay">
+    <div class="modal-close">✕</div>
+    <div class="modal-photo">🌸</div>
+    <div class="modal-counter">1 / 3</div>
+    <div class="modal-dots">
+      <div class="modal-dot active"></div>
+      <div class="modal-dot inactive"></div>
+      <div class="modal-dot inactive"></div>
+    </div>
+    <div class="modal-nav">
+      <div class="modal-nav-btn" style="background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.3);">‹</div>
+      <div class="modal-nav-btn">›</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     STATE 3: Share Sheet
+════════════════════════════════════════════════════════ -->
+<div id="state-share" class="phone" style="display:none; position:relative; min-height:600px;">
+  <!-- Dimmed background -->
+  <div style="width:100%;height:100%;background:rgba(26,22,48,0.45);position:absolute;top:0;left:0;z-index:1;"></div>
+  <!-- Sheet -->
+  <div style="position:absolute;bottom:0;left:0;right:0;background:#fff;border-top-left-radius:28px;border-top-right-radius:28px;padding:20px 24px 40px;z-index:2;">
+    <div class="share-handle"></div>
+    <div class="share-title">แชร์บันทึก</div>
+    <div class="share-option">
+      <div class="share-icon-wrap">📋</div>
+      <span class="share-label" style="color:#6B6585;">คัดลอกลิงก์</span>
+      <span class="share-chevron">›</span>
+    </div>
+    <div class="share-option">
+      <div class="share-icon-wrap">📱</div>
+      <span class="share-label" style="color:#06C755;">LINE</span>
+      <span class="share-chevron">›</span>
+    </div>
+    <div class="share-option">
+      <div class="share-icon-wrap">💬</div>
+      <span class="share-label" style="color:#1877F2;">Facebook</span>
+      <span class="share-chevron">›</span>
+    </div>
+    <div class="share-option">
+      <div class="share-icon-wrap">📸</div>
+      <span class="share-label" style="color:#D14F86;">บันทึกเป็นรูปภาพ</span>
+      <span class="share-chevron">›</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     Premium Ideas Panel
+════════════════════════════════════════════════════════ -->
+<div class="ideas-panel">
+  <h2>💎 ไอเดีย Premium Version</h2>
+
+  <div class="idea-item">
+    <span class="idea-icon">🎨</span>
+    <div class="idea-text">
+      <strong>Theme ม่วง/ชมพู เหมือนหน้า Home</strong><br>
+      ปัจจุบันหน้า Detail ใช้ Santorini light-blue ซึ่งดูสว่างและสะอาด
+      แต่อาจพิจารณาเพิ่ม gradient header แบบ Pro เพื่อ consistency
+      <br><em>→ ทางเลือก: dark header + light body (เหมือน Instagram Story detail)</em>
+    </div>
+  </div>
+
+  <div class="idea-item">
+    <span class="idea-icon">🌟</span>
+    <div class="idea-text">
+      <strong>Mood Timeline Widget</strong><br>
+      แสดง streak mood ย้อนหลัง 7 วัน เล็กๆ ใต้ title block
+      เพื่อให้เห็น pattern อารมณ์ในบริบทของวันนั้น
+      <br><em>→ เส้น sparkline หรือ dot row สีตาม mood</em>
+    </div>
+  </div>
+
+  <div class="idea-item">
+    <span class="idea-icon">🖼️</span>
+    <div class="idea-text">
+      <strong>Full-bleed Hero Photo</strong><br>
+      รูปแรกขึ้น full-width บน header แบบ editorial พร้อม
+      gradient overlay ให้ text อ่านได้ (แทน carousel ปัจจุบัน)
+      <br><em>→ คล้าย Medium / Apple Photos Memory</em>
+    </div>
+  </div>
+
+  <div class="idea-item">
+    <span class="idea-icon">✍️</span>
+    <div class="idea-text">
+      <strong>AI Reflection Prompt</strong><br>
+      Premium feature: AI แนะนำ prompt เพิ่มเติมจาก content ที่เขียน
+      เพื่อกระตุ้นให้เขียนลึกขึ้น เช่น "คุณรู้สึกแบบนี้บ่อยไหม?"
+      <br><em>→ ใช้ Claude API / on-device model</em>
+    </div>
+  </div>
+
+  <div class="idea-item">
+    <span class="idea-icon">🔒</span>
+    <div class="idea-text">
+      <strong>Lock บันทึกส่วนตัว</strong><br>
+      กด lock icon ที่ header เพื่อซ่อนบันทึกนั้นจาก timeline ปกติ
+      ต้องใช้ biometric/PIN เพื่อเปิด
+      <br><em>→ premium entitlement เปิดใช้ได้</em>
+    </div>
+  </div>
+
+  <div class="idea-item">
+    <span class="idea-icon">📤</span>
+    <div class="idea-text">
+      <strong>Export เป็น PDF / สมุดบันทึก</strong><br>
+      รวมหลาย entry เป็น PDF สวยๆ แชร์หรือปรินต์ได้
+      Premium exclusive feature
+      <br><em>→ ใช้ react-native-print หรือ PDF generation API</em>
+    </div>
+  </div>
+</div>
+
+<script>
+function showState(state) {
+  document.querySelectorAll('.phone').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+  document.getElementById('state-' + state).style.display = 'block';
+  const idx = ['main','lightbox','share'].indexOf(state);
+  document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+}
+</script>
+</body>
+</html>

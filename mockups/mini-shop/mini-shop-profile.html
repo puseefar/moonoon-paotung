@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Mini Shop – Shop Profile (Pro)</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', 'Noto Sans Thai', sans-serif;
+      background: #F3F0FF;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      padding: 24px 0 80px;
+    }
+
+    .phone {
+      width: 375px;
+      min-height: 812px;
+      background: linear-gradient(160deg, #C8E8FF 0%, #D9CCFF 40%, #F0C8FF 100%);
+      border-radius: 40px;
+      box-shadow: 0 24px 64px rgba(120, 60, 220, 0.18);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Status bar */
+    .status-bar {
+      padding: 14px 24px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #4B3A8A;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .status-bar .time { font-size: 15px; font-weight: 700; }
+    .status-icons { display: flex; gap: 6px; align-items: center; font-size: 13px; }
+
+    /* Top section */
+    .top-section {
+      padding: 0 24px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      position: relative;
+    }
+    .blob-top {
+      position: absolute;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(167,139,250,0.3) 0%, transparent 70%);
+      top: -60px; right: -40px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .shop-avatar-wrap { position: relative; z-index: 1; }
+    .shop-avatar {
+      width: 72px; height: 72px;
+      background: linear-gradient(135deg, #7C3AED, #EC4899);
+      border-radius: 22px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px;
+      box-shadow: 0 8px 24px rgba(124,58,237,0.3);
+    }
+    .avatar-edit-btn {
+      position: absolute;
+      bottom: -4px; right: -4px;
+      width: 22px; height: 22px;
+      background: white;
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      cursor: pointer;
+    }
+    .top-label { text-align: center; z-index: 1; }
+    .top-label h2 { font-size: 19px; font-weight: 800; color: #2D1B69; }
+    .top-label p { font-size: 12px; color: #7C5CB8; margin-top: 2px; }
+
+    /* Form card */
+    .form-card {
+      flex: 1;
+      background: rgba(255,255,255,0.72);
+      backdrop-filter: blur(20px);
+      border-radius: 28px 28px 0 0;
+      padding: 20px 18px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      overflow-y: auto;
+    }
+
+    /* Section block */
+    .section-block {
+      margin-bottom: 18px;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1.5px solid rgba(167,139,250,0.2);
+    }
+    .section-icon {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, #7C3AED, #A855F7);
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .section-title-text {
+      font-size: 14px;
+      font-weight: 800;
+      color: #2D1B69;
+      flex: 1;
+    }
+    .section-num {
+      font-size: 10px;
+      font-weight: 700;
+      color: #9B7FC8;
+      background: rgba(124,58,237,0.08);
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-bottom: 12px;
+    }
+    .form-group:last-child { margin-bottom: 0; }
+
+    .label-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .form-label {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #5B21B6;
+    }
+    .required { color: #EC4899; margin-left: 1px; }
+    .visibility-tag {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 6px;
+      margin-left: auto;
+    }
+    .tag-public {
+      background: rgba(16,185,129,0.1);
+      color: #059669;
+      border: 1px solid rgba(16,185,129,0.25);
+    }
+    .tag-private {
+      background: rgba(124,58,237,0.08);
+      color: #6D28D9;
+      border: 1px solid rgba(124,58,237,0.2);
+    }
+    .tag-optional {
+      background: rgba(156,163,175,0.12);
+      color: #6B7280;
+      border: 1px solid rgba(156,163,175,0.25);
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px 14px;
+      background: rgba(255,255,255,0.92);
+      border: 1.5px solid rgba(167,139,250,0.4);
+      border-radius: 12px;
+      font-size: 13.5px;
+      color: #2D1B69;
+      outline: none;
+      font-family: inherit;
+    }
+    .form-input::placeholder { color: #C4B5D8; }
+    .form-input:focus { border-color: #7C3AED; }
+    textarea.form-input {
+      resize: none;
+      height: 72px;
+      line-height: 1.5;
+    }
+
+    /* Shop type pills */
+    .type-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+    }
+    .type-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 12px;
+      background: rgba(255,255,255,0.85);
+      border: 1.5px solid rgba(167,139,250,0.35);
+      border-radius: 11px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #5B21B6;
+      cursor: pointer;
+    }
+    .type-pill.selected {
+      background: rgba(124,58,237,0.08);
+      border-color: #7C3AED;
+      color: #5B21B6;
+    }
+    .type-pill-icon { font-size: 16px; }
+
+    /* Contact row */
+    .contact-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .contact-icon-box {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .ci-phone { background: rgba(59,130,246,0.1); }
+    .ci-line  { background: rgba(6,199,85,0.1); }
+    .ci-fb    { background: rgba(59,89,152,0.1); }
+    .contact-input {
+      flex: 1;
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.92);
+      border: 1.5px solid rgba(167,139,250,0.35);
+      border-radius: 11px;
+      font-size: 13px;
+      color: #2D1B69;
+      outline: none;
+      font-family: inherit;
+    }
+    .contact-input::placeholder { color: #C4B5D8; }
+
+    /* Upload area */
+    .image-upload-area {
+      width: 100%;
+      height: 80px;
+      background: rgba(237,233,254,0.45);
+      border: 2px dashed rgba(124,58,237,0.3);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+    .image-upload-area span { font-size: 12.5px; color: #7C3AED; font-weight: 600; }
+    .image-upload-area small { font-size: 11px; color: #A78BFA; display: block; margin-top: 2px; }
+
+    /* Toggle row (has location / no location) */
+    .toggle-options {
+      display: flex;
+      gap: 8px;
+    }
+    .toggle-opt {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 10px;
+      background: rgba(255,255,255,0.85);
+      border: 1.5px solid rgba(167,139,250,0.35);
+      border-radius: 11px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #7C5CB8;
+      cursor: pointer;
+    }
+    .toggle-opt.selected {
+      background: rgba(124,58,237,0.08);
+      border-color: #7C3AED;
+      color: #5B21B6;
+    }
+
+    /* Location map stub */
+    .map-stub {
+      width: 100%;
+      height: 100px;
+      background: linear-gradient(160deg, #C8E8FF, #D9CCFF);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: 1.5px dashed rgba(124,58,237,0.3);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+    .map-stub::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 18px,
+        rgba(167,139,250,0.15) 18px,
+        rgba(167,139,250,0.15) 19px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 18px,
+        rgba(167,139,250,0.15) 18px,
+        rgba(167,139,250,0.15) 19px
+      );
+    }
+    .map-stub-content { position: relative; z-index: 1; text-align: center; }
+    .map-stub-icon { font-size: 24px; }
+    .map-stub-text { font-size: 12px; font-weight: 700; color: #5B21B6; margin-top: 4px; }
+    .map-stub-sub { font-size: 11px; color: #9B7FC8; }
+
+    .location-btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .location-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 9px;
+      border-radius: 10px;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1.5px solid;
+    }
+    .loc-btn-map {
+      background: rgba(59,130,246,0.07);
+      border-color: rgba(59,130,246,0.3);
+      color: #2563EB;
+    }
+    .loc-btn-gps {
+      background: rgba(16,185,129,0.07);
+      border-color: rgba(16,185,129,0.3);
+      color: #059669;
+    }
+
+    /* Payment type radio */
+    .payment-radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .payment-radio {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 12px;
+      background: rgba(255,255,255,0.85);
+      border: 1.5px solid rgba(167,139,250,0.35);
+      border-radius: 12px;
+      cursor: pointer;
+    }
+    .payment-radio.selected {
+      border-color: #7C3AED;
+      background: rgba(124,58,237,0.06);
+    }
+    .radio-circle {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      border: 2px solid #C4B5D8;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .radio-circle.checked { border-color: #7C3AED; background: #7C3AED; }
+    .radio-dot { width: 7px; height: 7px; background: white; border-radius: 50%; }
+    .radio-icon { font-size: 20px; }
+    .radio-info-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: #2D1B69;
+    }
+    .radio-info-sub {
+      font-size: 11px;
+      color: #9B7FC8;
+      margin-top: 1px;
+    }
+
+    /* PromptPay type sub-radio */
+    .promptpay-type-row {
+      display: flex;
+      gap: 7px;
+      padding: 10px 12px;
+      background: rgba(124,58,237,0.04);
+      border-radius: 10px;
+      border: 1.5px solid rgba(124,58,237,0.15);
+    }
+    .pp-type-opt {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 7px 8px;
+      border-radius: 8px;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1.5px solid rgba(167,139,250,0.35);
+      background: white;
+      color: #7C5CB8;
+    }
+    .pp-type-opt.selected {
+      border-color: #7C3AED;
+      background: rgba(124,58,237,0.09);
+      color: #5B21B6;
+    }
+
+    /* Warning box */
+    .warning-box {
+      display: flex;
+      gap: 8px;
+      padding: 9px 12px;
+      border-radius: 10px;
+      font-size: 11.5px;
+      line-height: 1.5;
+    }
+    .warning-yellow {
+      background: rgba(234,179,8,0.09);
+      border: 1.5px solid rgba(234,179,8,0.3);
+      color: #92400E;
+    }
+    .warning-blue {
+      background: rgba(59,130,246,0.07);
+      border: 1.5px solid rgba(59,130,246,0.25);
+      color: #1E40AF;
+    }
+    .warning-green {
+      background: rgba(16,185,129,0.08);
+      border: 1.5px solid rgba(16,185,129,0.25);
+      color: #065F46;
+    }
+
+    /* Masked preview */
+    .masked-preview {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      background: rgba(237,233,254,0.5);
+      border-radius: 10px;
+      font-size: 12px;
+      color: #5B21B6;
+    }
+    .masked-value {
+      font-weight: 700;
+      font-family: monospace;
+      letter-spacing: 1px;
+    }
+
+    /* Bank dropdown stub */
+    .bank-select {
+      width: 100%;
+      padding: 12px 14px;
+      background: rgba(255,255,255,0.92);
+      border: 1.5px solid rgba(167,139,250,0.4);
+      border-radius: 12px;
+      font-size: 13.5px;
+      color: #2D1B69;
+      outline: none;
+      font-family: inherit;
+      appearance: none;
+      cursor: pointer;
+    }
+
+    /* Visibility choice */
+    .visibility-opts {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .visibility-opt {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 9px;
+      border: 1.5px solid rgba(167,139,250,0.3);
+      background: rgba(255,255,255,0.85);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      color: #5B21B6;
+    }
+    .visibility-opt.selected {
+      border-color: #7C3AED;
+      background: rgba(124,58,237,0.06);
+    }
+    .vis-radio {
+      width: 15px; height: 15px;
+      border-radius: 50%;
+      border: 2px solid #C4B5D8;
+      flex-shrink: 0;
+    }
+    .vis-radio.checked {
+      border-color: #7C3AED;
+      background: #7C3AED;
+      position: relative;
+    }
+    .vis-radio.checked::after {
+      content: '';
+      position: absolute;
+      width: 5px; height: 5px;
+      background: white;
+      border-radius: 50%;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    /* Privacy section */
+    .privacy-block {
+      background: rgba(237,233,254,0.4);
+      border: 1.5px solid rgba(124,58,237,0.2);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 18px;
+    }
+    .privacy-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #2D1B69;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .checkbox-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .checkbox-row:last-child { margin-bottom: 0; }
+    .checkbox-box {
+      width: 18px; height: 18px;
+      background: white;
+      border: 2px solid #A78BFA;
+      border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+      cursor: pointer;
+    }
+    .checkbox-box.checked {
+      background: linear-gradient(135deg, #7C3AED, #A855F7);
+      border-color: #7C3AED;
+      color: white;
+      font-size: 11px;
+    }
+    .checkbox-text {
+      font-size: 12px;
+      color: #4B3A8A;
+      line-height: 1.5;
+    }
+    .privacy-link {
+      font-size: 12px;
+      color: #7C3AED;
+      text-decoration: underline;
+      font-weight: 600;
+      display: block;
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    /* Buttons */
+    .btn-row {
+      display: flex;
+      gap: 12px;
+    }
+    .btn-cancel {
+      flex: 1;
+      padding: 13px;
+      border: 1.5px solid rgba(167,139,250,0.5);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.7);
+      font-size: 14px;
+      font-weight: 600;
+      color: #7C3AED;
+      cursor: pointer;
+    }
+    .btn-primary {
+      flex: 2;
+      padding: 13px;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #7C3AED 0%, #A855F7 50%, #EC4899 100%);
+      color: white;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(124,58,237,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .divider { height: 1px; background: rgba(167,139,250,0.2); margin: 4px 0 16px; }
+  </style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <span class="time">22:14</span>
+    <div class="status-icons">
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="#4B3A8A"><rect x="0" y="3" width="3" height="9" rx="1"/><rect x="4" y="2" width="3" height="10" rx="1"/><rect x="8" y="1" width="3" height="11" rx="1"/><rect x="12" y="0" width="3" height="12" rx="1"/></svg>
+      <svg width="15" height="12" viewBox="0 0 15 12" fill="#4B3A8A"><path d="M7.5 2.5 C10.5 2.5 13 4.5 14 7 L12.5 7 C11.6 5.3 9.7 4 7.5 4 C5.3 4 3.4 5.3 2.5 7 L1 7 C2 4.5 4.5 2.5 7.5 2.5Z"/><path d="M7.5 5.5 C9.3 5.5 10.8 6.5 11.5 8 L10 8 C9.4 7.2 8.5 6.7 7.5 6.7 C6.5 6.7 5.6 7.2 5 8 L3.5 8 C4.2 6.5 5.7 5.5 7.5 5.5Z"/><circle cx="7.5" cy="10" r="1.2"/></svg>
+      <svg width="24" height="12" viewBox="0 0 24 12" fill="none"><rect x="0" y="1" width="20" height="10" rx="2.5" stroke="#4B3A8A" stroke-width="1.2"/><rect x="1.5" y="2.5" width="13" height="7" rx="1.5" fill="#4B3A8A"/><path d="M21.5 4.5 C22.5 4.5 23 5 23 6 C23 7 22.5 7.5 21.5 7.5" stroke="#4B3A8A" stroke-width="1.2" stroke-linecap="round"/></svg>
+    </div>
+  </div>
+
+  <!-- Top section -->
+  <div class="top-section">
+    <div class="blob-top"></div>
+    <div class="shop-avatar-wrap">
+      <div class="shop-avatar">🏪</div>
+      <div class="avatar-edit-btn">✏️</div>
+    </div>
+    <div class="top-label">
+      <h2>ตั้งค่าร้านของคุณ</h2>
+      <p>กรอกข้อมูลเพื่อเปิดร้านได้เลย</p>
+    </div>
+  </div>
+
+  <!-- Form card -->
+  <div class="form-card">
+
+    <!-- ─── SECTION A: ข้อมูลร้าน ─── -->
+    <div class="section-block">
+      <div class="section-header">
+        <div class="section-icon">🏪</div>
+        <div class="section-title-text">ข้อมูลร้าน</div>
+        <div class="section-num">A</div>
+      </div>
+
+      <!-- โลโก้ -->
+      <div class="form-group">
+        <div class="label-row">
+          <span class="form-label">โลโก้ร้าน</span>
+          <span class="visibility-tag tag-public">👁 ลูกค้าเห็น</span>
+        </div>
+        <div class="image-upload-area">
+          <div style="font-size:28px;">🖼️</div>
+          <div>
+            <span>แตะเพื่อเลือกรูปโลโก้</span>
+            <small>PNG, JPG · แนะนำ 500×500px</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- ชื่อร้าน -->
+      <div class="form-group">
+        <div class="label-row">
+          <span class="form-label">ชื่อร้าน<span class="required">*</span></span>
+          <span class="visibility-tag tag-public">👁 ลูกค้าเห็น</span>
+        </div>
+        <input class="form-input" type="text" placeholder="เช่น ร้านหมูนุ่น" />
+      </div>
+
+      <!-- ประเภทร้าน -->
+      <div class="form-group">
+        <div class="label-row">
+          <span class="form-label">ประเภทร้าน<span class="required">*</span></span>
+          <span class="visibility-tag tag-public">👁 ลูกค้าเห็น</span>
+        </div>
+        <div class="type-grid">
+          <div class="type-pill selected"><span class="type-pill-icon">👗</span>เสื้อผ้า / แฟชั่น</div>
+          <div class="type-pill"><span class="type-pill-icon">🏠</span>ของใช้บ้าน</div>
+          <div class="type-pill"><span class="type-pill-icon">🌿</span>เกษตร / สวน</div>
+          <div class="type-pill"><span class="type-pill-icon">✨</span>Homemade</div>
+          <div class="type-pill"><span class="type-pill-icon">♻️</span>สินค้ามือสอง</div>
+          <div class="type-pill"><span class="type-pill-icon">⋯</span>อื่น ๆ</div>
+        </div>
+      </div>
+
+      <!-- รายละเอียด -->
+      <div class="form-group">
+        <div class="label-row">
+          <span class="form-label">รายละเอียดร้าน</span>
+          <span class="visibility-tag tag-public">👁 ลูกค้าเห็น</span>
+        </div>
+        <textarea class="form-input" placeholder="เช่น ร้านจำหน่ายเสื้อผ้า Oversize คุณภาพดี ราคาถูก มีสินค้า Handmade"></textarea>
+      </div>
+
+      <!-- ช่องทางติดต่อ -->
+      <div class="form-group">
+        <div class="label-row">
+          <span class="form-label">ช่องทางติดต่อ</span>
+          <span class="visibility-tag tag-public">👁 ลูกค้าเห็น</span>
+        </div>
+        <div class="contact-row">
+          <div class="contact-icon-box ci-phone">📞</div>
+          <input class="contact-input" type="tel" placeholder="เบอร์โทรติดต่อ เช่น 081-234-5678" />
+        </div>
+        <div class="contact-row">
+          <div class="contact-icon-box ci-line">💬</div>
+          <input class="contact-input" type="text" placeholder="LINE ID หรือ LINE OA (ไม่จำเป็น)" />
+        </div>
+        <div class="contact-row">
+          <div class="contact-icon-box ci-fb">📘</div>
+          <input class="contact-input" type="text" placeholder="Facebook Page (ไม่จำเป็น)" />
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SECTION B: ที่ตั้งร้าน ─── -->
+    <div class="section-block">
+      <div class="section-header">
+        <div class="section-icon">📍</div>
+        <div class="section-title-text">ที่ตั้งร้าน</div>
+        <div class="section-num">B · ไม่จำเป็น</div>
+      </div>
+
+      <div class="form-group">
+        <div class="label-row">
+          <span class="form-label">ลักษณะร้าน</span>
+          <span class="visibility-tag tag-public">👁 ลูกค้าเห็น</span>
+        </div>
+        <div class="toggle-options">
+          <div class="toggle-opt">🛒 ขายออนไลน์ / ไม่มีหน้าร้าน</div>
+          <div class="toggle-opt selected">🏪 มีหน้าร้าน</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <div class="label-row">
+          <span class="form-label">ตำแหน่งร้าน</span>
+          <span class="visibility-tag tag-public">👁 ลูกค้าเห็น</span>
+        </div>
+        <div class="map-stub">
+          <div class="map-stub-content">
+            <div class="map-stub-icon">🗺️</div>
+            <div class="map-stub-text">ยังไม่ได้ปักหมุด</div>
+            <div class="map-stub-sub">กดปุ่มด้านล่างเพื่อเพิ่มตำแหน่ง</div>
+          </div>
+        </div>
+        <div class="location-btn-row">
+          <button class="location-btn loc-btn-map">📌 ปักหมุดบน Maps</button>
+          <button class="location-btn loc-btn-gps">📡 ใช้ GPS ปัจจุบัน</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <div class="label-row">
+          <span class="form-label">ที่อยู่ร้าน (ข้อความ)</span>
+          <span class="visibility-tag tag-optional">ไม่จำเป็น</span>
+        </div>
+        <textarea class="form-input" style="height:60px;" placeholder="เช่น ตำบลเมืองบัว อำเภอชุมพลบุรี จังหวัดสุรินทร์ 32190"></textarea>
+      </div>
+
+      <div class="form-group">
+        <div class="label-row">
+          <span class="form-label">เวลาเปิด-ปิด</span>
+          <span class="visibility-tag tag-optional">ไม่จำเป็น</span>
+        </div>
+        <input class="form-input" type="text" placeholder="เช่น จ.–ศ. 09:00–18:00 น. หรือ ทุกวัน" />
+      </div>
+    </div>
+
+    <!-- ─── SECTION C: ข้อมูลรับเงิน ─── -->
+    <div class="section-block">
+      <div class="section-header">
+        <div class="section-icon">💳</div>
+        <div class="section-title-text">ข้อมูลรับเงิน</div>
+        <div class="section-num">C</div>
+      </div>
+
+      <div class="warning-box warning-blue" style="margin-bottom:12px;">
+        🔒 ข้อมูลส่วนนี้ใช้เพื่อสร้าง QR รับชำระเงิน และแสดงให้ลูกค้าตรวจสอบก่อนโอนเท่านั้น
+      </div>
+
+      <!-- วิธีรับเงิน -->
+      <div class="form-group">
+        <div class="label-row">
+          <span class="form-label">วิธีรับเงินหลัก<span class="required">*</span></span>
+        </div>
+        <div class="payment-radio-group">
+          <div class="payment-radio selected">
+            <div class="radio-circle checked"><div class="radio-dot"></div></div>
+            <div class="radio-icon">🏦</div>
+            <div>
+              <div class="radio-info-label">PromptPay</div>
+              <div class="radio-info-sub">สร้าง QR อัตโนมัติ · ตรวจสลิปได้ทันที</div>
+            </div>
+          </div>
+          <div class="payment-radio">
+            <div class="radio-circle"></div>
+            <div class="radio-icon">🏧</div>
+            <div>
+              <div class="radio-info-label">บัญชีธนาคาร</div>
+              <div class="radio-info-sub">แสดงเลขบัญชีให้ลูกค้าโอน</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PromptPay section (shown when PromptPay selected) -->
+      <div class="form-group">
+        <div class="label-row">
+          <span class="form-label">ประเภท PromptPay<span class="required">*</span></span>
+          <span class="visibility-tag tag-private">🔒 ระบบเท่านั้น</span>
+        </div>
+        <div class="promptpay-type-row">
+          <div class="pp-type-opt selected">📱 เบอร์โทรศัพท์<br><span style="font-size:10px; font-weight:400; color:#9B7FC8;">แนะนำ · 10 หลัก</span></div>
+          <div class="pp-type-opt">🪪 เลขบัตรประชาชน<br><span style="font-size:10px; font-weight:400; color:#9B7FC8;">13 หลัก · ระวัง</span></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <div class="label-row">
+          <span class="form-label">เบอร์ที่ผูก PromptPay<span class="required">*</span></span>
+          <span class="visibility-tag tag-private">🔒 ระบบเท่านั้น</span>
+        </div>
+        <input class="form-input" type="tel" placeholder="เช่น 0812345678" />
+        <div class="masked-preview">
+          <span>แสดงให้ลูกค้าเห็นเป็น →</span>
+          <span class="masked-value">081-XXX-5678</span>
+        </div>
+        <div class="warning-box warning-green" style="margin-top:6px;">
+          ✅ แนะนำใช้เบอร์โทรที่ผูก PromptPay แล้ว เพื่อให้ระบบสร้าง QR ได้ถูกต้อง
+        </div>
+      </div>
+
+      <!-- ชื่อบัญชีรับเงิน -->
+      <div class="form-group">
+        <div class="label-row">
+          <span class="form-label">ชื่อบัญชีรับเงิน<span class="required">*</span></span>
+          <span class="visibility-tag tag-public">👁 ลูกค้าเห็น</span>
+        </div>
+        <input class="form-input" type="text" placeholder="ชื่อ-นามสกุล เจ้าของบัญชี" />
+        <div class="warning-box warning-yellow" style="margin-top:6px;">
+          ⚠️ ชื่อบัญชีจะแสดงให้ลูกค้าตรวจสอบก่อนโอน โปรดกรอกให้ตรงกับบัญชีธนาคารจริง
+        </div>
+      </div>
+
+      <!-- เลขบัญชีธนาคาร (Optional) -->
+      <div class="form-group">
+        <div class="label-row">
+          <span class="form-label">ธนาคาร</span>
+          <span class="visibility-tag tag-optional">ไม่จำเป็น</span>
+        </div>
+        <select class="bank-select">
+          <option value="">เลือกธนาคาร (ถ้ามีบัญชีธนาคารสำรอง)</option>
+          <option>ธนาคารไทยพาณิชย์ (SCB)</option>
+          <option>ธนาคารกสิกรไทย (KBank)</option>
+          <option>ธนาคารกรุงไทย (KTB)</option>
+          <option>ธนาคารกรุงเทพ (BBL)</option>
+          <option>ธนาคารออมสิน</option>
+          <option>ธนาคารอื่น ๆ</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <div class="label-row">
+          <span class="form-label">เลขที่บัญชีธนาคาร</span>
+          <span class="visibility-tag tag-optional">ไม่จำเป็น</span>
+        </div>
+        <input class="form-input" type="text" placeholder="เช่น 123-4-56789-0" />
+      </div>
+
+      <!-- การแสดงข้อมูลรับเงิน -->
+      <div class="form-group">
+        <div class="label-row">
+          <span class="form-label">แสดงข้อมูลรับเงินให้ลูกค้าเห็น</span>
+        </div>
+        <div class="visibility-opts">
+          <div class="visibility-opt selected">
+            <div class="vis-radio checked"></div>
+            แสดง QR PromptPay เท่านั้น (แนะนำ)
+          </div>
+          <div class="visibility-opt">
+            <div class="vis-radio"></div>
+            แสดง QR + ชื่อบัญชี
+          </div>
+          <div class="visibility-opt">
+            <div class="vis-radio"></div>
+            แสดง QR + ชื่อบัญชี + เลขบัญชี
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SECTION D: ยืนยันและความเป็นส่วนตัว ─── -->
+    <div class="privacy-block">
+      <div class="privacy-title">🔐 ยืนยันข้อมูลและความเป็นส่วนตัว</div>
+      <div class="checkbox-row">
+        <div class="checkbox-box checked">✓</div>
+        <div class="checkbox-text">ฉันยืนยันว่าข้อมูลรับเงิน (PromptPay / บัญชีธนาคาร) เป็นของฉัน หรือได้รับอนุญาตให้ใช้</div>
+      </div>
+      <div class="checkbox-row">
+        <div class="checkbox-box checked">✓</div>
+        <div class="checkbox-text">ฉันเข้าใจว่าข้อมูลบางส่วน เช่น ชื่อบัญชีและ QR Code จะถูกแสดงบนหน้าชำระเงินให้ลูกค้าเห็น</div>
+      </div>
+      <div class="checkbox-row">
+        <div class="checkbox-box"></div>
+        <div class="checkbox-text">ฉันได้อ่านและยอมรับ <span style="color:#7C3AED; font-weight:700;">นโยบายความเป็นส่วนตัว (Privacy Policy)</span> เกี่ยวกับการเก็บข้อมูลร้านค้า</div>
+      </div>
+      <a class="privacy-link" href="#">📄 อ่านนโยบายความเป็นส่วนตัว</a>
+    </div>
+
+    <!-- Buttons -->
+    <div class="btn-row">
+      <button class="btn-cancel">ยกเลิก</button>
+      <button class="btn-primary">🏪 เปิดร้าน</button>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

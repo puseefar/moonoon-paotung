@@ -1,7 +1,7 @@
 # Restructure — Reconciliation & Progress Handoff
 
 **Date:** 2026-06-27 · **By:** Claude (exec of `2026-06-27-free-pro-restructure-plan.md`)
-**Status:** Week-2 entitlement layer landed (additive). File reorg (week 1) **deferred** — see §4.
+**Status:** Entitlement layer landed (additive) · WIP committed as 11 commits + tag `pre-restructure-v1` · **docs + mockups reorg DONE** (§4.1–4.2 complete). Remaining = code follow-ups in §4.3.
 
 This records where the restructure plan met reality, what was decided, what was
 built, and exactly what remains.

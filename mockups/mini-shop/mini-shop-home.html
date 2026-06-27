@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Mini Shop – Home</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', 'Noto Sans Thai', sans-serif;
+      background: #F3F0FF;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      padding: 24px 0;
+    }
+
+    .phone {
+      width: 375px;
+      min-height: 812px;
+      background: linear-gradient(160deg, #C8E8FF 0%, #D9CCFF 40%, #F0C8FF 100%);
+      border-radius: 40px;
+      box-shadow: 0 24px 64px rgba(120, 60, 220, 0.18);
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Status bar */
+    .status-bar {
+      width: 100%;
+      padding: 14px 24px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: #4B3A8A;
+      font-weight: 600;
+    }
+    .status-bar .time { font-size: 15px; font-weight: 700; }
+    .status-icons { display: flex; gap: 6px; align-items: center; }
+
+    /* Hero section */
+    .hero {
+      width: 100%;
+      padding: 16px 24px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    /* Decorative blobs */
+    .blob-1 {
+      position: absolute;
+      width: 180px; height: 180px;
+      background: radial-gradient(circle, rgba(167,139,250,0.35) 0%, transparent 70%);
+      top: -40px; right: -20px;
+      border-radius: 50%;
+    }
+    .blob-2 {
+      position: absolute;
+      width: 140px; height: 140px;
+      background: radial-gradient(circle, rgba(236,72,153,0.2) 0%, transparent 70%);
+      top: 80px; left: -30px;
+      border-radius: 50%;
+    }
+
+    /* Shop badge */
+    .shop-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.55);
+      backdrop-filter: blur(12px);
+      border: 1.5px solid rgba(255,255,255,0.8);
+      border-radius: 20px;
+      padding: 6px 16px 6px 8px;
+      margin-bottom: 8px;
+      z-index: 1;
+    }
+    .shop-badge .badge-icon {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, #7C3AED, #EC4899);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+    }
+    .shop-badge span {
+      font-size: 12px;
+      color: #5B21B6;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    /* Shop name */
+    .shop-name {
+      text-align: center;
+      z-index: 1;
+      margin-bottom: 4px;
+    }
+    .shop-name h1 {
+      font-size: 28px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #4C1D95 0%, #7C3AED 50%, #EC4899 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.2;
+    }
+    .shop-name p {
+      font-size: 13px;
+      color: #6D4BB0;
+      margin-top: 4px;
+      opacity: 0.85;
+    }
+
+    /* Character image */
+    .character-wrap {
+      position: relative;
+      width: 240px;
+      height: 240px;
+      z-index: 1;
+      margin: 8px 0 -12px;
+    }
+    .character-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 12px 24px rgba(124,58,237,0.25));
+    }
+    /* Glow under character */
+    .character-glow {
+      position: absolute;
+      bottom: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 160px; height: 30px;
+      background: radial-gradient(ellipse, rgba(124,58,237,0.25) 0%, transparent 70%);
+    }
+
+    /* Card section */
+    .card-section {
+      width: 100%;
+      flex: 1;
+      background: rgba(255,255,255,0.65);
+      backdrop-filter: blur(20px);
+      border-radius: 32px 32px 0 0;
+      padding: 32px 24px 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .card-title {
+      text-align: center;
+    }
+    .card-title h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #2D1B69;
+    }
+    .card-title p {
+      font-size: 13px;
+      color: #7C5CB8;
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+
+    /* Feature pills */
+    .features {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+    }
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255,255,255,0.8);
+      border: 1.5px solid rgba(167,139,250,0.3);
+      border-radius: 16px;
+      padding: 12px 16px;
+    }
+    .feature-icon {
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .fi-1 { background: linear-gradient(135deg, #DDD6FE, #C4B5FD); }
+    .fi-2 { background: linear-gradient(135deg, #FCE7F3, #FBCFE8); }
+    .fi-3 { background: linear-gradient(135deg, #CFFAFE, #A5F3FC); }
+    .feature-text strong {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: #2D1B69;
+    }
+    .feature-text span {
+      font-size: 11.5px;
+      color: #7C5CB8;
+    }
+
+    /* CTA Button */
+    .btn-primary {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #7C3AED 0%, #A855F7 50%, #EC4899 100%);
+      color: white;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(124,58,237,0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform 0.15s;
+      letter-spacing: 0.3px;
+    }
+    .btn-primary:active { transform: scale(0.97); }
+
+    .terms {
+      font-size: 11px;
+      color: #9B7FC8;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <div class="status-bar">
+      <span class="time">22:13</span>
+      <div class="status-icons">
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="#4B3A8A">
+          <rect x="0" y="3" width="3" height="9" rx="1"/>
+          <rect x="4" y="2" width="3" height="10" rx="1"/>
+          <rect x="8" y="1" width="3" height="11" rx="1"/>
+          <rect x="12" y="0" width="3" height="12" rx="1"/>
+        </svg>
+        <svg width="15" height="12" viewBox="0 0 15 12" fill="#4B3A8A">
+          <path d="M7.5 2.5 C10.5 2.5 13 4.5 14 7 L12.5 7 C11.6 5.3 9.7 4 7.5 4 C5.3 4 3.4 5.3 2.5 7 L1 7 C2 4.5 4.5 2.5 7.5 2.5Z"/>
+          <path d="M7.5 5.5 C9.3 5.5 10.8 6.5 11.5 8 L10 8 C9.4 7.2 8.5 6.7 7.5 6.7 C6.5 6.7 5.6 7.2 5 8 L3.5 8 C4.2 6.5 5.7 5.5 7.5 5.5Z"/>
+          <circle cx="7.5" cy="10" r="1.2"/>
+        </svg>
+        <svg width="24" height="12" viewBox="0 0 24 12" fill="none">
+          <rect x="0" y="1" width="20" height="10" rx="2.5" stroke="#4B3A8A" stroke-width="1.2"/>
+          <rect x="1.5" y="2.5" width="13" height="7" rx="1.5" fill="#4B3A8A"/>
+          <path d="M21.5 4.5 C22.5 4.5 23 5 23 6 C23 7 22.5 7.5 21.5 7.5" stroke="#4B3A8A" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="hero">
+      <div class="blob-1"></div>
+      <div class="blob-2"></div>
+
+      <div class="shop-badge">
+        <div class="badge-icon">🏪</div>
+        <span>Mini Shop · Pro</span>
+      </div>
+
+      <div class="shop-name">
+        <h1>ร้านหมูนุ่น<br/>เป๋าตุง</h1>
+        <p>ขายสินค้าออนไลน์ได้ง่ายๆ</p>
+      </div>
+
+      <div class="character-wrap">
+        <img src="../../expense-tracker/assets/characters/moonoon-happy.png" alt="Moonoon" />
+        <div class="character-glow"></div>
+      </div>
+    </div>
+
+    <div class="card-section">
+      <div class="card-title">
+        <h2>เปิดร้านของคุณ</h2>
+        <p>รับชำระผ่าน PromptPay<br/>แจ้งเตือนทาง LINE ทันที</p>
+      </div>
+
+      <div class="features">
+        <div class="feature-item">
+          <div class="feature-icon fi-1">🛍️</div>
+          <div class="feature-text">
+            <strong>เพิ่มสินค้าได้สูงสุด 5 ชิ้น</strong>
+            <span>ตั้งชื่อ ราคา และรูปภาพสินค้า</span>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon fi-2">💳</div>
+          <div class="feature-text">
+            <strong>รับชำระผ่าน PromptPay</strong>
+            <span>QR Code อัตโนมัติ ไม่ต้องพิมพ์เลข</span>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon fi-3">🔔</div>
+          <div class="feature-text">
+            <strong>แจ้งเตือนออเดอร์ทาง LINE</strong>
+            <span>รู้ทันทีเมื่อมีคนสั่งซื้อ</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-primary">
+        🏪 เปิดร้านเลย
+      </button>
+
+      <p class="terms">ฟรีสำหรับผู้ใช้ Pro Package · ไม่มีค่าธรรมเนียม</p>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Mini Shop – Create Product (Pro)</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', 'Noto Sans Thai', sans-serif;
+      background: #F3F0FF;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      padding: 24px 0 80px;
+    }
+
+    .phone {
+      width: 375px;
+      min-height: 812px;
+      background: linear-gradient(160deg, #C8E8FF 0%, #D9CCFF 35%, #F0C8FF 100%);
+      border-radius: 40px;
+      box-shadow: 0 24px 64px rgba(120, 60, 220, 0.18);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Status bar */
+    .status-bar {
+      padding: 14px 24px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #4B3A8A;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .status-bar .time { font-size: 15px; font-weight: 700; }
+    .status-icons { display: flex; gap: 6px; align-items: center; }
+
+    /* Top nav */
+    .top-nav {
+      padding: 4px 20px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .nav-left { display: flex; align-items: center; gap: 10px; }
+    .back-btn {
+      width: 36px; height: 36px;
+      background: rgba(255,255,255,0.6);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      border: 1.5px solid rgba(255,255,255,0.7);
+    }
+    .nav-title { font-size: 16px; font-weight: 700; color: #2D1B69; }
+    .nav-subtitle { font-size: 11px; color: #7C5CB8; margin-top: 1px; }
+    .orders-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: linear-gradient(135deg, #7C3AED, #EC4899);
+      border: none;
+      border-radius: 12px;
+      padding: 7px 12px;
+      color: white;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* Shop info card */
+    .shop-info-card {
+      margin: 0 16px 12px;
+      background: rgba(255,255,255,0.75);
+      backdrop-filter: blur(16px);
+      border-radius: 20px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1.5px solid rgba(255,255,255,0.9);
+      box-shadow: 0 4px 16px rgba(124,58,237,0.1);
+      flex-shrink: 0;
+    }
+    .shop-info-left { display: flex; align-items: center; gap: 10px; }
+    .shop-icon-sm {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, #7C3AED, #EC4899);
+      border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .shop-info-text strong { display: block; font-size: 13px; font-weight: 700; color: #2D1B69; }
+    .shop-info-text span { font-size: 11px; color: #7C5CB8; }
+    .shop-status {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(16,185,129,0.12);
+      border: 1.5px solid rgba(16,185,129,0.3);
+      border-radius: 10px;
+      padding: 5px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #059669;
+    }
+    .status-dot { width: 7px; height: 7px; background: #10B981; border-radius: 50%; }
+
+    /* Product limit bar */
+    .limit-bar {
+      margin: 0 16px 10px;
+      background: rgba(255,255,255,0.6);
+      border-radius: 12px;
+      padding: 8px 12px;
+      flex-shrink: 0;
+    }
+    .limit-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #7C5CB8;
+      margin-bottom: 5px;
+      font-weight: 600;
+    }
+    .progress-bar {
+      height: 5px;
+      background: rgba(167,139,250,0.2);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 20%;
+      background: linear-gradient(90deg, #7C3AED, #EC4899);
+      border-radius: 3px;
+    }
+
+    /* Content area */
+    .content {
+      flex: 1;
+      background: rgba(255,255,255,0.68);
+      backdrop-filter: blur(20px);
+      border-radius: 28px 28px 0 0;
+      overflow-y: auto;
+      padding: 18px 16px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    /* Section block */
+    .section-block {
+      margin-bottom: 16px;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1.5px solid rgba(167,139,250,0.2);
+    }
+    .section-icon {
+      width: 26px; height: 26px;
+      background: linear-gradient(135deg, #7C3AED, #A855F7);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+    .section-title-text {
+      font-size: 14px;
+      font-weight: 800;
+      color: #2D1B69;
+      flex: 1;
+    }
+    .section-badge {
+      font-size: 10px;
+      font-weight: 700;
+      color: #9B7FC8;
+      background: rgba(124,58,237,0.08);
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+
+    /* Form group */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-bottom: 12px;
+    }
+    .form-group:last-child { margin-bottom: 0; }
+    .form-label {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #5B21B6;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .required { color: #EC4899; margin-left: 1px; }
+    .label-hint {
+      font-size: 10px;
+      color: #A78BFA;
+      font-weight: 500;
+      margin-left: auto;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 11px 14px;
+      background: rgba(255,255,255,0.92);
+      border: 1.5px solid rgba(167,139,250,0.35);
+      border-radius: 12px;
+      font-size: 13.5px;
+      color: #2D1B69;
+      outline: none;
+      font-family: inherit;
+    }
+    .form-input::placeholder { color: #C4B5D8; }
+    .form-input:focus { border-color: #7C3AED; }
+
+    textarea.form-input {
+      resize: none;
+      height: 68px;
+      line-height: 1.5;
+    }
+
+    /* ─── IMAGE PICKER ─── */
+    .img-pick-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, rgba(124,58,237,0.08), rgba(236,72,153,0.06));
+      border: 2px dashed rgba(124,58,237,0.35);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+    .img-pick-icon {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, #7C3AED, #EC4899);
+      border-radius: 13px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+    .img-pick-text strong {
+      display: block;
+      font-size: 13px;
+      font-weight: 800;
+      color: #5B21B6;
+    }
+    .img-pick-text span {
+      font-size: 11px;
+      color: #9B7FC8;
+    }
+    .img-pick-arrow {
+      margin-left: auto;
+      font-size: 16px;
+      color: #A78BFA;
+    }
+
+    /* Slots row */
+    .slots-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .img-slot {
+      flex: 1;
+      aspect-ratio: 1;
+      background: rgba(237,233,254,0.55);
+      border: 2px dashed rgba(124,58,237,0.25);
+      border-radius: 13px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      position: relative;
+      cursor: pointer;
+      overflow: hidden;
+    }
+    .img-slot.filled {
+      background: linear-gradient(160deg, #E8D5FF, #D4BBFF);
+      border-style: solid;
+      border-color: rgba(124,58,237,0.3);
+    }
+    .slot-emoji { font-size: 26px; }
+    .slot-plus { font-size: 20px; color: #C4B5D8; }
+    .slot-label { font-size: 9px; color: #C4B5D8; font-weight: 600; }
+    .slot-filled-label { font-size: 9px; color: #7C5CB8; font-weight: 600; }
+
+    /* Cover badge */
+    .cover-badge {
+      position: absolute;
+      top: 4px; left: 4px;
+      background: linear-gradient(135deg, #7C3AED, #EC4899);
+      color: white;
+      font-size: 8px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 5px;
+      letter-spacing: 0.3px;
+    }
+    /* Drag handle */
+    .drag-handle {
+      position: absolute;
+      bottom: 4px; right: 4px;
+      font-size: 10px;
+      color: rgba(124,58,237,0.5);
+    }
+    /* Remove btn */
+    .slot-remove {
+      position: absolute;
+      top: 3px; right: 3px;
+      width: 16px; height: 16px;
+      background: rgba(236,72,153,0.85);
+      color: white;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px;
+      font-weight: 700;
+    }
+
+    .img-hint {
+      font-size: 11px;
+      color: #A78BFA;
+      text-align: center;
+    }
+
+    /* Category pills */
+    .cat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+    }
+    .cat-pill {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 8px 6px;
+      background: rgba(255,255,255,0.85);
+      border: 1.5px solid rgba(167,139,250,0.3);
+      border-radius: 11px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #7C5CB8;
+      cursor: pointer;
+      text-align: center;
+    }
+    .cat-pill.selected {
+      background: rgba(124,58,237,0.08);
+      border-color: #7C3AED;
+      color: #5B21B6;
+    }
+    .cat-pill-icon { font-size: 18px; }
+
+    /* Price row */
+    .price-row {
+      display: flex;
+      gap: 8px;
+    }
+    .price-field {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .price-input-wrap { position: relative; }
+    .price-prefix {
+      position: absolute;
+      left: 12px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 14px;
+      font-weight: 700;
+      color: #7C3AED;
+    }
+    .price-input-wrap .form-input {
+      padding-left: 28px;
+      font-size: 16px;
+      font-weight: 800;
+      color: #2D1B69;
+    }
+    .price-input-wrap .form-input.original {
+      font-size: 13px;
+      font-weight: 600;
+      color: #9B7FC8;
+      text-decoration: line-through;
+    }
+    .discount-preview {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(236,72,153,0.1);
+      border: 1.5px solid rgba(236,72,153,0.25);
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: 800;
+      color: #BE185D;
+      margin-top: 4px;
+      align-self: flex-start;
+    }
+
+    /* Stock counter */
+    .stock-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .stock-label-col { flex: 1; }
+    .stock-label-col .form-label { margin-bottom: 0; }
+    .stock-label-col small { font-size: 11px; color: #A78BFA; }
+    .qty-ctrl {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      border: 1.5px solid rgba(124,58,237,0.3);
+      border-radius: 12px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.9);
+    }
+    .qty-btn {
+      width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      color: #7C3AED;
+      font-weight: 700;
+      background: rgba(124,58,237,0.06);
+      cursor: pointer;
+      border: none;
+      flex-shrink: 0;
+    }
+    .qty-val {
+      width: 48px;
+      text-align: center;
+      font-size: 16px;
+      font-weight: 800;
+      color: #2D1B69;
+    }
+
+    /* Toggle row */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.8);
+      border: 1.5px solid rgba(167,139,250,0.25);
+      border-radius: 12px;
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+    .toggle-row:last-child { margin-bottom: 0; }
+    .toggle-info { flex: 1; }
+    .toggle-name {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #2D1B69;
+    }
+    .toggle-desc {
+      font-size: 11px;
+      color: #9B7FC8;
+      margin-top: 1px;
+    }
+    .toggle-switch {
+      width: 38px; height: 22px;
+      background: rgba(167,139,250,0.3);
+      border-radius: 11px;
+      position: relative;
+      flex-shrink: 0;
+      transition: background 0.2s;
+    }
+    .toggle-switch.on {
+      background: linear-gradient(135deg, #7C3AED, #A855F7);
+    }
+    .toggle-knob {
+      width: 18px; height: 18px;
+      background: white;
+      border-radius: 50%;
+      position: absolute;
+      top: 2px; left: 2px;
+      transition: left 0.2s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    }
+    .toggle-switch.on .toggle-knob { left: 18px; }
+
+    /* Product status radio */
+    .status-radio-group {
+      display: flex;
+      gap: 8px;
+    }
+    .status-radio {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      padding: 10px 8px;
+      background: rgba(255,255,255,0.85);
+      border: 2px solid rgba(167,139,250,0.3);
+      border-radius: 12px;
+      cursor: pointer;
+      text-align: center;
+    }
+    .status-radio.selected {
+      border-color: #7C3AED;
+      background: rgba(124,58,237,0.07);
+    }
+    .status-radio-icon { font-size: 20px; }
+    .status-radio-label {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #2D1B69;
+    }
+    .status-radio-desc {
+      font-size: 10px;
+      color: #9B7FC8;
+    }
+
+    /* Shipping options */
+    .shipping-opt {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.8);
+      border: 1.5px solid rgba(167,139,250,0.25);
+      border-radius: 12px;
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+    .shipping-opt:last-child { margin-bottom: 0; }
+    .shipping-checkbox {
+      width: 18px; height: 18px;
+      background: white;
+      border: 2px solid #A78BFA;
+      border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 11px;
+    }
+    .shipping-checkbox.checked {
+      background: linear-gradient(135deg, #7C3AED, #A855F7);
+      border-color: #7C3AED;
+      color: white;
+    }
+    .shipping-icon { font-size: 18px; flex-shrink: 0; }
+    .shipping-info { flex: 1; }
+    .shipping-name {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #2D1B69;
+    }
+    .shipping-sub {
+      font-size: 11px;
+      color: #9B7FC8;
+      margin-top: 1px;
+    }
+    .shipping-price-input {
+      padding: 6px 10px;
+      background: rgba(255,255,255,0.9);
+      border: 1.5px solid rgba(124,58,237,0.3);
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #2D1B69;
+      width: 70px;
+      text-align: center;
+      font-family: inherit;
+      outline: none;
+    }
+
+    /* Premium hint */
+    .premium-hint {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: linear-gradient(135deg, rgba(250,204,21,0.1), rgba(251,146,60,0.08));
+      border: 1.5px solid rgba(251,146,60,0.25);
+      border-radius: 10px;
+      font-size: 11px;
+      color: #92400E;
+      font-weight: 600;
+    }
+
+    /* Btn row */
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 4px;
+    }
+    .btn-draft {
+      flex: 1;
+      padding: 13px;
+      border: 1.5px solid rgba(167,139,250,0.5);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.75);
+      font-size: 13px;
+      font-weight: 700;
+      color: #7C3AED;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+    .btn-publish {
+      flex: 2;
+      padding: 13px;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #7C3AED 0%, #A855F7 50%, #EC4899 100%);
+      color: white;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(124,58,237,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+  </style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <span class="time">22:15</span>
+    <div class="status-icons">
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="#4B3A8A"><rect x="0" y="3" width="3" height="9" rx="1"/><rect x="4" y="2" width="3" height="10" rx="1"/><rect x="8" y="1" width="3" height="11" rx="1"/><rect x="12" y="0" width="3" height="12" rx="1"/></svg>
+      <svg width="15" height="12" viewBox="0 0 15 12" fill="#4B3A8A"><path d="M7.5 2.5 C10.5 2.5 13 4.5 14 7 L12.5 7 C11.6 5.3 9.7 4 7.5 4 C5.3 4 3.4 5.3 2.5 7 L1 7 C2 4.5 4.5 2.5 7.5 2.5Z"/><path d="M7.5 5.5 C9.3 5.5 10.8 6.5 11.5 8 L10 8 C9.4 7.2 8.5 6.7 7.5 6.7 C6.5 6.7 5.6 7.2 5 8 L3.5 8 C4.2 6.5 5.7 5.5 7.5 5.5Z"/><circle cx="7.5" cy="10" r="1.2"/></svg>
+      <svg width="24" height="12" viewBox="0 0 24 12" fill="none"><rect x="0" y="1" width="20" height="10" rx="2.5" stroke="#4B3A8A" stroke-width="1.2"/><rect x="1.5" y="2.5" width="13" height="7" rx="1.5" fill="#4B3A8A"/><path d="M21.5 4.5 C22.5 4.5 23 5 23 6 C23 7 22.5 7.5 21.5 7.5" stroke="#4B3A8A" stroke-width="1.2" stroke-linecap="round"/></svg>
+    </div>
+  </div>
+
+  <!-- Top nav -->
+  <div class="top-nav">
+    <div class="nav-left">
+      <div class="back-btn">←</div>
+      <div>
+        <div class="nav-title">เพิ่มสินค้าใหม่</div>
+        <div class="nav-subtitle">ร้านหมูนุ่นเป๋าตุง · สินค้าสูงสุด 5 ชิ้น</div>
+      </div>
+    </div>
+    <button class="orders-btn">📦 Orders</button>
+  </div>
+
+  <!-- Shop info + limit bar -->
+  <div class="shop-info-card">
+    <div class="shop-info-left">
+      <div class="shop-icon-sm">🏪</div>
+      <div class="shop-info-text">
+        <strong>หมูนุ่นเป๋าตุง</strong>
+        <span>📞 0923153579</span>
+      </div>
+    </div>
+    <div class="shop-status">
+      <div class="status-dot"></div>
+      เปิดร้าน
+    </div>
+  </div>
+
+  <div class="limit-bar">
+    <div class="limit-label">
+      <span>สินค้า: ใช้ไปแล้ว 1 / 5 ชิ้น</span>
+      <span style="color:#7C3AED; font-weight:800;">20%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill"></div></div>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+
+    <!-- ─── SECTION 1: รูปภาพสินค้า ─── -->
+    <div class="section-block">
+      <div class="section-header">
+        <div class="section-icon">🖼️</div>
+        <div class="section-title-text">รูปภาพสินค้า</div>
+        <div class="section-badge">สูงสุด 3 รูป</div>
+      </div>
+
+      <!-- Gallery picker button -->
+      <div class="img-pick-btn">
+        <div class="img-pick-icon">🖼️</div>
+        <div class="img-pick-text">
+          <strong>เลือกรูปจากแกลเลอรี</strong>
+          <span>เลือกได้หลายรูปพร้อมกัน · กดค้างเพื่อสลับลำดับ</span>
+        </div>
+        <div class="img-pick-arrow">›</div>
+      </div>
+
+      <!-- Slots — slot 1 filled (example), 2-3 empty -->
+      <div class="slots-row">
+        <!-- Slot 1: filled, has cover badge -->
+        <div class="img-slot filled">
+          <div class="slot-emoji">👕</div>
+          <div class="slot-filled-label">รูปที่ 1</div>
+          <div class="cover-badge">★ หน้าปก</div>
+          <div class="drag-handle">⠿</div>
+          <div class="slot-remove">✕</div>
+        </div>
+        <!-- Slot 2: empty -->
+        <div class="img-slot">
+          <div class="slot-plus">＋</div>
+          <div class="slot-label">รูปที่ 2</div>
+        </div>
+        <!-- Slot 3: empty -->
+        <div class="img-slot">
+          <div class="slot-plus">＋</div>
+          <div class="slot-label">รูปที่ 3</div>
+        </div>
+      </div>
+      <div class="img-hint">รูปแรก = หน้าปกสินค้า · กดค้างที่รูปเพื่อสลับลำดับ</div>
+    </div>
+
+    <!-- ─── SECTION 2: ข้อมูลสินค้า ─── -->
+    <div class="section-block">
+      <div class="section-header">
+        <div class="section-icon">📋</div>
+        <div class="section-title-text">ข้อมูลสินค้า</div>
+      </div>
+
+      <div class="form-group">
+        <div class="form-label">ชื่อสินค้า<span class="required">*</span></div>
+        <input class="form-input" type="text" placeholder="เช่น เสื้อยืด Oversize สีพาสเทล" />
+      </div>
+
+      <div class="form-group">
+        <div class="form-label">
+          หมวดหมู่<span class="required">*</span>
+          <span class="label-hint">ช่วยให้ลูกค้าค้นหาสินค้าได้</span>
+        </div>
+        <div class="cat-grid">
+          <div class="cat-pill selected">
+            <div class="cat-pill-icon">👗</div>
+            เสื้อผ้า
+          </div>
+          <div class="cat-pill">
+            <div class="cat-pill-icon">🏠</div>
+            ของบ้าน
+          </div>
+          <div class="cat-pill">
+            <div class="cat-pill-icon">🌿</div>
+            เกษตร
+          </div>
+          <div class="cat-pill">
+            <div class="cat-pill-icon">✨</div>
+            Homemade
+          </div>
+          <div class="cat-pill">
+            <div class="cat-pill-icon">♻️</div>
+            มือสอง
+          </div>
+          <div class="cat-pill">
+            <div class="cat-pill-icon">⋯</div>
+            อื่น ๆ
+          </div>
+        </div>
+        <div class="premium-hint">
+          ⭐ Premium: สร้างหมวดหมู่เองได้ไม่จำกัด
+        </div>
+      </div>
+
+      <div class="form-group">
+        <div class="form-label">รายละเอียดสินค้า</div>
+        <textarea class="form-input" placeholder="เช่น ผ้าคอตตอน 100% นุ่มใส่สบาย มีหลายสี Free size รอบอก 38-46 นิ้ว"></textarea>
+      </div>
+    </div>
+
+    <!-- ─── SECTION 3: ราคา ─── -->
+    <div class="section-block">
+      <div class="section-header">
+        <div class="section-icon">💰</div>
+        <div class="section-title-text">ราคา</div>
+      </div>
+
+      <div class="price-row">
+        <div class="price-field">
+          <div class="form-label">ราคาขาย<span class="required">*</span></div>
+          <div class="price-input-wrap">
+            <span class="price-prefix">฿</span>
+            <input class="form-input" type="number" placeholder="199" />
+          </div>
+        </div>
+        <div class="price-field">
+          <div class="form-label">
+            ราคาเดิม
+            <span class="label-hint">ถ้ามีส่วนลด</span>
+          </div>
+          <div class="price-input-wrap">
+            <span class="price-prefix" style="color:#C4B5D8;">฿</span>
+            <input class="form-input original" type="number" placeholder="350" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Discount preview (shows when both prices filled) -->
+      <div class="discount-preview">
+        🏷️ แสดงเป็น: ลด 43% บนหน้าสินค้า
+      </div>
+    </div>
+
+    <!-- ─── SECTION 4: สต็อก & สถานะ ─── -->
+    <div class="section-block">
+      <div class="section-header">
+        <div class="section-icon">📦</div>
+        <div class="section-title-text">สต็อก & สถานะ</div>
+      </div>
+
+      <!-- จำนวนในคลัง -->
+      <div class="form-group">
+        <div class="stock-row">
+          <div class="stock-label-col">
+            <div class="form-label">จำนวนในคลัง<span class="required">*</span></div>
+            <small>ระบบจะนับออเดอร์ที่จ่ายแล้วโดยอัตโนมัติ</small>
+          </div>
+          <div class="qty-ctrl">
+            <button class="qty-btn">−</button>
+            <span class="qty-val">10</span>
+            <button class="qty-btn">+</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toggles -->
+      <div class="toggle-row">
+        <div class="shipping-icon">🔔</div>
+        <div class="toggle-info">
+          <div class="toggle-name">แจ้งเตือนเมื่อสินค้าเหลือน้อย</div>
+          <div class="toggle-desc">แจ้งเตือนเมื่อเหลือ ≤ 3 ชิ้น</div>
+        </div>
+        <div class="toggle-switch on"><div class="toggle-knob"></div></div>
+      </div>
+
+      <div class="toggle-row">
+        <div class="shipping-icon">🙈</div>
+        <div class="toggle-info">
+          <div class="toggle-name">ซ่อนสินค้าเมื่อสต็อกหมด</div>
+          <div class="toggle-desc">ซ่อนจากหน้าร้านอัตโนมัติเมื่อ = 0</div>
+        </div>
+        <div class="toggle-switch"><div class="toggle-knob"></div></div>
+      </div>
+
+      <!-- สถานะสินค้า -->
+      <div class="form-group" style="margin-top:12px;">
+        <div class="form-label">สถานะเมื่อบันทึก</div>
+        <div class="status-radio-group">
+          <div class="status-radio selected">
+            <div class="status-radio-icon">🟢</div>
+            <div class="status-radio-label">เปิดขายทันที</div>
+            <div class="status-radio-desc">ลูกค้าเห็นได้เลย</div>
+          </div>
+          <div class="status-radio">
+            <div class="status-radio-icon">📝</div>
+            <div class="status-radio-label">บันทึกเป็นร่าง</div>
+            <div class="status-radio-desc">ยังไม่แสดงร้าน</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SECTION 5: การจัดส่ง ─── -->
+    <div class="section-block">
+      <div class="section-header">
+        <div class="section-icon">🚚</div>
+        <div class="section-title-text">การจัดส่ง</div>
+        <div class="section-badge">เลือกได้หลายแบบ</div>
+      </div>
+
+      <div class="shipping-opt">
+        <div class="shipping-checkbox checked">✓</div>
+        <div class="shipping-icon">🎁</div>
+        <div class="shipping-info">
+          <div class="shipping-name">ส่งฟรี</div>
+          <div class="shipping-sub">ดูดีในสายตาลูกค้า</div>
+        </div>
+      </div>
+
+      <div class="shipping-opt">
+        <div class="shipping-checkbox checked">✓</div>
+        <div class="shipping-icon">📦</div>
+        <div class="shipping-info">
+          <div class="shipping-name">ค่าส่งคงที่</div>
+          <div class="shipping-sub">กำหนดราคาตายตัว</div>
+        </div>
+        <input class="shipping-price-input" type="number" placeholder="฿40" />
+      </div>
+
+      <div class="shipping-opt">
+        <div class="shipping-checkbox"></div>
+        <div class="shipping-icon">🤝</div>
+        <div class="shipping-info">
+          <div class="shipping-name">นัดรับเอง / ไม่จัดส่ง</div>
+          <div class="shipping-sub">ติดต่อนัดผ่าน LINE/โทร</div>
+        </div>
+      </div>
+
+      <!-- COD toggle -->
+      <div class="toggle-row" style="margin-top:8px;">
+        <div class="shipping-icon">💵</div>
+        <div class="toggle-info">
+          <div class="toggle-name">รับชำระเงินปลายทาง (COD)</div>
+          <div class="toggle-desc">ลูกค้าจ่ายเมื่อรับของ</div>
+        </div>
+        <div class="toggle-switch"><div class="toggle-knob"></div></div>
+      </div>
+    </div>
+
+    <!-- Buttons -->
+    <div class="btn-row">
+      <button class="btn-draft">📝 บันทึกร่าง</button>
+      <button class="btn-publish">✅ เพิ่มสินค้า · เปิดขาย</button>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

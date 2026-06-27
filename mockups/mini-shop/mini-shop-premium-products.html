@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Mini Shop – Premium Products (Future)</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', 'Noto Sans Thai', sans-serif;
+      background: #F3F0FF;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      padding: 24px 0;
+    }
+
+    .phone {
+      width: 375px;
+      min-height: 812px;
+      background: #F8F5FF;
+      border-radius: 40px;
+      box-shadow: 0 24px 64px rgba(120, 60, 220, 0.18);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top bar */
+    .top-bar {
+      background: linear-gradient(145deg, #4C1D95, #6D28D9);
+      padding: 44px 20px 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .top-bar::before {
+      content: '';
+      position: absolute;
+      width: 180px; height: 180px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 50%;
+      top: -60px; right: -30px;
+    }
+
+    .search-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+      z-index: 1;
+    }
+    .search-field {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.18);
+      border: 1.5px solid rgba(255,255,255,0.3);
+      border-radius: 14px;
+      padding: 10px 14px;
+    }
+    .search-field span { font-size: 14px; }
+    .search-field input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: white;
+      font-size: 13.5px;
+      font-family: inherit;
+      width: 100%;
+    }
+    .search-field input::placeholder { color: rgba(255,255,255,0.6); }
+
+    .filter-btn {
+      width: 40px; height: 40px;
+      background: rgba(255,255,255,0.18);
+      border: 1.5px solid rgba(255,255,255,0.3);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .category-title-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 14px;
+      position: relative;
+      z-index: 1;
+    }
+    .category-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: white;
+    }
+    .sort-btn {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 10px;
+      padding: 5px 10px;
+      color: rgba(255,255,255,0.85);
+      font-size: 11.5px;
+      font-weight: 600;
+    }
+
+    /* Premium badge banner */
+    .premium-banner {
+      margin: 16px;
+      background: linear-gradient(135deg, #F59E0B 0%, #EF4444 50%, #EC4899 100%);
+      border-radius: 18px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 6px 20px rgba(239,68,68,0.25);
+    }
+    .premium-icon { font-size: 28px; }
+    .premium-text strong {
+      display: block;
+      font-size: 13px;
+      font-weight: 800;
+      color: white;
+    }
+    .premium-text span {
+      font-size: 11px;
+      color: rgba(255,255,255,0.85);
+    }
+    .premium-tag {
+      margin-left: auto;
+      background: rgba(255,255,255,0.25);
+      border: 1px solid rgba(255,255,255,0.4);
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-size: 10px;
+      font-weight: 800;
+      color: white;
+      letter-spacing: 0.5px;
+    }
+
+    /* Content */
+    .content {
+      flex: 1;
+      padding: 4px 16px 24px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Filter row */
+    .filter-row {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 4px 0;
+    }
+    .filter-row::-webkit-scrollbar { display: none; }
+    .filter-chip {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .filter-chip.active {
+      background: linear-gradient(135deg, #7C3AED, #A855F7);
+      color: white;
+    }
+    .filter-chip:not(.active) {
+      background: white;
+      color: #5B21B6;
+      border: 1.5px solid rgba(167,139,250,0.3);
+    }
+
+    /* Products grid - 2 col */
+    .products-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .product-card {
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 3px 12px rgba(100,60,200,0.08);
+      cursor: pointer;
+    }
+
+    .product-img {
+      width: 100%;
+      height: 116px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 44px;
+      position: relative;
+    }
+    .pi-1 { background: linear-gradient(135deg, #EDE9FE, #DDD6FE); }
+    .pi-2 { background: linear-gradient(135deg, #FCE7F3, #FBCFE8); }
+    .pi-3 { background: linear-gradient(135deg, #CFFAFE, #A5F3FC); }
+    .pi-4 { background: linear-gradient(135deg, #FEF3C7, #FDE68A); }
+    .pi-5 { background: linear-gradient(135deg, #D1FAE5, #A7F3D0); }
+    .pi-6 { background: linear-gradient(135deg, #FEE2E2, #FECACA); }
+    .pi-7 { background: linear-gradient(135deg, #E0E7FF, #C7D2FE); }
+    .pi-8 { background: linear-gradient(135deg, #F5F3FF, #EDE9FE); }
+
+    .heart-btn {
+      position: absolute;
+      top: 8px; right: 8px;
+      width: 26px; height: 26px;
+      background: rgba(255,255,255,0.85);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .card-badge {
+      position: absolute;
+      top: 8px; left: 8px;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 3px 6px;
+      border-radius: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .badge-new { background: #7C3AED; color: white; }
+    .badge-hot { background: #EF4444; color: white; }
+    .badge-sale { background: #F59E0B; color: white; }
+    .badge-limit { background: #10B981; color: white; }
+
+    .card-body {
+      padding: 9px 10px 11px;
+    }
+    .card-name {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #2D1B69;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .card-desc {
+      font-size: 10.5px;
+      color: #A78BFA;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .card-stars {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      margin-top: 4px;
+    }
+    .star { font-size: 10px; }
+    .star-count { font-size: 10px; color: #B8A5E0; margin-left: 3px; }
+    .card-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 6px;
+    }
+    .card-price {
+      font-size: 14px;
+      font-weight: 800;
+      color: #7C3AED;
+    }
+    .card-price-orig {
+      font-size: 10px;
+      color: #C4B5E0;
+      text-decoration: line-through;
+      margin-left: 3px;
+    }
+    .cart-btn {
+      width: 26px; height: 26px;
+      background: linear-gradient(135deg, #7C3AED, #EC4899);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+      color: white;
+    }
+
+    /* Load more */
+    .load-more {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 14px;
+      background: white;
+      border-radius: 14px;
+      border: 1.5px solid rgba(167,139,250,0.3);
+      color: #7C3AED;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* Bottom nav */
+    .bottom-nav {
+      display: flex;
+      justify-content: space-around;
+      padding: 10px 20px 18px;
+      background: white;
+      border-top: 1px solid rgba(167,139,250,0.2);
+      flex-shrink: 0;
+    }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      cursor: pointer;
+      position: relative;
+    }
+    .nav-icon { font-size: 20px; }
+    .nav-label { font-size: 10px; color: #C4B5E0; }
+    .nav-item.active .nav-label { color: #7C3AED; }
+    .nav-badge {
+      position: absolute;
+      top: -2px; right: -6px;
+      width: 14px; height: 14px;
+      background: #EC4899;
+      border-radius: 7px;
+      font-size: 9px;
+      font-weight: 800;
+      color: white;
+      display: flex; align-items: center; justify-content: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <div class="top-bar">
+      <div class="search-row">
+        <div class="search-field">
+          <span>🔍</span>
+          <input type="text" placeholder="ค้นหาสินค้า..." value="สินค้าทั้งหมด" />
+        </div>
+        <div class="filter-btn">⚙️</div>
+      </div>
+      <div class="category-title-wrap">
+        <div class="category-title">สินค้าทั้งหมด</div>
+        <div class="sort-btn">เรียงตาม ▾</div>
+      </div>
+    </div>
+
+    <!-- Premium notice -->
+    <div class="premium-banner">
+      <div class="premium-icon">👑</div>
+      <div class="premium-text">
+        <strong>Premium Version · สินค้าไม่จำกัด</strong>
+        <span>เพิ่มสินค้าได้ไม่จำกัดจำนวน</span>
+      </div>
+      <div class="premium-tag">PREMIUM</div>
+    </div>
+
+    <div class="content">
+      <!-- Filter chips -->
+      <div class="filter-row">
+        <div class="filter-chip active">ทั้งหมด (12)</div>
+        <div class="filter-chip">🍜 อาหาร (4)</div>
+        <div class="filter-chip">🧁 ขนม (3)</div>
+        <div class="filter-chip">🥤 เครื่องดื่ม (3)</div>
+        <div class="filter-chip">🎁 Gift (2)</div>
+      </div>
+
+      <!-- Products grid -->
+      <div class="products-grid">
+        <div class="product-card">
+          <div class="product-img pi-1">
+            🍜
+            <div class="heart-btn">🤍</div>
+            <div class="card-badge badge-new">NEW</div>
+          </div>
+          <div class="card-body">
+            <div class="card-name">ผัดไทยกุ้งสด</div>
+            <div class="card-desc">กุ้งสด เส้นนุ่ม</div>
+            <div class="card-stars">
+              <span class="star">⭐</span><span class="star">⭐</span><span class="star">⭐</span><span class="star">⭐</span><span class="star">⭐</span>
+              <span class="star-count">(24)</span>
+            </div>
+            <div class="card-bottom">
+              <div><span class="card-price">฿65</span><span class="card-price-orig">฿80</span></div>
+              <div class="cart-btn">🛒</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="product-card">
+          <div class="product-img pi-2">
+            🧁
+            <div class="heart-btn">❤️</div>
+            <div class="card-badge badge-sale">-20%</div>
+          </div>
+          <div class="card-body">
+            <div class="card-name">ขนมครีมสตรอว์</div>
+            <div class="card-desc">ครีมสด หอม</div>
+            <div class="card-stars">
+              <span class="star">⭐</span><span class="star">⭐</span><span class="star">⭐</span><span class="star">⭐</span>
+              <span class="star-count">(18)</span>
+            </div>
+            <div class="card-bottom">
+              <div><span class="card-price">฿45</span><span class="card-price-orig">฿55</span></div>
+              <div class="cart-btn">🛒</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="product-card">
+          <div class="product-img pi-3">
+            🥤
+            <div class="heart-btn">🤍</div>
+            <div class="card-badge badge-hot">HOT</div>
+          </div>
+          <div class="card-body">
+            <div class="card-name">ชาไทยเย็น</div>
+            <div class="card-desc">นมข้นหวาน</div>
+            <div class="card-stars">
+              <span class="star">⭐</span><span class="star">⭐</span><span class="star">⭐</span><span class="star">⭐</span><span class="star">⭐</span>
+              <span class="star-count">(56)</span>
+            </div>
+            <div class="card-bottom">
+              <div><span class="card-price">฿35</span></div>
+              <div class="cart-btn">🛒</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="product-card">
+          <div class="product-img pi-4">
+            🍱
+            <div class="heart-btn">🤍</div>
+          </div>
+          <div class="card-body">
+            <div class="card-name">ข้าวกล่องพิเศษ</div>
+            <div class="card-desc">กับข้าว 3 อย่าง</div>
+            <div class="card-stars">
+              <span class="star">⭐</span><span class="star">⭐</span><span class="star">⭐</span><span class="star">⭐</span>
+              <span class="star-count">(12)</span>
+            </div>
+            <div class="card-bottom">
+              <div><span class="card-price">฿80</span></div>
+              <div class="cart-btn">🛒</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="product-card">
+          <div class="product-img pi-5">
+            🥗
+            <div class="heart-btn">🤍</div>
+            <div class="card-badge badge-limit">LIMITED</div>
+          </div>
+          <div class="card-body">
+            <div class="card-name">สลัดผักออร์แกนิค</div>
+            <div class="card-desc">สด ใหม่ทุกวัน</div>
+            <div class="card-stars">
+              <span class="star">⭐</span><span class="star">⭐</span><span class="star">⭐</span><span class="star">⭐</span>
+              <span class="star-count">(8)</span>
+            </div>
+            <div class="card-bottom">
+              <div><span class="card-price">฿55</span></div>
+              <div class="cart-btn">🛒</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="product-card">
+          <div class="product-img pi-6">
+            🍦
+            <div class="heart-btn">❤️</div>
+            <div class="card-badge badge-new">NEW</div>
+          </div>
+          <div class="card-body">
+            <div class="card-name">ไอศครีมโฮมเมด</div>
+            <div class="card-desc">หลากรส หอมมัน</div>
+            <div class="card-stars">
+              <span class="star">⭐</span><span class="star">⭐</span><span class="star">⭐</span><span class="star">⭐</span><span class="star">⭐</span>
+              <span class="star-count">(31)</span>
+            </div>
+            <div class="card-bottom">
+              <div><span class="card-price">฿40</span></div>
+              <div class="cart-btn">🛒</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="product-card">
+          <div class="product-img pi-7">
+            🧇
+            <div class="heart-btn">🤍</div>
+          </div>
+          <div class="card-body">
+            <div class="card-name">วาฟเฟิลครีม</div>
+            <div class="card-desc">ทอดสด กรอบนอกนุ่มใน</div>
+            <div class="card-stars">
+              <span class="star">⭐</span><span class="star">⭐</span><span class="star">⭐</span><span class="star">⭐</span>
+              <span class="star-count">(15)</span>
+            </div>
+            <div class="card-bottom">
+              <div><span class="card-price">฿50</span><span class="card-price-orig">฿60</span></div>
+              <div class="cart-btn">🛒</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="product-card">
+          <div class="product-img pi-8">
+            🎁
+            <div class="heart-btn">🤍</div>
+            <div class="card-badge badge-sale">GIFT</div>
+          </div>
+          <div class="card-body">
+            <div class="card-name">เซ็ตของขวัญ</div>
+            <div class="card-desc">3 ชิ้น พร้อมกล่อง</div>
+            <div class="card-stars">
+              <span class="star">⭐</span><span class="star">⭐</span><span class="star">⭐</span><span class="star">⭐</span><span class="star">⭐</span>
+              <span class="star-count">(7)</span>
+            </div>
+            <div class="card-bottom">
+              <div><span class="card-price">฿199</span></div>
+              <div class="cart-btn">🛒</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="load-more">
+        โหลดสินค้าเพิ่มเติม (4 รายการ) →
+      </div>
+    </div>
+
+    <div class="bottom-nav">
+      <div class="nav-item">
+        <div class="nav-icon">🏠</div>
+        <div class="nav-label">หน้าแรก</div>
+      </div>
+      <div class="nav-item active">
+        <div class="nav-icon">🛍️</div>
+        <div class="nav-label">สินค้า</div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">🛒</div>
+        <div class="nav-label">ตะกร้า</div>
+        <div class="nav-badge">3</div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">📦</div>
+        <div class="nav-label">ออเดอร์</div>
+        <div class="nav-badge">1</div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">👤</div>
+        <div class="nav-label">โปรไฟล์</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Mini Shop – Sale Page (Pro)</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', 'Noto Sans Thai', sans-serif;
+      background: #F3F0FF;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      padding: 24px 0 80px;
+    }
+
+    .phone {
+      width: 375px;
+      min-height: 812px;
+      background: #F8F5FF;
+      border-radius: 40px;
+      box-shadow: 0 24px 64px rgba(120,60,220,0.18);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ─── Header ─── */
+    .header {
+      background: linear-gradient(145deg, #6D28D9 0%, #8B5CF6 50%, #A855F7 100%);
+      padding: 44px 18px 20px;
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .header::before {
+      content: '';
+      position: absolute;
+      width: 200px; height: 200px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 50%;
+      top: -60px; right: -40px;
+    }
+    .header::after {
+      content: '';
+      position: absolute;
+      width: 120px; height: 120px;
+      background: rgba(236,72,153,0.18);
+      border-radius: 50%;
+      bottom: -30px; left: 20px;
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      position: relative;
+      z-index: 1;
+    }
+    .shop-header-info { display: flex; align-items: center; gap: 10px; }
+    .shop-icon-hd {
+      width: 42px; height: 42px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      border: 1.5px solid rgba(255,255,255,0.3);
+    }
+    .shop-hd-name { font-size: 16px; font-weight: 800; color: white; }
+    .shop-hd-sub { font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 1px; }
+    .header-icons { display: flex; gap: 7px; }
+    .hd-icon-btn {
+      width: 34px; height: 34px;
+      background: rgba(255,255,255,0.18);
+      border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.25);
+    }
+
+    /* Search */
+    .search-wrap { position: relative; z-index: 1; }
+    .search-bar {
+      width: 100%;
+      padding: 10px 16px 10px 38px;
+      background: rgba(255,255,255,0.2);
+      border: 1.5px solid rgba(255,255,255,0.35);
+      border-radius: 13px;
+      font-size: 13px;
+      color: white;
+      outline: none;
+      font-family: inherit;
+      backdrop-filter: blur(8px);
+    }
+    .search-bar::placeholder { color: rgba(255,255,255,0.6); }
+    .search-icon {
+      position: absolute;
+      left: 12px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 14px;
+      opacity: 0.7;
+    }
+
+    /* ─── Fast Share Owner Panel ─── */
+    .share-panel {
+      background: white;
+      padding: 10px 16px 12px;
+      border-bottom: 1px solid #F0EAF8;
+      flex-shrink: 0;
+    }
+    .share-panel-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: #9B7FC8;
+      letter-spacing: 0.3px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .share-panel-label::after {
+      content: '· ลิงก์ร้านของคุณ';
+      font-weight: 500;
+      color: #C4B5D8;
+      font-size: 10px;
+    }
+    .share-url-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 8px;
+    }
+    .share-url-box {
+      flex: 1;
+      padding: 7px 10px;
+      background: #F8F5FF;
+      border: 1.5px solid rgba(124,58,237,0.2);
+      border-radius: 8px;
+      font-size: 11px;
+      color: #7C5CB8;
+      font-family: monospace;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .btn-copy-link {
+      padding: 7px 12px;
+      background: rgba(124,58,237,0.1);
+      border: 1.5px solid rgba(124,58,237,0.25);
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #6D28D9;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .share-btns-row {
+      display: flex;
+      gap: 7px;
+    }
+    .share-social-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-line { background: #06C755; color: white; }
+    .btn-facebook { background: #1877F2; color: white; }
+    .btn-qr {
+      background: rgba(124,58,237,0.1);
+      color: #6D28D9;
+      border: 1.5px solid rgba(124,58,237,0.25) !important;
+    }
+
+    /* ─── Scrollable content ─── */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 14px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    /* ─── Banner carousel ─── */
+    .banner {
+      width: 100%;
+      height: 128px;
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+    .banner-promo {
+      background: linear-gradient(135deg, #4C1D95 0%, #7C3AED 55%, #EC4899 100%);
+    }
+    .banner::before {
+      content: '';
+      position: absolute;
+      width: 110px; height: 110px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 50%;
+      right: 50px; top: -20px;
+    }
+    .banner-text .promo-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: rgba(255,255,255,0.8);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .banner-text .promo-main {
+      font-size: 24px;
+      font-weight: 900;
+      color: white;
+      line-height: 1.1;
+      margin-top: 3px;
+    }
+    .banner-text .promo-sub {
+      font-size: 11px;
+      color: rgba(255,255,255,0.75);
+      margin-top: 4px;
+    }
+    .banner-badge {
+      background: rgba(255,255,255,0.25);
+      border: 1.5px solid rgba(255,255,255,0.4);
+      border-radius: 12px;
+      padding: 8px 12px;
+      text-align: center;
+      z-index: 1;
+      flex-shrink: 0;
+    }
+    .badge-num { font-size: 20px; font-weight: 900; color: white; }
+    .badge-label { font-size: 10px; color: rgba(255,255,255,0.8); margin-top: 1px; }
+
+    .banner-dots {
+      display: flex;
+      justify-content: center;
+      gap: 5px;
+      margin-top: 8px;
+    }
+    .dot {
+      width: 6px; height: 6px;
+      border-radius: 3px;
+      background: rgba(124,58,237,0.2);
+    }
+    .dot.active {
+      width: 18px;
+      background: linear-gradient(90deg, #7C3AED, #EC4899);
+    }
+
+    /* ─── Section header ─── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .section-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #2D1B69;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .section-count {
+      font-size: 11px;
+      font-weight: 600;
+      color: #A78BFA;
+      background: rgba(124,58,237,0.08);
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+    .view-all {
+      font-size: 12px;
+      color: #7C3AED;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* ─── Category tabs ─── */
+    .categories {
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding-bottom: 2px;
+    }
+    .categories::-webkit-scrollbar { display: none; }
+    .cat-tab {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+      flex-shrink: 0;
+      border: 1.5px solid transparent;
+    }
+    .cat-tab.active {
+      background: linear-gradient(135deg, #7C3AED, #A855F7);
+      color: white;
+    }
+    .cat-tab:not(.active) {
+      background: white;
+      color: #5B21B6;
+      border-color: rgba(167,139,250,0.3);
+    }
+
+    /* ─── Best Seller highlight ─── */
+    .bestseller-card {
+      background: linear-gradient(135deg, #4C1D95 0%, #6D28D9 100%);
+      border-radius: 18px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+    .bestseller-card::before {
+      content: '';
+      position: absolute;
+      width: 100px; height: 100px;
+      background: rgba(236,72,153,0.2);
+      border-radius: 50%;
+      right: -20px; top: -20px;
+    }
+    .bestseller-thumb {
+      width: 72px; height: 72px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px;
+      flex-shrink: 0;
+      border: 1.5px solid rgba(255,255,255,0.25);
+      z-index: 1;
+    }
+    .bestseller-info { flex: 1; z-index: 1; }
+    .bestseller-crown { font-size: 11px; color: #FDE68A; font-weight: 700; margin-bottom: 3px; }
+    .bestseller-name { font-size: 15px; font-weight: 800; color: white; margin-bottom: 4px; }
+    .bestseller-price { font-size: 18px; font-weight: 900; color: #FDE68A; }
+    .bestseller-sold { font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 2px; }
+    .bestseller-btn {
+      z-index: 1;
+      flex-shrink: 0;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.2);
+      border: 1.5px solid rgba(255,255,255,0.35);
+      border-radius: 12px;
+      color: white;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    /* ─── Products grid ─── */
+    .products-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 11px;
+    }
+
+    .product-card {
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 3px 14px rgba(100,60,200,0.07);
+      cursor: pointer;
+      position: relative;
+    }
+    .product-img {
+      width: 100%;
+      height: 118px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      position: relative;
+    }
+    .pi-purple { background: linear-gradient(135deg, #EDE9FE, #DDD6FE); }
+    .pi-pink   { background: linear-gradient(135deg, #FCE7F3, #FBCFE8); }
+    .pi-green  { background: linear-gradient(135deg, #D1FAE5, #A7F3D0); }
+    .pi-yellow { background: linear-gradient(135deg, #FEF3C7, #FDE68A); }
+    .pi-gray   { background: linear-gradient(135deg, #F3F4F6, #E5E7EB); filter: grayscale(0.4); }
+
+    .wishlist-btn {
+      position: absolute;
+      top: 7px; right: 7px;
+      width: 26px; height: 26px;
+      background: rgba(255,255,255,0.85);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    /* Status badges */
+    .prod-badge {
+      position: absolute;
+      top: 7px; left: 7px;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 3px 7px;
+      border-radius: 6px;
+      letter-spacing: 0.3px;
+    }
+    .badge-sale     { background: linear-gradient(135deg, #EC4899, #F472B6); color: white; }
+    .badge-new      { background: linear-gradient(135deg, #7C3AED, #A855F7); color: white; }
+    .badge-hot      { background: linear-gradient(135deg, #F59E0B, #F97316); color: white; }
+    .badge-rec      { background: rgba(59,130,246,0.85); color: white; }
+    .badge-low      { background: rgba(239,68,68,0.85); color: white; }
+    .badge-soldout  { background: rgba(107,114,128,0.85); color: white; }
+
+    /* Sold out overlay */
+    .soldout-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      color: #6B7280;
+      letter-spacing: 0.5px;
+    }
+
+    .product-info {
+      padding: 9px 11px 11px;
+    }
+    .product-cat-tag {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: #A78BFA;
+      margin-bottom: 3px;
+    }
+    .product-name {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #2D1B69;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .price-row {
+      display: flex;
+      align-items: baseline;
+      gap: 5px;
+      margin-bottom: 6px;
+    }
+    .product-price {
+      font-size: 15px;
+      font-weight: 900;
+      color: #7C3AED;
+    }
+    .product-original {
+      font-size: 11px;
+      color: #C4B5D8;
+      text-decoration: line-through;
+    }
+    .product-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .sold-count { font-size: 10px; color: #B8A5E0; }
+    .add-to-cart {
+      width: 26px; height: 26px;
+      background: linear-gradient(135deg, #7C3AED, #EC4899);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+      color: white;
+      cursor: pointer;
+    }
+
+    /* Wide product card */
+    .product-card-wide {
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 3px 14px rgba(100,60,200,0.07);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      padding: 12px;
+      gap: 12px;
+      position: relative;
+    }
+    .wide-thumb {
+      width: 80px; height: 80px;
+      border-radius: 13px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 38px;
+      flex-shrink: 0;
+    }
+    .wide-info { flex: 1; }
+    .wide-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: #2D1B69;
+      margin-bottom: 3px;
+    }
+    .wide-desc {
+      font-size: 11px;
+      color: #9B7FC8;
+      margin-bottom: 6px;
+    }
+    .wide-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .wide-price { font-size: 16px; font-weight: 900; color: #7C3AED; }
+
+    /* Low stock badge inside card */
+    .low-stock-chip {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(239,68,68,0.09);
+      border: 1.5px solid rgba(239,68,68,0.25);
+      border-radius: 7px;
+      padding: 3px 7px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #DC2626;
+      margin-bottom: 5px;
+      align-self: flex-start;
+    }
+
+    /* ─── Bottom nav ─── */
+    .bottom-nav {
+      display: flex;
+      justify-content: space-around;
+      padding: 10px 20px 18px;
+      background: white;
+      border-top: 1px solid rgba(167,139,250,0.2);
+      flex-shrink: 0;
+    }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      cursor: pointer;
+    }
+    .nav-icon { font-size: 20px; }
+    .nav-label { font-size: 10px; color: #B8A5E0; }
+    .nav-item.active .nav-label { color: #7C3AED; font-weight: 700; }
+    .nav-dot {
+      width: 4px; height: 4px;
+      background: linear-gradient(135deg, #7C3AED, #EC4899);
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- ─── Header ─── -->
+  <div class="header">
+    <div class="header-top">
+      <div class="shop-header-info">
+        <div class="shop-icon-hd">🐷</div>
+        <div>
+          <div class="shop-hd-name">ร้านหมูนุ่นเป๋าตุง</div>
+          <div class="shop-hd-sub">สินค้า 5 รายการ · ⭐ 4.9 · เปิดอยู่</div>
+        </div>
+      </div>
+      <div class="header-icons">
+        <div class="hd-icon-btn">🔗</div>
+        <div class="hd-icon-btn">⚙️</div>
+      </div>
+    </div>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-bar" type="text" placeholder="ค้นหาสินค้าในร้านนี้..." />
+    </div>
+  </div>
+
+  <!-- ─── Fast Share Owner Panel ─── -->
+  <div class="share-panel">
+    <div class="share-panel-label">🔗 แชร์ร้านค้าของคุณ</div>
+    <div class="share-url-row">
+      <div class="share-url-box">poatung.app/shop/moonoon</div>
+      <button class="btn-copy-link">📋 คัดลอก</button>
+    </div>
+    <div class="share-btns-row">
+      <button class="share-social-btn btn-line">💬 LINE</button>
+      <button class="share-social-btn btn-facebook">📘 Facebook</button>
+      <button class="share-social-btn btn-qr">📷 QR</button>
+    </div>
+  </div>
+
+  <!-- ─── Scrollable content ─── -->
+  <div class="content">
+
+    <!-- Banner -->
+    <div>
+      <div class="banner banner-promo">
+        <div class="banner-text">
+          <div class="promo-label">โปรโมชั่นพิเศษ</div>
+          <div class="promo-main">ลด 20%<br/>วันนี้เท่านั้น</div>
+          <div class="promo-sub">สินค้าคัดพิเศษ ราคาคุ้ม</div>
+        </div>
+        <div class="banner-badge">
+          <div class="badge-num">5</div>
+          <div class="badge-label">รายการ</div>
+        </div>
+      </div>
+      <div class="banner-dots" style="margin-top:9px;">
+        <div class="dot active"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+    </div>
+
+    <!-- Categories (match Create Product) -->
+    <div>
+      <div class="section-header">
+        <span class="section-title">หมวดหมู่</span>
+      </div>
+      <div class="categories">
+        <div class="cat-tab active">🛒 ทั้งหมด</div>
+        <div class="cat-tab">👗 เสื้อผ้า</div>
+        <div class="cat-tab">🏠 ของบ้าน</div>
+        <div class="cat-tab">🌿 เกษตร</div>
+        <div class="cat-tab">✨ Homemade</div>
+        <div class="cat-tab">♻️ มือสอง</div>
+      </div>
+    </div>
+
+    <!-- Best seller highlight -->
+    <div>
+      <div class="section-header">
+        <span class="section-title">🔥 ขายดีสัปดาห์นี้</span>
+      </div>
+      <div class="bestseller-card">
+        <div class="bestseller-thumb">👕</div>
+        <div class="bestseller-info">
+          <div class="bestseller-crown">👑 อันดับ 1 ของร้าน</div>
+          <div class="bestseller-name">เสื้อ Oversize สีพาสเทล</div>
+          <div class="bestseller-price">฿199 <span style="font-size:13px; font-weight:600; color:rgba(255,255,255,0.5); text-decoration:line-through;">฿350</span></div>
+          <div class="bestseller-sold">ขายไปแล้ว 56 ชิ้นสัปดาห์นี้</div>
+        </div>
+        <div class="bestseller-btn">ดู<br/>สินค้า</div>
+      </div>
+    </div>
+
+    <!-- Products grid — 1 ชิ้น/หมวดหมู่ -->
+    <div>
+      <div class="section-header">
+        <span class="section-title">สินค้าทั้งหมด <span class="section-count">5 รายการ</span></span>
+        <span class="view-all">Pro · สูงสุด 5 ชิ้น</span>
+      </div>
+
+      <div class="products-grid">
+
+        <!-- 1. เสื้อผ้า — ลดราคา badge -->
+        <div class="product-card">
+          <div class="product-img pi-purple">
+            👕
+            <div class="wishlist-btn">🤍</div>
+            <div class="prod-badge badge-sale">🏷️ ลดราคา</div>
+          </div>
+          <div class="product-info">
+            <div class="product-cat-tag">👗 เสื้อผ้า</div>
+            <div class="product-name">เสื้อ Oversize พาสเทล</div>
+            <div class="price-row">
+              <span class="product-price">฿199</span>
+              <span class="product-original">฿350</span>
+            </div>
+            <div class="product-bottom">
+              <span class="sold-count">ขายแล้ว 56 ชิ้น</span>
+              <div class="add-to-cart">🛒</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. ของบ้าน — NEW badge -->
+        <div class="product-card">
+          <div class="product-img pi-pink">
+            🧺
+            <div class="wishlist-btn">🤍</div>
+            <div class="prod-badge badge-new">✨ NEW</div>
+          </div>
+          <div class="product-info">
+            <div class="product-cat-tag">🏠 ของบ้าน</div>
+            <div class="product-name">กระเป๋าผ้า Tote</div>
+            <div class="price-row">
+              <span class="product-price">฿89</span>
+            </div>
+            <div class="product-bottom">
+              <span class="sold-count">ขายแล้ว 8 ชิ้น</span>
+              <div class="add-to-cart">🛒</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. เกษตร — HOT badge -->
+        <div class="product-card">
+          <div class="product-img pi-green">
+            🌱
+            <div class="wishlist-btn">🤍</div>
+            <div class="prod-badge badge-hot">🔥 HOT</div>
+          </div>
+          <div class="product-info">
+            <div class="product-cat-tag">🌿 เกษตร / สวน</div>
+            <div class="product-name">ต้นไม้ฟอกอากาศ</div>
+            <div class="price-row">
+              <span class="product-price">฿149</span>
+            </div>
+            <div class="product-bottom">
+              <span class="sold-count">ขายแล้ว 31 ชิ้น</span>
+              <div class="add-to-cart">🛒</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Homemade — แนะนำ badge, เหลือน้อย -->
+        <div class="product-card">
+          <div class="product-img pi-yellow">
+            🧼
+            <div class="wishlist-btn">❤️</div>
+            <div class="prod-badge badge-rec">💜 แนะนำ</div>
+          </div>
+          <div class="product-info">
+            <div class="product-cat-tag">✨ Homemade</div>
+            <div class="product-name">สบู่สมุนไพร Handmade</div>
+            <div class="price-row">
+              <span class="product-price">฿120</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:4px; background:rgba(239,68,68,0.08); border:1.5px solid rgba(239,68,68,0.2); border-radius:6px; padding:2px 7px; margin-bottom:5px; width:fit-content;">
+              <span style="font-size:9.5px; font-weight:800; color:#DC2626;">⚠️ เหลือ 2 ชิ้น</span>
+            </div>
+            <div class="product-bottom">
+              <span class="sold-count">ขายแล้ว 44 ชิ้น</span>
+              <div class="add-to-cart">🛒</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 5. มือสอง — wide card, sold out -->
+      <div style="margin-top:11px;">
+        <div class="product-card-wide">
+          <div class="wide-thumb pi-gray" style="border-radius:13px; position:relative; overflow:hidden;">
+            <span style="font-size:38px; position:relative; z-index:1; filter:grayscale(0.5);">👜</span>
+            <div class="soldout-overlay">สินค้าหมด</div>
+          </div>
+          <div class="wide-info">
+            <div class="product-cat-tag" style="font-size:9.5px; color:#A78BFA; margin-bottom:3px;">♻️ มือสอง</div>
+            <div class="wide-name">กระเป๋าหนัง Vintage สภาพดี</div>
+            <div class="wide-desc">สภาพ 90% · ไม่มีตำหนิ · พร้อมส่ง</div>
+            <div class="wide-bottom">
+              <span class="wide-price" style="color:#9CA3AF;">฿350</span>
+              <div style="padding:6px 12px; background:#F3F4F6; border-radius:8px; font-size:11px; font-weight:700; color:#9CA3AF;">หมดแล้ว</div>
+            </div>
+          </div>
+          <div class="prod-badge badge-soldout" style="position:absolute; top:8px; left:8px;">สินค้าหมด</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ─── Bottom nav ─── -->
+  <div class="bottom-nav">
+    <div class="nav-item active">
+      <div class="nav-icon">🏠</div>
+      <div class="nav-label">หน้าแรก</div>
+      <div class="nav-dot"></div>
+    </div>
+    <div class="nav-item">
+      <div class="nav-icon">❤️</div>
+      <div class="nav-label">ถูกใจ</div>
+    </div>
+    <div class="nav-item">
+      <div class="nav-icon">🛒</div>
+      <div class="nav-label">ตะกร้า</div>
+    </div>
+    <div class="nav-item">
+      <div class="nav-icon">📦</div>
+      <div class="nav-label">ออเดอร์</div>
+    </div>
+    <div class="nav-item">
+      <div class="nav-icon">👤</div>
+      <div class="nav-label">โปรไฟล์</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

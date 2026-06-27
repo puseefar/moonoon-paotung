@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Life Diary — Home เดิม vs ใหม่</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ui: 'Noto Sans Thai', system-ui, sans-serif;
+    --diary: 'Mali', 'Noto Sans Thai', cursive;
+
+    --ink: #3a3340;
+    --ink-soft: #6b6472;
+    --ink-faint: #9b94a3;
+    --pink: #f25fa6;
+    --pink-deep: #d8408a;
+    --lilac: #b18cf0;
+    --glass: rgba(255,255,255,0.62);
+    --glass-strong: rgba(255,255,255,0.82);
+    --line: rgba(120,100,140,0.16);
+
+    --warn: #d8455f;
+    --good: #2e9e6b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:var(--ui);
+    background:
+      radial-gradient(1200px 600px at 15% -10%, #fbe9f3 0%, transparent 55%),
+      radial-gradient(900px 500px at 110% 10%, #eae6fb 0%, transparent 50%),
+      #efece6;
+    color:var(--ink);
+    min-height:100vh;
+    padding:32px 20px 60px;
+  }
+  .page-head{max-width:980px;margin:0 auto 26px;text-align:center;}
+  .page-head h1{font-family:var(--diary);font-size:26px;font-weight:700;color:var(--pink-deep);letter-spacing:.2px;}
+  .page-head p{font-size:14px;color:var(--ink-soft);margin-top:6px;line-height:1.6;}
+
+  .stage{
+    display:flex;gap:48px;justify-content:center;align-items:flex-start;
+    flex-wrap:wrap;max-width:980px;margin:0 auto;
+  }
+  .col{display:flex;flex-direction:column;align-items:center;gap:14px;}
+  .col-tag{
+    font-family:var(--diary);font-weight:600;font-size:15px;
+    padding:6px 16px;border-radius:999px;
+  }
+  .tag-old{background:#fbe2e6;color:var(--warn);}
+  .tag-new{background:#dff3e9;color:var(--good);}
+  .col-note{font-size:12px;color:var(--ink-faint);max-width:300px;text-align:center;line-height:1.55;min-height:34px;}
+
+  /* ---------- phone shell ---------- */
+  .phone{
+    width:330px;height:680px;border-radius:42px;
+    background:#1d1a22;padding:10px;
+    box-shadow:0 30px 60px -22px rgba(60,40,80,.45), 0 4px 14px rgba(0,0,0,.12);
+    position:relative;
+  }
+  .screen{
+    position:relative;width:100%;height:100%;border-radius:33px;overflow:hidden;
+    display:flex;flex-direction:column;
+  }
+  .scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+  .scroll::-webkit-scrollbar{width:0;}
+
+  /* backgrounds */
+  .bg-old{
+    background:
+      linear-gradient(180deg, rgba(60,70,110,.55), rgba(120,110,140,.30) 40%, rgba(210,200,210,.15)),
+      linear-gradient(160deg,#5b6a92 0%, #7d7a98 45%, #c9c4cf 100%);
+  }
+  .bg-new{
+    background:
+      radial-gradient(120% 80% at 80% 0%, #ffe3ef 0%, transparent 55%),
+      linear-gradient(180deg,#fde9f1 0%, #efe6fb 42%, #e6f0fb 100%);
+  }
+
+  /* ---------- header ---------- */
+  .hdr{display:flex;align-items:flex-start;justify-content:space-between;padding:18px 18px 4px;}
+  .brand .logo{font-family:var(--diary);font-weight:700;font-size:21px;color:var(--pink);line-height:1;}
+  .brand .sub{font-size:11px;color:var(--ink-soft);margin-top:2px;}
+  .bg-old .brand .sub{color:rgba(255,255,255,.7);}
+  .hdr-actions{display:flex;gap:8px;}
+  .hdr-btn{width:34px;height:34px;border-radius:50%;border:none;display:grid;place-items:center;
+    background:rgba(255,255,255,.45);backdrop-filter:blur(6px);cursor:pointer;font-size:15px;}
+  .avatar{background:linear-gradient(135deg,#ff9a6b,#f25fa6);color:#fff;font-weight:600;font-size:14px;}
+
+  .date{text-align:center;font-size:13px;font-weight:500;padding:2px 0 0;}
+  .bg-new .date{color:var(--ink-soft);}
+  .bg-old .date{color:rgba(255,255,255,.85);}
+
+  /* =========================================================
+     OLD VERSION — cramped, low contrast (illustrates problems)
+     ========================================================= */
+  .old-q{text-align:center;font-size:13px;color:rgba(255,255,255,.78);margin:6px 0 8px;}
+  .old-emoji{display:flex;justify-content:space-between;padding:0 14px;margin-bottom:4px;}
+  .old-emoji .em{display:flex;flex-direction:column;align-items:center;gap:2px;}
+  .old-emoji .em span:first-child{font-size:30px;}
+  .old-emoji .em span:last-child{font-size:10px;color:rgba(255,255,255,.6);}
+  .old-act-label{font-size:11px;color:rgba(255,255,255,.55);padding:4px 16px 2px;}
+  .old-act{display:flex;gap:6px;padding:0 14px;overflow:hidden;margin-bottom:8px;}
+  .old-chip{flex:1;background:rgba(255,255,255,.35);border-radius:12px;padding:7px 4px;
+    font-size:11px;text-align:center;color:#4a4458;white-space:nowrap;}
+  .old-prompt{margin:6px 14px;padding:10px 12px;border-top:1px solid rgba(255,255,255,.3);}
+  .old-prompt .pl{font-size:11px;color:var(--pink);}
+  .old-prompt .pq{font-size:15px;color:rgba(255,255,255,.85);margin-top:6px;}
+  .old-empty{margin:8px 14px;padding:18px 12px;border-radius:18px;text-align:center;
+    background:rgba(255,255,255,.16);}
+  .old-empty .ph{font-size:34px;opacity:.7;}
+  .old-empty .et{font-family:var(--diary);font-size:15px;color:rgba(255,255,255,.8);margin-top:8px;}
+  .old-empty .cta{margin-top:6px;font-size:14px;color:#4a4458;font-weight:600;}
+  .old-sub{font-size:11px;color:rgba(255,255,255,.6);padding:6px 16px;line-height:1.5;}
+
+  .annot{position:absolute;font-size:10px;font-weight:600;color:#fff;background:var(--warn);
+    padding:3px 8px;border-radius:8px;box-shadow:0 4px 10px rgba(200,40,70,.35);z-index:5;}
+  .annot::after{content:"";position:absolute;width:0;height:0;}
+
+  /* =========================================================
+     NEW VERSION
+     ========================================================= */
+  .new-pad{padding:6px 16px 14px;}
+
+  /* mood: one-tap row by default -> collapses after select */
+  .mood-block{margin-top:8px;}
+  .mood-label{font-size:12.5px;color:var(--ink-soft);font-weight:500;margin-bottom:8px;}
+  .mood-row{display:flex;justify-content:space-between;gap:4px;}
+  .mood{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+    background:none;border:none;cursor:pointer;padding:6px 0;border-radius:14px;transition:.18s;}
+  .mood:hover,.mood:focus-visible{background:rgba(255,255,255,.5);outline:none;}
+  .mood .e{font-size:30px;line-height:1;}
+  .mood .t{font-size:10.5px;color:var(--ink-soft);}
+  .mood-summary{display:none;align-items:center;gap:10px;
+    background:var(--glass-strong);border-radius:16px;padding:10px 14px;
+    box-shadow:0 2px 8px rgba(120,90,140,.08);}
+  .mood-summary .se{font-size:26px;}
+  .mood-summary .stxt{font-size:13px;font-weight:600;color:var(--ink);}
+  .mood-summary .stxt-sub{font-size:11px;color:var(--ink-faint);}
+  .mood-summary .change{margin-left:auto;font-size:12px;color:var(--pink-deep);font-weight:600;
+    background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:10px;}
+  .mood-summary .change:hover{background:rgba(242,95,166,.1);}
+
+  /* daily prompt card — focus */
+  .prompt-card{margin-top:14px;background:var(--glass-strong);border-radius:20px;
+    padding:15px 16px;box-shadow:0 6px 18px rgba(140,100,160,.10);}
+  .prompt-top{display:flex;justify-content:space-between;align-items:center;}
+  .prompt-eyebrow{font-size:11px;font-weight:600;color:var(--pink-deep);letter-spacing:.3px;}
+  .prompt-next{font-size:12px;color:var(--ink-faint);background:none;border:none;cursor:pointer;}
+  .prompt-q{font-family:var(--diary);font-size:18px;line-height:1.45;color:var(--ink);margin-top:8px;}
+  .prompt-dots{display:flex;gap:5px;margin-top:12px;}
+  .prompt-dots i{width:6px;height:6px;border-radius:50%;background:rgba(140,110,160,.25);}
+  .prompt-dots i.on{background:var(--pink);width:16px;border-radius:6px;}
+
+  /* main CTA */
+  .cta-main{margin-top:14px;width:100%;border:none;cursor:pointer;
+    background:linear-gradient(135deg,#f86fb0,#b87cf0);color:#fff;
+    font-family:var(--diary);font-weight:700;font-size:16px;
+    padding:15px;border-radius:18px;display:flex;align-items:center;justify-content:center;gap:8px;
+    box-shadow:0 10px 22px -8px rgba(216,64,138,.6);transition:.18s;}
+  .cta-main:hover{transform:translateY(-1px);box-shadow:0 14px 26px -8px rgba(216,64,138,.7);}
+  .cta-main:active{transform:translateY(0);}
+
+  /* activity — collapsed chip -> bottom sheet */
+  .act-block{margin-top:14px;}
+  .act-trigger{width:100%;display:flex;align-items:center;gap:10px;cursor:pointer;
+    background:var(--glass);border:1px dashed rgba(150,120,170,.4);border-radius:16px;
+    padding:12px 14px;font-family:var(--ui);font-size:13px;color:var(--ink-soft);transition:.18s;}
+  .act-trigger:hover{background:var(--glass-strong);}
+  .act-trigger.set{border-style:solid;border-color:transparent;background:var(--glass-strong);
+    color:var(--ink);font-weight:600;}
+  .act-trigger .ai{font-size:20px;}
+  .act-trigger .achange{margin-left:auto;font-size:12px;color:var(--pink-deep);font-weight:600;}
+
+  /* empty / populated */
+  .empty-card{margin-top:16px;text-align:center;padding:22px 16px;border-radius:22px;
+    background:linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,.15));}
+  .empty-card .ill{font-size:46px;}
+  .empty-card .eh{font-family:var(--diary);font-weight:600;font-size:16px;color:var(--ink);margin-top:8px;}
+  .empty-card .es{font-size:12px;color:var(--ink-soft);margin-top:6px;line-height:1.55;}
+
+  .entry{margin-top:14px;background:var(--glass-strong);border-radius:18px;overflow:hidden;
+    box-shadow:0 4px 14px rgba(140,100,160,.10);}
+  .entry .ephoto{height:96px;background:linear-gradient(120deg,#ffd5e8,#cfe0ff);
+    display:grid;place-items:center;font-size:30px;}
+  .entry .ebody{padding:12px 14px;}
+  .entry .etime{font-size:11px;color:var(--ink-faint);}
+  .entry .etxt{font-size:13px;color:var(--ink);line-height:1.5;margin-top:4px;}
+  .entry .emeta{display:flex;gap:8px;margin-top:10px;font-size:12px;color:var(--ink-soft);}
+  .entry .emeta span{background:rgba(242,95,166,.1);padding:3px 9px;border-radius:999px;}
+
+  /* bottom nav */
+  .nav{display:flex;justify-content:space-around;padding:10px 6px 14px;
+    background:rgba(255,255,255,.5);backdrop-filter:blur(8px);border-top:1px solid var(--line);}
+  .bg-old .nav{background:rgba(255,255,255,.18);border-top-color:rgba(255,255,255,.2);}
+  .nav .ni{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--ink-soft);}
+  .bg-old .nav .ni{color:rgba(255,255,255,.7);}
+  .nav .ni .nig{font-size:18px;}
+  .nav .ni.add .nig{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;color:#fff;
+    background:linear-gradient(135deg,#f86fb0,#b87cf0);font-size:22px;box-shadow:0 6px 14px -4px rgba(216,64,138,.6);}
+  .nav .ni.active{color:var(--pink-deep);font-weight:600;}
+
+  /* bottom sheet */
+  .sheet-mask{position:absolute;inset:0;background:rgba(40,30,50,.32);opacity:0;pointer-events:none;
+    transition:.22s;z-index:20;border-radius:33px;}
+  .sheet-mask.show{opacity:1;pointer-events:auto;}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:24px 24px 33px 33px;
+    padding:18px 18px 24px;transform:translateY(110%);transition:.28s cubic-bezier(.2,.8,.2,1);z-index:21;}
+  .sheet.show{transform:translateY(0);}
+  .sheet .grab{width:40px;height:4px;border-radius:4px;background:#e3dde8;margin:0 auto 14px;}
+  .sheet h3{font-family:var(--diary);font-size:16px;color:var(--ink);margin-bottom:14px;}
+  .sheet-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  .sheet-item{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;
+    background:#f7f3fa;border:1.5px solid transparent;border-radius:16px;padding:14px 6px;transition:.15s;}
+  .sheet-item:hover{background:#f0e9f6;}
+  .sheet-item .si{font-size:26px;}
+  .sheet-item .st{font-size:11.5px;color:var(--ink-soft);}
+
+  /* state toggle under new phone */
+  .state-toggle{display:flex;gap:0;background:#fff;border-radius:999px;padding:4px;
+    box-shadow:0 4px 12px rgba(120,90,140,.12);}
+  .state-toggle button{border:none;background:none;cursor:pointer;font-family:var(--ui);
+    font-size:12.5px;font-weight:600;color:var(--ink-faint);padding:7px 16px;border-radius:999px;transition:.15s;}
+  .state-toggle button.on{background:#3a3340;color:#fff;}
+
+  .legend{max-width:980px;margin:34px auto 0;background:var(--glass-strong);border-radius:18px;
+    padding:18px 22px;font-size:13px;color:var(--ink-soft);line-height:1.7;}
+  .legend b{color:var(--ink);}
+  .legend .good{color:var(--good);font-weight:600;}
+
+  @media (max-width:760px){
+    .stage{gap:34px;}
+    .legend{font-size:12.5px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;}
+  }
+</style>
+</head>
+<body>
+
+  <div class="page-head">
+    <h1>Life Diary · Home — เดิม vs ใหม่</h1>
+    <p>เครื่องซ้ายจำลองปัญหาจาก prototype (contrast ต่ำ + ทุกอย่างกางพร้อมกัน) · เครื่องขวากดเล่นได้จริง: แตะ mood แล้วยุบ, แตะกิจกรรมเปิด bottom sheet, สลับ Empty/Populated</p>
+  </div>
+
+  <div class="stage">
+
+    <!-- ============== OLD ============== -->
+    <div class="col">
+      <div class="col-tag tag-old">เดิม (Prototype)</div>
+      <div class="phone">
+        <div class="screen bg-old">
+          <div class="annot" style="top:128px;right:6px;">contrast ต่ำ อ่านยาก</div>
+          <div class="annot" style="top:210px;right:6px;">emoji กินที่ บังพื้นหลัง</div>
+          <div class="annot" style="top:520px;right:6px;">CTA จม ไม่เด่น</div>
+          <div class="scroll">
+            <div class="hdr">
+              <div class="brand"><div class="logo">Life Diary</div><div class="sub">สมุดชีวิต</div></div>
+              <div class="hdr-actions">
+                <button class="hdr-btn">🔍</button>
+                <button class="hdr-btn avatar">ส</button>
+              </div>
+            </div>
+            <div class="date">วันอาทิตย์ที่ 16 มิถุนายน 2569</div>
+            <div class="old-q">วันนี้รู้สึกอย่างไร?</div>
+            <div class="old-emoji">
+              <div class="em"><span>😄</span><span>ดีมาก</span></div>
+              <div class="em"><span>😊</span><span>ดี</span></div>
+              <div class="em"><span>😐</span><span>สบายๆ</span></div>
+              <div class="em"><span>😔</span><span>เหนื่อย</span></div>
+              <div class="em"><span>😞</span><span>สู้ๆ</span></div>
+            </div>
+            <div class="old-act-label">วันนี้ทำอะไรอยู่น๊า 🩷 😊</div>
+            <div class="old-act">
+              <div class="old-chip">🏢 ทำงาน</div>
+              <div class="old-chip">🏪 เปิดร้าน</div>
+              <div class="old-chip">🏝️ วันหยุด</div>
+              <div class="old-chip">👨‍👩‍👧 พาครอบครัว</div>
+            </div>
+            <div class="old-prompt">
+              <div class="pl">💬 คำถามประจำวัน</div>
+              <div class="pq">วันนี้คุณภูมิใจอะไรเล็กๆ บ้าง?</div>
+            </div>
+            <div class="old-empty">
+              <div class="ph">🖼️</div>
+              <div class="et">ยังไม่มีบันทึกของวันนี้</div>
+              <div class="cta">✏️ เขียนบันทึกแรกของวันนี้</div>
+            </div>
+            <div class="old-sub">เริ่มเก็บเรื่องราว ความรู้สึก รูปภาพ หรือสถานที่ของคุณสักนิดดีไหม</div>
+          </div>
+          <div class="nav">
+            <div class="ni active"><span class="nig">🏠</span>หน้าแรก</div>
+            <div class="ni"><span class="nig">📅</span>ไทม์ไลน์</div>
+            <div class="ni add"><span class="nig">+</span></div>
+            <div class="ni"><span class="nig">🔍</span>ค้นหา</div>
+            <div class="ni"><span class="nig">✏️</span>บันทึก</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-note">ทุก element กางพร้อมกัน → ตาไม่รู้จะมองอะไรก่อน และตัวหนังสือขาวจมไปกับพื้นหลัง</div>
+    </div>
+
+    <!-- ============== NEW ============== -->
+    <div class="col">
+      <div class="col-tag tag-new">ใหม่ (ข้อเสนอ)</div>
+      <div class="phone">
+        <div class="screen bg-new">
+          <div class="scroll">
+            <div class="hdr">
+              <div class="brand"><div class="logo">Life Diary</div><div class="sub">สมุดชีวิต</div></div>
+              <div class="hdr-actions">
+                <button class="hdr-btn">🔍</button>
+                <button class="hdr-btn avatar">ส</button>
+              </div>
+            </div>
+            <div class="date">วันอาทิตย์ที่ 16 มิถุนายน 2569</div>
+
+            <div class="new-pad">
+              <!-- MOOD: one-tap row, collapses after select -->
+              <div class="mood-block">
+                <div class="mood-label" id="moodLabel">วันนี้รู้สึกยังไง?</div>
+                <div class="mood-row" id="moodRow">
+                  <button class="mood" onclick="pickMood('😄','ดีมาก')"><span class="e">😄</span><span class="t">ดีมาก</span></button>
+                  <button class="mood" onclick="pickMood('😊','ดี')"><span class="e">😊</span><span class="t">ดี</span></button>
+                  <button class="mood" onclick="pickMood('😐','สบายๆ')"><span class="e">😐</span><span class="t">สบายๆ</span></button>
+                  <button class="mood" onclick="pickMood('😔','เหนื่อย')"><span class="e">😔</span><span class="t">เหนื่อย</span></button>
+                  <button class="mood" onclick="pickMood('😞','สู้ๆ')"><span class="e">😞</span><span class="t">สู้ๆ</span></button>
+                </div>
+                <div class="mood-summary" id="moodSummary">
+                  <span class="se" id="moodSE">😊</span>
+                  <div><div class="stxt" id="moodST">อารมณ์วันนี้: ดี</div><div class="stxt-sub">บันทึกไว้แล้ว</div></div>
+                  <button class="change" onclick="resetMood()">เปลี่ยน</button>
+                </div>
+              </div>
+
+              <!-- DAILY PROMPT: focus -->
+              <div class="prompt-card">
+                <div class="prompt-top">
+                  <span class="prompt-eyebrow">คำถามประจำวัน</span>
+                  <button class="prompt-next" onclick="nextPrompt()">ถัดไป ›</button>
+                </div>
+                <div class="prompt-q" id="promptQ">วันนี้คุณภูมิใจอะไรเล็กๆ บ้าง?</div>
+                <div class="prompt-dots"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+              </div>
+
+              <!-- MAIN CTA -->
+              <button class="cta-main">✏️ เขียนบันทึกวันนี้</button>
+
+              <!-- ACTIVITY: collapsed -> bottom sheet -->
+              <div class="act-block">
+                <button class="act-trigger" id="actTrigger" onclick="openSheet()">
+                  <span class="ai" id="actIcon">➕</span>
+                  <span id="actText">เพิ่มกิจกรรมวันนี้</span>
+                  <span class="achange" id="actChange" style="display:none;">เปลี่ยน</span>
+                </button>
+              </div>
+
+              <!-- EMPTY (default) -->
+              <div class="empty-card" id="emptyCard">
+                <div class="ill">🐱</div>
+                <div class="eh">ยังไม่มีบันทึกของวันนี้</div>
+                <div class="es">เก็บเรื่องเล็กๆ ความรู้สึก รูปภาพ<br>หรือสถานที่ของวันนี้ไว้สักนิด</div>
+              </div>
+
+              <!-- POPULATED (hidden) -->
+              <div class="entry" id="entryCard" style="display:none;">
+                <div class="ephoto">🌅</div>
+                <div class="ebody">
+                  <div class="etime">วันนี้ · 08:14</div>
+                  <div class="etxt">ตื่นมาเจอแสงเช้าสวยมาก กาแฟแก้วแรกอร่อยเป็นพิเศษ ☕</div>
+                  <div class="emeta"><span id="entryMood">😊 ดี</span><span id="entryAct">🏪 เปิดร้าน</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="nav">
+            <div class="ni active"><span class="nig">🏠</span>หน้าแรก</div>
+            <div class="ni"><span class="nig">📅</span>ไทม์ไลน์</div>
+            <div class="ni add"><span class="nig">+</span></div>
+            <div class="ni"><span class="nig">🔍</span>ค้นหา</div>
+            <div class="ni"><span class="nig">✏️</span>บันทึก</div>
+          </div>
+
+          <!-- bottom sheet -->
+          <div class="sheet-mask" id="sheetMask" onclick="closeSheet()"></div>
+          <div class="sheet" id="sheet">
+            <div class="grab"></div>
+            <h3>วันนี้ทำอะไรอยู่น๊า?</h3>
+            <div class="sheet-grid">
+              <div class="sheet-item" onclick="pickAct('🏢','ทำงาน')"><span class="si">🏢</span><span class="st">ทำงาน</span></div>
+              <div class="sheet-item" onclick="pickAct('🏪','เปิดร้าน')"><span class="si">🏪</span><span class="st">เปิดร้าน</span></div>
+              <div class="sheet-item" onclick="pickAct('🏝️','วันหยุด')"><span class="si">🏝️</span><span class="st">วันหยุด</span></div>
+              <div class="sheet-item" onclick="pickAct('👨‍👩‍👧','ครอบครัว')"><span class="si">👨‍👩‍👧</span><span class="st">ครอบครัว</span></div>
+              <div class="sheet-item" onclick="pickAct('📚','เรียน')"><span class="si">📚</span><span class="st">เรียน</span></div>
+              <div class="sheet-item" onclick="pickAct('🏃','ออกกำลัง')"><span class="si">🏃</span><span class="st">ออกกำลัง</span></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <div class="state-toggle">
+        <button class="on" id="btnEmpty" onclick="setState('empty')">Empty State</button>
+        <button id="btnPop" onclick="setState('pop')">Populated</button>
+      </div>
+      <div class="col-note">คำถาม + ปุ่มเขียนเด่นสุด · mood แตะครั้งเดียวเสร็จแล้วยุบ · กิจกรรมเก็บใน bottom sheet</div>
+    </div>
+
+  </div>
+
+  <div class="legend">
+    <b>โครงที่เปลี่ยน (เทียบกับ verdict):</b><br>
+    1. <span class="good">contrast เป็น CSS fix ไม่ใช่ architecture</span> — ทิ้งรูปถ่ายจริง ใช้ gradient + glass card ทุกข้อความสำคัญอ่านออกทันที<br>
+    2. <span class="good">mood ≠ activity</span> — mood แสดงแถว one-tap ตั้งแต่แรก (daily ritual ต้องลื่น) แล้ว<b>ยุบหลังเลือก</b> เหลือ "😊 อารมณ์วันนี้: ดี · เปลี่ยน"<br>
+    3. <span class="good">activity ยุบตั้งแต่แรก</span> เป็น chip เดียว → bottom sheet (optional, list โตได้ไม่พังหน้า)<br>
+    4. ลำดับโฟกัส: <b>คำถามประจำวัน → ปุ่มเขียนบันทึก</b> เด่นสุด · empty state ใช้ฟีลแมวอบอุ่นแบบภาพ 3<br>
+    5. ยังไม่ผูก "dday event" เข้ามา — เก็บไว้เป็น feature แยกตามที่ flag ไว้
+  </div>
+
+<script>
+  function pickMood(emoji, label){
+    document.getElementById('moodRow').style.display='none';
+    document.getElementById('moodLabel').style.display='none';
+    document.getElementById('moodSE').textContent=emoji;
+    document.getElementById('moodST').textContent='อารมณ์วันนี้: '+label;
+    document.getElementById('moodSummary').style.display='flex';
+    document.getElementById('entryMood').textContent=emoji+' '+label;
+  }
+  function resetMood(){
+    document.getElementById('moodRow').style.display='flex';
+    document.getElementById('moodLabel').style.display='block';
+    document.getElementById('moodSummary').style.display='none';
+  }
+
+  function openSheet(){
+    document.getElementById('sheetMask').classList.add('show');
+    document.getElementById('sheet').classList.add('show');
+  }
+  function closeSheet(){
+    document.getElementById('sheetMask').classList.remove('show');
+    document.getElementById('sheet').classList.remove('show');
+  }
+  function pickAct(icon,label){
+    const t=document.getElementById('actTrigger');
+    t.classList.add('set');
+    document.getElementById('actIcon').textContent=icon;
+    document.getElementById('actText').textContent=label;
+    document.getElementById('actChange').style.display='inline';
+    document.getElementById('entryAct').textContent=icon+' '+label;
+    closeSheet();
+  }
+
+  const prompts=[
+    'วันนี้คุณภูมิใจอะไรเล็กๆ บ้าง?',
+    'มีอะไรเล็กๆ ที่อยากจำไว้ไหม?',
+    'ใครทำให้วันนี้ของคุณดีขึ้น?',
+    'พรุ่งนี้อยากให้เป็นยังไง?',
+    'วันนี้ได้เรียนรู้อะไรใหม่บ้าง?'
+  ];
+  let pi=0;
+  function nextPrompt(){
+    pi=(pi+1)%prompts.length;
+    document.getElementById('promptQ').textContent=prompts[pi];
+    const dots=document.querySelectorAll('.prompt-dots i');
+    dots.forEach((d,i)=>d.classList.toggle('on', i===pi));
+  }
+
+  function setState(s){
+    const empty=s==='empty';
+    document.getElementById('emptyCard').style.display=empty?'block':'none';
+    document.getElementById('entryCard').style.display=empty?'none':'block';
+    document.getElementById('btnEmpty').classList.toggle('on',empty);
+    document.getElementById('btnPop').classList.toggle('on',!empty);
+  }
+</script>
+</body>
+</html>
