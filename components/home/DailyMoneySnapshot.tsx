@@ -2,33 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import { Image, LayoutAnimation, Pressable, StyleSheet, Text, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { Card } from '@/components/ui/Card';
 import { useColorScheme } from '@/components/useColorScheme';
 import { formatCurrency } from '@/lib/format';
 import type { DailySnapshot } from '@/services/dailySnapshotService';
 
-// Character artwork — เปลี่ยนเป็น require('@/assets/characters/moonoon-happy.png') หลังบันทึกไฟล์แล้ว
-// const CHAR_HAPPY = require('@/assets/splash/logo-moonoon-paotung-clean.png');
-// const CHAR_SAD   = require('@/assets/splash/logo-moonoon-paotung-clean.png');
-
-
 const CHAR_HAPPY = require('@/assets/characters/moonoon-happy.png');
 const CHAR_SAD   = require('@/assets/characters/moonoon-sad.png');
-
-
-
-const HAPPY_MESSAGES = [
-  'วันนี้เก่งมากเลยเป๋าตุงสุด ๆ! 🐷✨',
-  'ยอดเยี่ยม! หมูนุ่นภูมิใจในตัวคุณมาก! 🌟',
-  'เก็บเงินเก่งมาก วันนี้เป๋าตุงอิ่มใจ! 💰✨',
-];
-
-const SAD_MESSAGES = [
-  'ไม่เป็นไรนะคนเก่ง❤️‍🩹 พรุ่งนี้เอาใหม่นะ หมูนุ่นเอาใจช่วย! 💖',
-  'ใจเย็นๆ นะ พรุ่งนี้เริ่มต้นใหม่ได้เลย เชื่อในตัวคุณ! 🌈',
-  'ทุกวันมีบทเรียนใหม่เสมอ วันพรุ่งนี้จะดีกว่านี้! 💪',
-];
 
 // Thai Buddhist year date: DD/MM/พ.ศ.
 function formatThaiDate(date: Date): string {
@@ -41,17 +23,14 @@ function formatThaiDate(date: Date): string {
 type Props = {
   snapshot: DailySnapshot | null;
   isLoading?: boolean;
-  onAddPress?: () => void;
 };
 
-export function DailyMoneySnapshot({ snapshot, isLoading, onAddPress }: Props) {
+export function DailyMoneySnapshot({ snapshot, isLoading }: Props) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const router = useRouter();
   const [detailExpanded, setDetailExpanded] = useState(false);
   const autoCollapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const [happyMsg] = useState(() => HAPPY_MESSAGES[Math.floor(Math.random() * HAPPY_MESSAGES.length)]);
-  const [sadMsg]   = useState(() => SAD_MESSAGES[Math.floor(Math.random() * SAD_MESSAGES.length)]);
 
   function clearTimer() {
     if (autoCollapseTimer.current) {
@@ -84,7 +63,7 @@ export function DailyMoneySnapshot({ snapshot, isLoading, onAddPress }: Props) {
         <View style={styles.emptyBox}>
           <Image source={CHAR_HAPPY} style={styles.emptyChar} resizeMode="contain" />
           <View style={{ flex: 1 }}>
-            <Text style={[styles.healthTitle, { color: colors.tint }]}>สุขภาพการเงินวันนี้</Text>
+            <Text style={[styles.healthTitle, { color: colors.tint }]}>สุขภาพการเงิน</Text>
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
               {isLoading ? 'กำลังสรุปข้อมูล...' : 'ยังไม่มีรายการวันนี้\nเริ่มเพิ่มรายการเพื่อดูสุขภาพการเงิน'}
             </Text>
@@ -95,22 +74,26 @@ export function DailyMoneySnapshot({ snapshot, isLoading, onAddPress }: Props) {
   }
 
   // ── State ────────────────────────────────────────────────────────────────────
-  const todayBalance  = snapshot.todayIncome - snapshot.todayExpense;
-  const isPositive    = todayBalance >= 0;
-
   const GREEN = '#2E7D32';
   const RED   = '#C62828';
 
-  // Gradient: 183deg — สีตาม state (บวก=ฟ้า / ลบ=ชมพู)
-  const gradStart = isPositive ? '#1aafeb' : '#eb5078';
+  const todayBalance = snapshot.todayIncome - snapshot.todayExpense;
+
+  // §4.2/§6.2 — character + ข้อความ ผูกกับ "สุขภาพการเงินเดือนนี้" (ไม่ใช่ยอดวันนี้)
+  // happy = สุขภาพดี/ปกติ/ยังไม่เคลื่อนไหว, sad = รายจ่ายเกินรายรับ (over) เท่านั้น
+  const status        = snapshot.health.status;
+  const isHealthy     = status !== 'over';
+  const message       = snapshot.healthMessage;
+  const charImage     = isHealthy ? CHAR_HAPPY : CHAR_SAD;
+
+  // Gradient: ฟ้า=สุขภาพดี / ชมพู=รายจ่ายเกิน
+  const gradStart = isHealthy ? '#1aafeb' : '#eb5078';
   const gradColors: [string, string, string] = [gradStart, 'rgba(235,245,255,0.6)', '#f7f7f7'];
   const gradLocations: [number, number, number] = [0, 0.45, 0.66];
 
-  const cardBorder    = isPositive ? '#90CAF9' : '#F48FB1';
-  const balanceColor  = isPositive ? GREEN : RED;
-  const charImage     = isPositive ? CHAR_HAPPY : CHAR_SAD;
-  const message       = isPositive ? happyMsg : sadMsg;
-  const titleBtnColor = isPositive ? '#1565C0' : '#AD1457';
+  const cardBorder    = isHealthy ? '#90CAF9' : '#F48FB1';
+  const balanceColor  = todayBalance >= 0 ? GREEN : RED;
+  const titleBtnColor = isHealthy ? '#1565C0' : '#AD1457';
 
   // Monthly
   const maxMonth       = Math.max(snapshot.monthIncome, snapshot.monthExpense, 1);
@@ -118,6 +101,8 @@ export function DailyMoneySnapshot({ snapshot, isLoading, onAddPress }: Props) {
   const expenseRatio   = snapshot.monthExpense / maxMonth;
   const monthBalance   = snapshot.monthBalance ?? (snapshot.monthIncome - snapshot.monthExpense);
   const monthBalColor  = monthBalance >= 0 ? GREEN : RED;
+
+  const hasUncategorized = snapshot.uncategorizedCount > 0;
 
   return (
     <View style={[styles.wrap, { borderColor: cardBorder }]}>
@@ -131,8 +116,8 @@ export function DailyMoneySnapshot({ snapshot, isLoading, onAddPress }: Props) {
         {/* ── Row 1: Title + Date ─────────────────────────────────────────────── */}
         <View style={styles.titleRow}>
           <View style={styles.titleLeft}>
-            <Text style={styles.heartIcon}>{isPositive ? '💙' : '❤️'}</Text>
-            <Text style={styles.healthTitle}>สุขภาพการเงินวันนี้</Text>
+            <Text style={styles.heartIcon}>{isHealthy ? '💙' : '❤️'}</Text>
+            <Text style={styles.healthTitle}>สุขภาพการเงินเดือนนี้</Text>
           </View>
           <View style={styles.dateBadge}>
             <FontAwesome name="calendar-o" size={10} color="#fff" />
@@ -140,61 +125,35 @@ export function DailyMoneySnapshot({ snapshot, isLoading, onAddPress }: Props) {
           </View>
         </View>
 
-        {/* ── Row 2: รับ / จ่าย / คงเหลือ ──────────────────────────────────────── */}
-        <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <View style={[styles.statIcon, { backgroundColor: 'rgba(255,255,255,0.75)' }]}>
-              <FontAwesome name="arrow-down" size={12} color={GREEN} />
-            </View>
-            <Text style={styles.statLabel}>รับ</Text>
-            <Text style={[styles.statAmount, { color: GREEN }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-              {formatCurrency(snapshot.todayIncome)}
-            </Text>
-          </View>
-
-          <View style={styles.statDivider} />
-
-          <View style={styles.statItem}>
-            <View style={[styles.statIcon, { backgroundColor: 'rgba(255,255,255,0.75)' }]}>
-              <FontAwesome name="arrow-up" size={12} color={RED} />
-            </View>
-            <Text style={styles.statLabel}>จ่าย</Text>
-            <Text style={[styles.statAmount, { color: RED }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-              {formatCurrency(snapshot.todayExpense)}
-            </Text>
-          </View>
-
-          <View style={styles.statDivider} />
-
-          <View style={styles.statItem}>
-            <View style={[styles.statIcon, { backgroundColor: 'rgba(255,255,255,0.75)' }]}>
-              <Text style={{ fontSize: 13 }}>{isPositive ? '😊' : '😢'}</Text>
-            </View>
-            <Text style={styles.statLabel}>สถานะ คงเหลือ</Text>
-            <Text style={[styles.statAmount, { color: balanceColor }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-              {todayBalance >= 0 ? '+' : ''}{formatCurrency(todayBalance)}
-            </Text>
-          </View>
-        </View>
-
-        {/* ── Row 3: Character + Message ───────────────────────────────────────── */}
+        {/* ── CARD 3 (§4.1): สุขภาพการเงิน — Character + ข้อความตีความ (แสดงเสมอ) ── */}
         <View style={styles.charRow}>
           <Image source={charImage} style={styles.charImage} resizeMode="contain" />
-          <Text style={[styles.charMessage, { color: isPositive ? '#0D47A1' : '#880E4F' }]}>
+          <Text style={[styles.charMessage, { color: isHealthy ? '#0D47A1' : '#880E4F' }]}>
             {message}
           </Text>
         </View>
 
-        {/* ── Expand Toggle (Monthly Detail) ────────────────────────────────────── */}
+        {/* ── §5.1: ป้ายเตือนแบบย่อ (สั้น สะอาด แตะเพื่อแก้ไข) ───────────────────── */}
+        {hasUncategorized && (
+          <Pressable
+            style={styles.uncatBanner}
+            onPress={() => router.push('/(tabs)/history' as any)}
+            hitSlop={6}>
+            <Text style={styles.uncatText} numberOfLines={1}>
+              {snapshot.uncategorizedCount} รายการยังไม่จัดหมวดหมู่
+            </Text>
+            <View style={styles.uncatEdit}>
+              <FontAwesome name="pencil" size={11} color="#E65100" />
+              <Text style={styles.uncatEditText}>แก้ไข</Text>
+            </View>
+          </Pressable>
+        )}
+
+        {/* ── Chevron Toggle ──────────────────────────────────────────────────── */}
         <Pressable style={styles.expandToggle} onPress={toggleDetail} hitSlop={8}>
           <Text style={[styles.expandLabel, { color: colors.textSecondary }]}>
-            รายละเอียดเดือนนี้
+            ดูรายละเอียด · วันนี้ และ เดือนนี้
           </Text>
-          {onAddPress && (
-            <Pressable style={[styles.addBtn, { backgroundColor: titleBtnColor }]} onPress={onAddPress} hitSlop={10}>
-              <FontAwesome name="plus" size={11} color="#fff" />
-            </Pressable>
-          )}
           <FontAwesome
             name={detailExpanded ? 'chevron-up' : 'chevron-down'}
             size={12}
@@ -202,13 +161,50 @@ export function DailyMoneySnapshot({ snapshot, isLoading, onAddPress }: Props) {
           />
         </Pressable>
 
-        {/* ── Expanded: Monthly Detail ─────────────────────────────────────────── */}
+        {/* ── CARD 2: Stats + Monthly Detail (แสดงเมื่อกด chevron) ──────────────── */}
         {detailExpanded && (
           <View style={styles.detailBody}>
+            {/* ── ส่วน "วันนี้" (§6.1 — แยกชัดจากเดือนนี้) ──────────────────────── */}
+            <Text style={styles.sectionHeader}>วันนี้</Text>
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <View style={[styles.statIcon, { backgroundColor: 'rgba(255,255,255,0.75)' }]}>
+                  <FontAwesome name="arrow-down" size={12} color={GREEN} />
+                </View>
+                <Text style={styles.statLabel}>รับ</Text>
+                <Text style={[styles.statAmount, { color: GREEN }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                  {formatCurrency(snapshot.todayIncome)}
+                </Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <View style={[styles.statIcon, { backgroundColor: 'rgba(255,255,255,0.75)' }]}>
+                  <FontAwesome name="arrow-up" size={12} color={RED} />
+                </View>
+                <Text style={styles.statLabel}>จ่าย</Text>
+                <Text style={[styles.statAmount, { color: RED }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                  {formatCurrency(snapshot.todayExpense)}
+                </Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <View style={[styles.statIcon, { backgroundColor: 'rgba(255,255,255,0.75)' }]}>
+                  <Text style={{ fontSize: 13 }}>{todayBalance >= 0 ? '😊' : '😢'}</Text>
+                </View>
+                <Text style={styles.statLabel}>คงเหลือวันนี้</Text>
+                <Text style={[styles.statAmount, { color: balanceColor }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                  {todayBalance >= 0 ? '+' : ''}{formatCurrency(todayBalance)}
+                </Text>
+              </View>
+            </View>
+
             <View style={[styles.detailDivider, { backgroundColor: cardBorder }]} />
 
+            {/* ── ส่วน "เดือนนี้" (§9 คำศัพท์มาตรฐาน) ───────────────────────────── */}
+            <Text style={styles.sectionHeader}>เดือนนี้</Text>
+
             <View style={styles.barRow}>
-              <Text style={[styles.barLabel, { color: colors.textSecondary }]}>รายรับ</Text>
+              <Text style={[styles.barLabel, { color: colors.textSecondary }]}>เงินเข้า</Text>
               <View style={[styles.barTrack, { backgroundColor: '#C8E6C9' }]}>
                 <View style={[styles.barFill, { width: `${Math.round(incomeRatio * 100)}%`, backgroundColor: GREEN }]} />
               </View>
@@ -218,7 +214,7 @@ export function DailyMoneySnapshot({ snapshot, isLoading, onAddPress }: Props) {
             </View>
 
             <View style={styles.barRow}>
-              <Text style={[styles.barLabel, { color: colors.textSecondary }]}>รายจ่าย</Text>
+              <Text style={[styles.barLabel, { color: colors.textSecondary }]}>ใช้ไป</Text>
               <View style={[styles.barTrack, { backgroundColor: '#FFCDD2' }]}>
                 <View style={[styles.barFill, { width: `${Math.round(expenseRatio * 100)}%`, backgroundColor: RED }]} />
               </View>
@@ -228,22 +224,26 @@ export function DailyMoneySnapshot({ snapshot, isLoading, onAddPress }: Props) {
             </View>
 
             <View style={[styles.monthBalRow, { borderColor: cardBorder, backgroundColor: monthBalance >= 0 ? '#E8F5E9' : '#FFEBEE' }]}>
-              <Text style={[styles.monthBalLabel, { color: colors.textSecondary }]}>คงเหลือเดือนนี้</Text>
+              <Text style={[styles.monthBalLabel, { color: colors.textSecondary }]}>เหลือใช้เดือนนี้</Text>
               <Text style={[styles.monthBalAmount, { color: monthBalColor }]}>
                 {monthBalance >= 0 ? '+' : ''}{formatCurrency(monthBalance)}
               </Text>
             </View>
 
-            {snapshot.insight ? (
+            {/* ── §4.3: ข้อความสรุปอัตโนมัติ (ภาษาคน) ──────────────────────────── */}
+            {snapshot.monthNarrative ? (
               <View style={styles.insightRow}>
-                <FontAwesome name="lightbulb-o" size={13} color={titleBtnColor} />
+                <FontAwesome name="comment-o" size={13} color={titleBtnColor} />
                 <Text style={[styles.insightText, { color: colors.text }]}>
-                  <Text style={{ color: titleBtnColor, fontWeight: '700' }}>
-                    เฉลี่ย {formatCurrency(snapshot.dailyAverage)}/วัน
-                  </Text>
-                  {'  ·  '}{snapshot.insight}
+                  {snapshot.monthNarrative}
                 </Text>
               </View>
+            ) : null}
+
+            {snapshot.dailyAverage > 0 ? (
+              <Text style={[styles.avgText, { color: colors.textSecondary }]}>
+                เฉลี่ยใช้จ่าย {formatCurrency(snapshot.dailyAverage)}/วัน
+              </Text>
             ) : null}
           </View>
         )}
@@ -409,20 +409,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.3,
   },
-  addBtn: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
 
   // Expanded monthly detail
   detailBody: {
     paddingHorizontal: 16,
     paddingBottom: 14,
-    paddingTop: 4,
+    paddingTop: 8,
     gap: 10,
     backgroundColor: '#FFFFFF',
   },
@@ -488,5 +480,45 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     fontWeight: '500',
+  },
+  sectionHeader: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#455A64',
+    letterSpacing: 0.4,
+    marginBottom: 2,
+  },
+  avgText: {
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'right',
+  },
+  // §5.1 uncategorized warning — แบบย่อ บรรทัดเดียว
+  uncatBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: 12,
+    marginBottom: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,243,224,0.9)',
+  },
+  uncatText: {
+    flexShrink: 1,
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#BF6000',
+  },
+  uncatEdit: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  uncatEditText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#E65100',
   },
 });

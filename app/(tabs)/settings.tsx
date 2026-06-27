@@ -7,6 +7,7 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { Card } from '@/components/ui/Card';
 import { entitlementService, type PackageId } from '@/services/entitlementService';
+import { api } from '@/lib/api/client';
 
 // ── Setting Widget Icons ─────────────────────────────────────────────────────
 const SETTING_ICONS = {
@@ -89,6 +90,7 @@ const DEV_PACKAGES: { id: PackageId; label: string; icon: string }[] = [
 function DevToolsSection() {
   const [states, setStates] = useState<Partial<Record<PackageId, boolean>>>({});
   const [toggling, setToggling] = useState<PackageId | null>(null);
+  const [seeding, setSeeding] = useState(false);
 
   const load = useCallback(async () => {
     const all = await entitlementService.getAllPackageStates();
@@ -102,6 +104,36 @@ function DevToolsSection() {
     await entitlementService.setPackageEnabled(id, value);
     setStates(prev => ({ ...prev, [id]: value }));
     setToggling(null);
+  }
+
+  async function handleSeed() {
+    Alert.alert(
+      '🌱 Seed ข้อมูลตัวอย่าง',
+      'จะสร้างร้านค้า + เพิ่มสินค้าตัวอย่าง (เสื้อแขนยาวลายสก๊อต 3 สี)\n⚠️ สินค้าเดิมจะถูกลบออก',
+      [
+        { text: 'ยกเลิก', style: 'cancel' },
+        {
+          text: '🌱 Seed เลย', onPress: async () => {
+            setSeeding(true);
+            try {
+              const result = await api.seedShopData();
+              if (result.ok) {
+                Alert.alert(
+                  '✅ Seed สำเร็จ',
+                  `ร้าน: ${result.data.shop.name}\nสินค้า: ${result.data.products.length} รายการ\n\n📷 หมายเหตุ: กรุณาเพิ่มรูปสินค้าผ่านหน้า "แก้ไขสินค้า" ในภายหลัง\n\nกลับไปหน้า Mini Shop เพื่อดูผล`
+                );
+              } else {
+                Alert.alert('❌ Seed ไม่สำเร็จ', result.message + '\n\nTip: ลอง reload แอปแล้วลองใหม่');
+              }
+            } catch (e: any) {
+              Alert.alert('❌ เกิดข้อผิดพลาด', e?.message ?? String(e));
+            } finally {
+              setSeeding(false);
+            }
+          },
+        },
+      ]
+    );
   }
 
   function resetAll() {
@@ -164,6 +196,24 @@ function DevToolsSection() {
           </View>
         ))}
       </View>
+
+      {/* Seed data button */}
+      <Pressable onPress={handleSeed} disabled={seeding}
+        style={{ marginTop: 10, backgroundColor: seeding ? '#F3F4F6' : '#ECFDF5',
+          borderRadius: 12, borderWidth: 1.5, borderColor: '#A7F3D0',
+          paddingVertical: 11, paddingHorizontal: 14,
+          flexDirection: 'row', alignItems: 'center', gap: 8,
+          opacity: seeding ? 0.7 : 1 }}>
+        <Text style={{ fontSize: 18 }}>{seeding ? '⏳' : '🌱'}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: '#065F46' }}>
+            {seeding ? 'กำลัง seed...' : 'Seed ข้อมูลตัวอย่าง Mini Shop'}
+          </Text>
+          <Text style={{ fontSize: 10, color: '#6EE7B7', marginTop: 1 }}>
+            ร้านค้า + เสื้อแขนยาวลายสก๊อต 3 สี
+          </Text>
+        </View>
+      </Pressable>
 
       <Text style={{ fontSize: 10, color: '#9CA3AF', textAlign: 'center', marginTop: 8 }}>
         ⚠️ Dev only — ซ่อนใน Production APK · เปลี่ยนแล้วกลับไปหน้าเดิมเพื่อ reload

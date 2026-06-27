@@ -1,36 +1,51 @@
-import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Image, ImageBackground, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '@/lib/theme';
 import { getDaypart, GREETING, BG, type Daypart } from '@/lib/time';
 import { formatCurrency } from '@/lib/format';
+import { WalletAvatar } from '@/components/wallet/WalletAvatar';
+import { getWalletBrandPreset } from '@/constants/walletBrands';
+
+// สีเริ่มต้นของกระเป๋าที่ไม่ใช่แบรนด์ธนาคาร (เช่น เงินสด) — โทนส้มอ่อน
+const CASH_CHIP_COLOR = '#EF6C00';
+const CASH_CHIP_BG = '#FFF0E0';
+
+// รูปภาพพื้นหลังตามช่วงเวลา (ใส่ null = ใช้ gradient แทน)
+const BG_IMAGE: Record<Daypart, ReturnType<typeof require> | null> = {
+  morning: require('@/assets/scenery/headder-morrning.png'),
+  day:     require('@/assets/scenery/headder-day.png'),
+  evening: null,                                              // ยังไม่มีรูป → ใช้ gradient
+  night:   require('@/assets/scenery/header-night.png'),
+};
+
+type WalletBrief = { name: string; balance: number; icon?: string | null };
 
 type Props = {
   name: string;
   tambon?: string;
   avatarUri?: string;
   totalBalance?: number;
-  onScan?: () => void;
-  onQR?: () => void;
+  wallets?: WalletBrief[];
 };
 
-// scrim เพิ่มความชัดของ text บน gradient แต่ละช่วงเวลา
+// scrim — ลดลงมากเพื่อไม่ให้รูปภาพมืดหรือสีเพี้ยน
 const SCRIM: Record<Daypart, string> = {
-  morning: 'rgba(80,30,0,0.14)',
-  day:     'rgba(0,25,70,0.12)',
-  evening: 'rgba(40,0,60,0.20)',
-  night:   'rgba(0,0,15,0.30)',
+  morning: 'rgba(203, 128, 253, 0.11)',  
+  day:     'rgba(0,25,70,0.04)',
+  evening: 'rgba(40,0,60,0.08)',
+  night:   'rgba(0,0,15,0.10)',
 };
 
 const GLOW: Record<Daypart, string> = {
-  morning: 'rgba(255,220,150,0.22)',
+  morning: 'rgba(36, 129, 250, 0.247)', 
   day:     'rgba(255,255,255,0.14)',
   evening: 'rgba(255,160,100,0.20)',
   night:   'rgba(120,90,255,0.18)',
 };
 
-export function HomeHeader({ name, tambon, avatarUri, totalBalance, onScan, onQR }: Props) {
+export function HomeHeader({ name, tambon, avatarUri, totalBalance, wallets }: Props) {
   const part = getDaypart();
   const insets = useSafeAreaInsets();
   const { height, width } = useWindowDimensions();
@@ -39,23 +54,53 @@ export function HomeHeader({ name, tambon, avatarUri, totalBalance, onScan, onQR
   const headerHeight = Math.round(height * 0.25);
   const compact = width < 380 || headerHeight < 200;
 
+  // §4.1 — chip แยกยอดแต่ละกระเป๋า สีตามแบรนด์ (ธ.ก.ส.=เขียว, กรุงไทย=ฟ้า, เงินสด=ส้ม)
+  const walletChips = (wallets ?? [])
+    .filter((w) => w.balance !== 0)
+    .map((w) => {
+      const brand = getWalletBrandPreset(w.icon);
+      return {
+        name: w.name,
+        balance: w.balance,
+        icon: w.icon ?? null,
+        color: brand?.color ?? CASH_CHIP_COLOR,
+        backgroundColor: brand?.backgroundColor ?? CASH_CHIP_BG,
+      };
+    });
+
   return (
     <View
       style={[
         styles.header,
         {
-          height: headerHeight,
+          minHeight: headerHeight,
           paddingTop: insets.top + (compact ? 8 : 12),
           paddingBottom: compact ? 12 : 16,
         },
       ]}>
-      {/* ข้อ 2 & 3: LinearGradient แทนรูปภาพ — ไม่มี transform/scale ไม่เบลอ */}
-      <LinearGradient
-        colors={BG[part]}
-        start={{ x: 0.2, y: 0 }}
-        end={{ x: 0.8, y: 1 }}
-        style={StyleSheet.absoluteFillObject}
-      />
+      {/* พื้นหลัง: รูปภาพ (ถ้ามี) หรือ Gradient */}
+      {BG_IMAGE[part] ? (
+        <ImageBackground
+          source={BG_IMAGE[part]!}
+          style={StyleSheet.absoluteFillObject}
+          resizeMode="cover"
+          imageStyle={{ opacity: 1 }}>
+          {/* overlay ฟ้าอ่อนโปร่งใส — ไม่ทำให้รูปมืดหรือสีเพี้ยน */}
+          <LinearGradient
+            colors={['rgba(120,180,255,0.10)', 'rgba(180,220,255,0.04)', 'rgba(100,160,240,0.12)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+        </ImageBackground>
+      ) : (
+        <LinearGradient
+          colors={BG[part]}
+          start={{ x: 0.2, y: 0 }}
+          end={{ x: 0.8, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+      )}
       <View style={[StyleSheet.absoluteFill, { backgroundColor: SCRIM[part] }]} />
       <View style={[styles.glow, { backgroundColor: GLOW[part] }]} />
 
@@ -82,7 +127,7 @@ export function HomeHeader({ name, tambon, avatarUri, totalBalance, onScan, onQR
               </Text>
               {tambon ? (
                 <View style={[styles.locationPill, compact && styles.locationPillCompact]}>
-                  <FontAwesome name="map-marker" size={compact ? 10 : 11} color="#FF8CA8" />
+                  <FontAwesome name="map-marker" size={compact ? 12 : 14} color="#f32ec8" />
                   <Text style={[styles.locationText, compact && styles.locationTextCompact]} numberOfLines={1}>
                     {tambon}
                   </Text>
@@ -93,7 +138,7 @@ export function HomeHeader({ name, tambon, avatarUri, totalBalance, onScan, onQR
 
           <View style={styles.balanceBlock}>
             <Text style={[styles.balanceLabel, compact && styles.balanceLabelCompact]}>
-              ยอดรวมทุกกระเป๋า
+              ยอดเงินทั้งหมด
             </Text>
             <Text
               style={[styles.balanceValue, compact && styles.balanceValueCompact]}
@@ -102,23 +147,21 @@ export function HomeHeader({ name, tambon, avatarUri, totalBalance, onScan, onQR
               minimumFontScale={0.8}>
               {formatCurrency(totalBalance ?? 0)}
             </Text>
+            {walletChips.length > 0 ? (
+              <View style={styles.chipRow}>
+                {walletChips.map((w, i) => (
+                  <View key={`${w.name}-${i}`} style={[styles.walletChip, { backgroundColor: w.backgroundColor }]}>
+                    <WalletAvatar icon={w.icon} size={16} backgroundColor="transparent" />
+                    <Text style={[styles.walletChipText, { color: w.color }]} numberOfLines={1}>
+                      {w.name} {formatCurrency(w.balance)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
           </View>
 
-          <View style={styles.actionRow}>
-            <Pressable style={[styles.actionButton, compact && styles.actionButtonCompact]} onPress={onScan}>
-              <View style={styles.actionIconWrap}>
-                <FontAwesome name="qrcode" size={compact ? 14 : 15} color="#FFFFFF" />
-              </View>
-              <Text style={[styles.actionText, compact && styles.actionTextCompact]}>สแกนสลิป</Text>
-            </Pressable>
-
-            <Pressable style={[styles.actionButton, compact && styles.actionButtonCompact]} onPress={onQR}>
-              <View style={styles.actionIconWrap}>
-                <FontAwesome name="credit-card" size={compact ? 14 : 15} color="#FFFFFF" />
-              </View>
-              <Text style={[styles.actionText, compact && styles.actionTextCompact]}>QR ของฉัน</Text>
-            </Pressable>
-          </View>
+          {/* Action buttons removed — สแกนสลิปอยู่ใน MenuGrid แล้ว */}
         </View>
       </View>
     </View>
@@ -145,16 +188,14 @@ const styles = StyleSheet.create({
   },
   greetingPill: {
     alignSelf: 'flex-start',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
+    paddingHorizontal: 2,
+    paddingVertical: 2,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
   },
   greetingPillCompact: {
-    paddingHorizontal: 9,
-    paddingVertical: 5,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
   },
   greetingText: {
     fontSize: 11,
@@ -162,24 +203,16 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   greetingTextCompact: {
-    fontSize: 10,
+    fontSize: 14,
   },
   heroCard: {
-    borderRadius: 26,
-    padding: 12,
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    shadowColor: '#10233F',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.14,
-    shadowRadius: 24,
-    elevation: 6,
+    padding: 4,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
     gap: 10,
   },
   heroCardCompact: {
-    borderRadius: 22,
-    padding: 10,
+    padding: 2,
     gap: 8,
   },
   identityRow: {
@@ -211,31 +244,31 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     color: '#FFFFFF',
+    textShadowColor: 'rgba(0,0,0,0.55)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   nameCompact: {
-    fontSize: 17,
+    fontSize: 18,
   },
   locationPill: {
     alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    borderRadius: 999,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: 'transparent',
   },
   locationPillCompact: {
     paddingHorizontal: 6,
     paddingVertical: 3,
   },
   locationText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '600',
     color: 'rgba(255,255,255,0.84)',
   },
   locationTextCompact: {
-    fontSize: 9,
+    fontSize: 12,
   },
   balanceBlock: {
     gap: 2,
@@ -248,15 +281,43 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   balanceLabelCompact: {
-    fontSize: 9,
+    fontSize: 12,
   },
   balanceValue: {
     fontSize: 26,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#0ff31a',
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 5,
   },
   balanceValueCompact: {
-    fontSize: 22,
+    fontSize: 18,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 6,
+  },
+  walletChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingLeft: 3,
+    paddingRight: 9,
+    paddingVertical: 3,
+    borderRadius: 999,
+    // เงาบางๆ ให้ลอยเหนือรูปพื้นหลัง
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.18,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  walletChipText: {
+    fontSize: 11,
+    fontWeight: '800',
   },
   actionRow: {
     flexDirection: 'row',
@@ -270,9 +331,8 @@ const styles = StyleSheet.create({
     gap: 6,
     borderRadius: 18,
     paddingVertical: 8,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    borderWidth: 0,
   },
   actionButtonCompact: {
     gap: 5,

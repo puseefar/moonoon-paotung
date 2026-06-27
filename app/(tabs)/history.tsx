@@ -1,18 +1,46 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, RefreshControl, SectionList, StyleSheet, Text, View } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useFocusEffect } from '@react-navigation/native';
 import { useColorScheme } from '@/components/useColorScheme';
 import { SwipeableTransactionItem } from '@/components/transaction/SwipeableTransactionItem';
+import { TradeGroupCard } from '@/components/transaction/TradeGroupCard';
+import { CategoryAssignModal } from '@/components/transaction/CategoryAssignModal';
 import { TransactionFilter, type FilterState } from '@/components/transaction/TransactionFilter';
 import Colors from '@/constants/Colors';
 import type { Category } from '@/db/schema';
+import type { TransactionWithCategory } from '@/types';
 import { useTransactionsByDate } from '@/hooks/useTransactionsByDate';
 import { formatCurrency, formatMonthYear, getMonthDateRange } from '@/lib/format';
 import { categoryService } from '@/services/categoryService';
 import { useSummaryStore } from '@/stores/useSummaryStore';
 import { useTransactionStore } from '@/stores/useTransactionStore';
 import { useWalletStore } from '@/stores/useWalletStore';
+
+// หน่วยแสดงผลในรายการ: รายการเดี่ยว หรือ ชุดซื้อ-ขาย (รวม legs ที่มี tradeGroupId เดียวกัน)
+type RenderUnit =
+  | { kind: 'single'; tx: TransactionWithCategory }
+  | { kind: 'trade'; groupId: string; legs: TransactionWithCategory[] };
+
+function groupTrades(list: TransactionWithCategory[]): RenderUnit[] {
+  const seen = new Set<string>();
+  const units: RenderUnit[] = [];
+  for (const tx of list) {
+    if (tx.tradeGroupId) {
+      if (seen.has(tx.tradeGroupId)) continue;
+      seen.add(tx.tradeGroupId);
+      units.push({
+        kind: 'trade',
+        groupId: tx.tradeGroupId,
+        legs: list.filter((t) => t.tradeGroupId === tx.tradeGroupId),
+      });
+    } else {
+      units.push({ kind: 'single', tx });
+    }
+  }
+  return units;
+}
 
 export default function HistoryScreen() {
   const colorScheme = useColorScheme();
@@ -29,8 +57,9 @@ export default function HistoryScreen() {
     searchText: '',
   });
   const [allCategories, setAllCategories] = useState<Category[]>([]);
+  const [editingTx, setEditingTx] = useState<TransactionWithCategory | null>(null);
 
-  const { deleteTransaction } = useTransactionStore();
+  const { deleteTransaction, deleteTradeGroup, updateTransactionCategory } = useTransactionStore();
   const { wallets, loadWallets } = useWalletStore();
   const { loadAll } = useSummaryStore();
 
@@ -45,6 +74,20 @@ export default function HistoryScreen() {
   );
 
   const { grouped, isLoading, refresh } = useTransactionsByDate(dateRange);
+
+  // Reload เมื่อกลับมาที่หน้านี้ โดยใช้ ref กัน infinite loop
+  // (refresh function เปลี่ยนทุก render ถ้าใส่เป็น dependency จะ loop ไม่หยุด)
+  const refreshRef = useRef(refresh);
+  const loadAllRef = useRef(loadAll);
+  useEffect(() => { refreshRef.current = refresh; }, [refresh]);
+  useEffect(() => { loadAllRef.current = loadAll; }, [loadAll]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshRef.current();
+      loadAllRef.current();
+    }, []) // ← empty deps: ทำงานครั้งเดียวต่อ focus ไม่ loop
+  );
 
   const filteredSections = useMemo(() => {
     return grouped
@@ -82,7 +125,8 @@ export default function HistoryScreen() {
           totalExpense: filtered
             .filter((tx) => tx.type === 'expense')
             .reduce((sum, tx) => sum + tx.amount, 0),
-          data: filtered,
+          txCount: filtered.length,
+          data: groupTrades(filtered), // รวมชุดซื้อ-ขายเป็นการ์ดเดียว
         };
       })
       .filter((section) => section.data.length > 0);
@@ -96,7 +140,7 @@ export default function HistoryScreen() {
     for (const section of filteredSections) {
       income += section.totalIncome;
       expense += section.totalExpense;
-      count += section.data.length;
+      count += section.txCount;
     }
 
     return { income, expense, count };
@@ -139,6 +183,30 @@ export default function HistoryScreen() {
         },
       },
     ]);
+  };
+
+  const handleDeleteTrade = (groupId: string) => {
+    Alert.alert('ลบชุดซื้อ-ขาย', 'ลบทั้งชุด (ทั้งรายรับและรายจ่าย) ใช่หรือไม่?', [
+      { text: 'ยกเลิก', style: 'cancel' },
+      {
+        text: 'ลบทั้งชุด',
+        style: 'destructive',
+        onPress: async () => {
+          await deleteTradeGroup(groupId);
+          refresh();
+          loadWallets();
+          loadAll();
+        },
+      },
+    ]);
+  };
+
+  const handleAssignCategory = async (categoryId: string) => {
+    if (!editingTx) return;
+    await updateTransactionCategory(editingTx.id, categoryId);
+    setEditingTx(null);
+    refresh();
+    loadAll();
   };
 
   const isCurrentMonth =
@@ -214,7 +282,7 @@ export default function HistoryScreen() {
 
       <SectionList
         sections={filteredSections}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => (item.kind === 'trade' ? `trade-${item.groupId}` : item.tx.id)}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refresh} />}
         renderSectionHeader={({ section }) => (
           <View
@@ -243,9 +311,21 @@ export default function HistoryScreen() {
             </View>
           </View>
         )}
-        renderItem={({ item }) => (
-          <SwipeableTransactionItem transaction={item} onDelete={() => handleDelete(item.id)} />
-        )}
+        renderItem={({ item }) =>
+          item.kind === 'trade' ? (
+            <TradeGroupCard legs={item.legs} onDelete={() => handleDeleteTrade(item.groupId)} />
+          ) : (
+            <SwipeableTransactionItem
+              transaction={item.tx}
+              onEdit={
+                item.tx.type === 'income' || item.tx.type === 'expense'
+                  ? () => setEditingTx(item.tx)
+                  : undefined
+              }
+              onDelete={() => handleDelete(item.tx.id)}
+            />
+          )
+        }
         ItemSeparatorComponent={() => (
           <View
             style={{
@@ -275,6 +355,14 @@ export default function HistoryScreen() {
           </View>
         }
         contentContainerStyle={{ paddingBottom: 100 }}
+      />
+
+      <CategoryAssignModal
+        visible={editingTx !== null}
+        transaction={editingTx}
+        categories={allCategories}
+        onClose={() => setEditingTx(null)}
+        onSelect={handleAssignCategory}
       />
     </GestureHandlerRootView>
   );

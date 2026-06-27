@@ -47,35 +47,41 @@ const iconStyles = StyleSheet.create({
   // Regular icon container
   wrap: {
     alignItems: 'center',
-    gap: 4,
+    gap: 2,
     paddingTop: 2,
+    paddingBottom: 4,
   },
   wrapActive: {
     // active state handled by dot + opacity
   },
   imgWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     overflow: 'hidden',
-    // Soft shadow via wrapper
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 5,           // padding สม่ำเสมอ — ป้องกัน icon ขนาด canvas ต่างกันล้นกรอบ
     shadowColor: '#1aafeb',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.18,
     shadowRadius: 6,
     elevation: 3,
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    marginBottom: 0 ,
+    backgroundColor: 'rgba(250, 250, 250, 1)',
   },
   img: {
-    width: 42,
-    height: 42,
+    width: 32,           // 46 - (5*2) = 36 — รูปจริงอยู่ใน padding box
+    height: 32,
+    
+
   },
   // Active dot indicator below icon
   dot: {
     width: 5,
     height: 5,
     borderRadius: 3,
-    backgroundColor: '#1aafeb',
+    backgroundColor: '#4b96f7',
     marginTop: -2,
   },
 
@@ -83,12 +89,13 @@ const iconStyles = StyleSheet.create({
   fabOuter: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: 0,
+   
   },
   fabInner: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
+    width: 45,            // ลด 20% จาก 62
+    height: 45,
+    borderRadius: 25,
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
@@ -99,8 +106,8 @@ const iconStyles = StyleSheet.create({
     elevation: 10,
   },
   fabImg: {
-    width: 44,
-    height: 44,
+    width: 32,             // ลด 20% จาก 44
+    height: 32,
   },
 });
 
@@ -108,7 +115,7 @@ const iconStyles = StyleSheet.create({
 function TabBarBackground() {
   return (
     <LinearGradient
-      colors={['rgba(26,175,235,0.12)', 'rgba(255,255,255,1)']}
+      colors={['rgba(71, 127, 248, 0.555)', 'rgba(255,255,255,1)']}
       locations={[0, 0.5]}
       start={{ x: 0.5, y: 0 }}
       end={{ x: 0.5, y: 1 }}
@@ -149,7 +156,8 @@ export default function TabLayout() {
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: '700',
-          marginTop: -2,
+          marginTop: 6,       // ขยายระยะห่าง icon → label
+          marginBottom: 2,
         },
         headerStyle: {
           backgroundColor: colors.tint,

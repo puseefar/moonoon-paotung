@@ -17,11 +17,17 @@ function buildPreviewSnapshot(): DailySnapshot {
   const recurringDate = new Date();
   recurringDate.setDate(recurringDate.getDate() + 3);
 
+  const monthIncome = 32500;
+  const monthExpense = 15420;
+  const monthBalance = monthIncome - monthExpense;
+  const ratio = monthExpense / monthIncome;
+
   return {
+    todayIncome: 0,
     todayExpense: 1280,
-    monthIncome: 32500,
-    monthExpense: 15420,
-    monthBalance: 17080,
+    monthIncome,
+    monthExpense,
+    monthBalance,
     dailyAverage: 685,
     transactionCountToday: 4,
     topExpenseCategory: {
@@ -36,6 +42,20 @@ function buildPreviewSnapshot(): DailySnapshot {
       nextDate: recurringDate,
     },
     insight: 'วันนี้ใช้จ่ายพอดีและยังคุมสมดุลเดือนนี้ได้ดี ลองรักษาจังหวะนี้ต่ออีกหน่อย',
+    health: {
+      status: 'good',
+      income: monthIncome,
+      expense: monthExpense,
+      remaining: monthBalance,
+      ratio,
+      spentPercent: ratio * 100,
+      hasActivity: true,
+    },
+    healthMessage: 'สุขภาพการเงินดี ใช้ไป 47.4% ของรายรับ เหลือ 17,080 บาท',
+    monthNarrative:
+      'เดือนนี้มีเงินเข้า 32,500 ใช้ไป 15,420 เหลือ 17,080 อยู่ในเกณฑ์ดี รายจ่ายหลักคืออาหารและเครื่องดื่ม 4,320',
+    uncategorizedCount: 0,
+    uncategorizedTotal: 0,
   };
 }
 
@@ -67,11 +87,9 @@ export function WebUiPreviewApp() {
             name="หมูนุ่น"
             tambon="ตำบล เมืองบัว"
             totalBalance={PREVIEW_HOME_BALANCE}
-            onScan={() => {}}
-            onQR={() => {}}
           />
 
-          <DailyMoneySnapshot snapshot={snapshot} onAddPress={() => {}} />
+          <DailyMoneySnapshot snapshot={snapshot} />
           <StaticMenuGrid onItemPress={() => {}} />
           <CardMenuSection onCardPress={() => {}} />
         </View>

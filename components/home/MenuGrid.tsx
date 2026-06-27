@@ -1,10 +1,10 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { theme } from '@/lib/theme';
 
 type MenuItem = {
   id: string;
-  image: ReturnType<typeof require>;
+  image: ImageSourcePropType;
   label: string;
   route: string;
 };
@@ -90,14 +90,14 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.90 }],
   },
   iconWrap: {
-    width: 56,
-    height: 56,
+    width: 46,
+    height: 46,
     borderRadius: 10,
     overflow: 'hidden',
   },
   iconImage: {
-    width: 56,
-    height: 56,
+    width: 46,
+    height: 46,
   },
   label: {
     fontSize: 10,

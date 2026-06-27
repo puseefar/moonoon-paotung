@@ -1,4 +1,10 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import {
+  Mali_400Regular,
+  Mali_500Medium,
+  Mali_600SemiBold,
+  Mali_700Bold,
+} from '@expo-google-fonts/mali';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import Constants from 'expo-constants';
 import { useFonts } from 'expo-font';
@@ -28,6 +34,27 @@ import { DatabaseProvider } from '@/db/provider';
 import { isWebUiPreviewEnabled } from '@/lib/webPreview';
 import { LockScreen } from '@/components/auth/LockScreen';
 import { authService } from '@/services/authService';
+import { CartProvider } from '@/features/mini-shop/context/CartContext';
+import { api } from '@/lib/api/client';
+import { entitlementService } from '@/services/entitlementService';
+import { shopOrderSyncService } from '@/features/mini-shop/services/shopOrderSyncService';
+
+// ── Sync entitlements จาก server หลัง install ใหม่ ─────────────────────────
+// SQLite ถูกล้างตอน reinstall → ดึง features จาก API แล้วบันทึกลง local
+async function syncEntitlementsFromServer(): Promise<void> {
+  try {
+    const res = await api.getEntitlement();
+    if (!res.ok) return;
+    const f = res.data.features;
+    await Promise.all([
+      entitlementService.setPackageEnabled('pkg-05-marketplace', f.pkg05Shop),
+      entitlementService.setPackageEnabled('pkg-15-payment',     f.pkg15Payment),
+      entitlementService.setPackageEnabled('pkg-13-social',      f.pkg13Line),
+    ]);
+  } catch {
+    // network ล้มเหลว — ใช้ค่า SQLite เดิม (ถ้ามี)
+  }
+}
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -47,6 +74,10 @@ export default function RootLayout() {
   const [loaded, fontError] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     ...FontAwesome.font,
+    Mali_400Regular,
+    Mali_500Medium,
+    Mali_600SemiBold,
+    Mali_700Bold,
   });
   const [fontLoadTimedOut, setFontLoadTimedOut] = useState(false);
 
@@ -183,6 +214,10 @@ function RootLayoutNav() {
 
   useEffect(() => {
     checkLockStatus();
+    // sync entitlements จาก server ทุกครั้งที่เปิด app (non-blocking)
+    syncEntitlementsFromServer();
+    // sync ออเดอร์ที่ลูกค้าจ่ายแล้ว → บันทึกรายรับ/ตัดสต็อก/แจ้งเตือน (non-blocking)
+    shopOrderSyncService.syncPaidOrders().catch(() => {});
   }, [checkLockStatus]);
 
   useEffect(() => {
@@ -193,6 +228,8 @@ function RootLayoutNav() {
         if (enabled && hasPin) {
           setIsLocked(true);
         }
+        // กลับเข้า foreground → เช็คออเดอร์ที่จ่ายแล้วระหว่างปิดแอป
+        shopOrderSyncService.syncPaidOrders().catch(() => {});
       }
       appState.current = nextState;
     });
@@ -209,6 +246,7 @@ function RootLayoutNav() {
 
   return (
     <DatabaseProvider>
+      <CartProvider>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -236,8 +274,17 @@ function RootLayoutNav() {
           <Stack.Screen name="line-connect" options={{ presentation: 'card' }} />
           <Stack.Screen name="shop-manage" options={{ presentation: 'card' }} />
           <Stack.Screen name="shop-orders" options={{ presentation: 'card' }} />
+          <Stack.Screen name="shop-profile" options={{ presentation: 'card' }} />
+          <Stack.Screen name="shop-create-product" options={{ presentation: 'card' }} />
+          <Stack.Screen name="shop-storefront" options={{ presentation: 'card' }} />
+          <Stack.Screen name="shop-product-detail" options={{ presentation: 'card' }} />
+          <Stack.Screen name="shop-place-order" options={{ presentation: 'card' }} />
+          <Stack.Screen name="shop-checkout" options={{ presentation: 'card' }} />
+          <Stack.Screen name="shop-order-success" options={{ presentation: 'card', gestureEnabled: false }} />
+          <Stack.Screen name="shop-analytics" options={{ presentation: 'card' }} />
         </Stack>
       </ThemeProvider>
+      </CartProvider>
     </DatabaseProvider>
   );
 }

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, StatusBar, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,6 +7,7 @@ import { HomeHeader } from '@/components/home/HomeHeader';
 import { MenuGrid } from '@/components/home/MenuGrid';
 import { dailySnapshotService, type DailySnapshot } from '@/services/dailySnapshotService';
 import { useSummaryStore } from '@/stores/useSummaryStore';
+import { useTransactionStore } from '@/stores/useTransactionStore';
 import { useWalletStore } from '@/stores/useWalletStore';
 
 export default function HomeScreen() {
@@ -14,16 +15,21 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const [snapshot, setSnapshot] = useState<DailySnapshot | null>(null);
 
-  const { loadWallets, totalBalance } = useWalletStore();
+  const { loadWallets, totalBalance, wallets } = useWalletStore();
   const { loadAll, isLoading } = useSummaryStore();
+  const lastUpdated = useTransactionStore((s) => s.lastUpdated);
 
   const refresh = useCallback(async () => {
-    const [dailySnapshot] = await Promise.all([
-      dailySnapshotService.getTodaySnapshot(),
-      loadWallets(),
-      loadAll(),
-    ]);
-    setSnapshot(dailySnapshot);
+    try {
+      const [dailySnapshot] = await Promise.all([
+        dailySnapshotService.getTodaySnapshot(),
+        loadWallets(),
+        loadAll(),
+      ]);
+      setSnapshot(dailySnapshot);
+    } catch (e) {
+      console.warn('HomeScreen refresh error:', e);
+    }
   }, [loadWallets, loadAll]);
 
   useFocusEffect(
@@ -31,6 +37,12 @@ export default function HomeScreen() {
       refresh();
     }, [refresh])
   );
+
+  // Proactive refresh: fires whenever addTransaction is called anywhere in the app
+  // (scan-slip, add tab, recurring, etc.) — home sees new data without needing focus change
+  useEffect(() => {
+    if (lastUpdated > 0) refresh();
+  }, [lastUpdated]);
 
   return (
     <View style={styles.root}>
@@ -44,14 +56,12 @@ export default function HomeScreen() {
           name="หมูนุ่น"
           tambon="ตำบล เมืองบัว"
           totalBalance={totalBalance}
-          onScan={() => router.push('/scan-slip' as any)}
-          onQR={() => {}}
+          wallets={wallets.map((w) => ({ name: w.name, balance: w.balance ?? 0, icon: w.icon ?? null }))}
         />
 
         <DailyMoneySnapshot
           snapshot={snapshot}
           isLoading={isLoading}
-          onAddPress={() => router.push('/(tabs)/add' as any)}
         />
 
         <MenuGrid />
