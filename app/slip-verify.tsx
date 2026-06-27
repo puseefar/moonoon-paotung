@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator, Alert, Image, ScrollView } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
@@ -14,10 +14,12 @@ export default function SlipVerifyScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { showSnackbar } = useSnackbar();
+  const { requestId: prefilledId } = useLocalSearchParams<{ requestId?: string }>();
 
   const [slipUri, setSlipUri] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [result, setResult] = useState<SlipVerifyResponse | null>(null);
+  const [linkedRequestId] = useState(prefilledId ?? '');
 
   async function pickSlip() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -46,7 +48,7 @@ export default function SlipVerifyScreen() {
       // อ่านไฟล์เป็น base64
       const base64 = await FileSystem.readAsStringAsync(slipUri, { encoding: FileSystem.EncodingType.Base64 });
       // Mock: ใช้ requestId แรกที่มีสถานะ pending (จริงควรให้ user เลือก)
-      const result = await api.verifySlip({ requestId: 'req-mock', slipImageBase64: base64 });
+      const result = await api.verifySlip({ requestId: linkedRequestId || 'req-mock', slipImageBase64: base64 });
       if (result.ok) {
         setResult(result.data);
         if (result.data.verified) {
@@ -76,7 +78,9 @@ export default function SlipVerifyScreen() {
           <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff' }}>📄 ยืนยันสลิป</Text>
         </View>
         <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 4, marginLeft: 38 }}>
-          อัปโหลดสลิปเพื่อยืนยันการชำระเงิน
+          {linkedRequestId
+            ? `อ้างอิง: ${linkedRequestId.slice(0, 8).toUpperCase()} · อัปโหลดสลิปเพื่อยืนยัน`
+            : 'อัปโหลดสลิปเพื่อยืนยันการชำระเงิน'}
         </Text>
       </LinearGradient>
 

@@ -55,6 +55,9 @@ export default function TripSessionScreen() {
   const [showPreDepartureModal, setShowPreDepartureModal] = useState(false);
   const [noteText, setNoteText] = useState('');
 
+  // Edit item
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+
   // Frequent items suggestion
   const [frequentItems, setFrequentItems] = useState<{ itemName: string; count: number; avgPrice: number }[]>([]);
 
@@ -81,7 +84,8 @@ export default function TripSessionScreen() {
     setData(summary as SessionSummary);
     setExpenseCategories(cats);
     if (wallets.length > 0 && !selectedWalletId) setSelectedWalletId(wallets[0].id);
-    if (summary?.session?.templateId) {
+    // ไม่แสดง frequent items เมื่อเลือก "กำหนดเอง" (blank) — รายการไม่เกี่ยวข้องกัน
+    if (summary?.session?.templateId && summary.session.templateId !== 'blank') {
       const freq = await tripEstimatorService.getFrequentItems(summary.session.templateId);
       setFrequentItems(freq);
     }
@@ -96,21 +100,50 @@ export default function TripSessionScreen() {
     const qty = parseFloat(newItemQty) || 1;
     setAddingItem(true);
     try {
-      await tripEstimatorService.addItem(sessionId, newItemName.trim(), price, qty, newItemUnit.trim() || undefined);
-      const addedName = newItemName.trim();
+      const savedName = newItemName.trim();
+      if (editingItemId) {
+        // Edit mode — อัปเดต item ที่มีอยู่
+        await tripEstimatorService.updateItem(editingItemId, {
+          itemName: savedName, estimatedPrice: price, quantity: qty,
+          unit: newItemUnit.trim() || undefined,
+        });
+        // ไม่ clear editingItemId ตรงนี้ — ให้ success screen ใช้เพื่อแสดง "แก้ไขแล้ว"
+      } else {
+        // Add mode — เพิ่มใหม่
+        await tripEstimatorService.addItem(sessionId, savedName, price, qty, newItemUnit.trim() || undefined);
+      }
       setNewItemName(''); setNewItemPrice(''); setNewItemQty(''); setNewItemUnit(''); setSuggestedPrice(null);
       load();
+      // แสดง success screen ใน modal (ทั้ง add และ edit mode)
       successScale.setValue(0);
-      setAddSuccess(addedName);
+      setAddSuccess(savedName);
       Animated.spring(successScale, { toValue: 1, useNativeDriver: true, tension: 50, friction: 7 }).start();
     } finally {
       setAddingItem(false);
     }
   }
 
-  function resetAndAddMore() { setAddSuccess(null); }
+  function openEditItem(item: TripItem) {
+    setEditingItemId(item.id);
+    setNewItemName(item.itemName);
+    setNewItemPrice(item.estimatedPrice ? String(item.estimatedPrice) : '');
+    setNewItemQty(item.quantity && item.quantity > 1 ? String(item.quantity) : '');
+    setNewItemUnit(item.unit ?? '');
+    setSuggestedPrice(null);
+    setAddSuccess(null);
+    setShowAddModal(true);
+  }
 
-  function closeModal() { setShowAddModal(false); setAddSuccess(null); }
+  function resetAndAddMore() {
+    setAddSuccess(null);
+    setEditingItemId(null); // กลับ add mode
+  }
+
+  function closeModal() {
+    setShowAddModal(false);
+    setAddSuccess(null);
+    setEditingItemId(null);
+  }
 
   function closeAndComplete() {
     setShowAddModal(false);
@@ -351,6 +384,13 @@ export default function TripSessionScreen() {
                             ประมาณ {formatCurrency((item.estimatedPrice ?? 0) * (item.quantity ?? 1))} บาท
                           </Text>
                         </View>
+                        {!isDone && (
+                          <Pressable onPress={() => openEditItem(item)}
+                            style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: '#EDE7F6',
+                              justifyContent: 'center', alignItems: 'center', marginLeft: 6 }}>
+                            <Text style={{ fontSize: 14 }}>✏️</Text>
+                          </Pressable>
+                        )}
                       </View>
                     </Swipeable>
                   ))}
@@ -438,7 +478,7 @@ export default function TripSessionScreen() {
           <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Text style={{ fontSize: 17, fontWeight: '800', color: '#333' }}>
-                {addSuccess ? '✅ เพิ่มแล้ว!' : '+ เพิ่มรายการ'}
+                {addSuccess ? '✅ เพิ่มแล้ว!' : editingItemId ? '✏️ แก้ไขรายการ' : '+ เพิ่มรายการ'}
               </Text>
               <Pressable onPress={closeModal}><Text style={{ fontSize: 22, color: '#BBB' }}>✕</Text></Pressable>
             </View>
@@ -447,42 +487,77 @@ export default function TripSessionScreen() {
             {!addSuccess && frequentItems.length > 0 && !newItemName && (
               <View style={{ marginBottom: 12 }}>
                 <Text style={{ fontSize: 11, fontWeight: '700', color: '#999', marginBottom: 6 }}>
-                  ⚡ ของที่ซื้อบ่อย
+                  ⚡ ของที่ซื้อบ่อย (กดเพิ่ม · ✏️ แก้ราคา · 🗑 ลบ)
                 </Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-                  {frequentItems.slice(0, 6).map((fi) => (
-                    <Pressable key={fi.itemName}
-                      onPress={() => {
-                        setNewItemName(fi.itemName);
-                        if (fi.avgPrice > 0 && !newItemPrice) setNewItemPrice(String(fi.avgPrice));
-                        setSuggestedPrice(fi.avgPrice > 0 ? fi.avgPrice : null);
-                      }}
-                      style={{ paddingHorizontal: 11, paddingVertical: 7, borderRadius: 20,
-                        backgroundColor: '#EDE7F6', borderWidth: 1, borderColor: '#CE93D8',
-                        flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#4A148C' }}>{fi.itemName}</Text>
-                      {fi.avgPrice > 0 && (
-                        <Text style={{ fontSize: 10, color: '#888' }}>~{formatCurrency(fi.avgPrice)}฿</Text>
-                      )}
-                    </Pressable>
+                  {frequentItems.slice(0, 8).map((fi) => (
+                    <View key={fi.itemName}
+                      style={{ borderRadius: 18, backgroundColor: '#EDE7F6',
+                        borderWidth: 1, borderColor: '#CE93D8',
+                        flexDirection: 'row', alignItems: 'center', overflow: 'hidden' }}>
+                      {/* Main tap area → เพิ่มรายการ */}
+                      <Pressable
+                        onPress={() => {
+                          setNewItemName(fi.itemName);
+                          if (fi.avgPrice > 0 && !newItemPrice) setNewItemPrice(String(fi.avgPrice));
+                          setSuggestedPrice(fi.avgPrice > 0 ? fi.avgPrice : null);
+                        }}
+                        style={{ paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#4A148C' }}>{fi.itemName}</Text>
+                        {fi.avgPrice > 0 && (
+                          <Text style={{ fontSize: 10, color: '#7B1FA2' }}>~{formatCurrency(fi.avgPrice)}฿</Text>
+                        )}
+                      </Pressable>
+
+                      {/* ✏️ แก้ราคา */}
+                      <Pressable
+                        onPress={() => {
+                          setNewItemName(fi.itemName);
+                          setNewItemPrice(fi.avgPrice > 0 ? String(fi.avgPrice) : '');
+                          setSuggestedPrice(fi.avgPrice > 0 ? fi.avgPrice : null);
+                          // focus ที่ช่องราคาเพื่อแก้ไข
+                        }}
+                        style={{ paddingHorizontal: 7, paddingVertical: 8,
+                          borderLeftWidth: 1, borderLeftColor: '#CE93D8',
+                          backgroundColor: '#F3E5F5' }}>
+                        <Text style={{ fontSize: 11 }}>✏️</Text>
+                      </Pressable>
+
+                      {/* 🗑 ลบออกจากรายการบ่อย */}
+                      <Pressable
+                        onPress={() => {
+                          tripEstimatorService.deletePriceMemory(fi.itemName);
+                          setFrequentItems(prev => prev.filter(x => x.itemName !== fi.itemName));
+                        }}
+                        style={{ paddingHorizontal: 7, paddingVertical: 8,
+                          borderLeftWidth: 1, borderLeftColor: '#CE93D8',
+                          backgroundColor: '#FCE4EC' }}>
+                        <Text style={{ fontSize: 11 }}>🗑</Text>
+                      </Pressable>
+                    </View>
                   ))}
                 </ScrollView>
               </View>
             )}
 
             {addSuccess ? (
-              /* ── Inline Success State ── */
+              /* ── Inline Success State (Add หรือ Edit) ── */
               <View>
                 <Animated.View style={{ alignItems: 'center', paddingVertical: 20, transform: [{ scale: successScale }] }}>
-                  <Text style={{ fontSize: 52 }}>🎉</Text>
-                  <Text style={{ fontSize: 16, fontWeight: '800', color: '#2E7D32', marginTop: 10 }}>
+                  <Text style={{ fontSize: 52 }}>{editingItemId ? '✅' : '🎉'}</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '800',
+                    color: editingItemId ? '#1565C0' : '#2E7D32', marginTop: 10 }}>
                     "{addSuccess}"
                   </Text>
-                  <Text style={{ fontSize: 13, color: '#888', marginTop: 4 }}>เพิ่มเข้า list แล้ว — จะทำอะไรต่อ?</Text>
+                  <Text style={{ fontSize: 13, color: '#888', marginTop: 4 }}>
+                    {editingItemId ? 'แก้ไขรายการแล้ว — จะทำอะไรต่อ?' : 'เพิ่มเข้า list แล้ว — จะทำอะไรต่อ?'}
+                  </Text>
                 </Animated.View>
                 <View style={{ gap: 10 }}>
                   <Pressable onPress={resetAndAddMore} style={{ borderWidth: 1.5, borderColor: '#7B1FA2', borderRadius: 14, paddingVertical: 13, alignItems: 'center' }}>
-                    <Text style={{ color: '#7B1FA2', fontWeight: '700', fontSize: 14 }}>+ เพิ่มรายการต่อ</Text>
+                    <Text style={{ color: '#7B1FA2', fontWeight: '700', fontSize: 14 }}>
+                      {editingItemId ? '✏️ แก้ไขรายการอื่น' : '+ เพิ่มรายการต่อ'}
+                    </Text>
                   </Pressable>
                   <Pressable onPress={closeModal} style={{ backgroundColor: '#EDE7F6', borderRadius: 14, paddingVertical: 13, alignItems: 'center' }}>
                     <Text style={{ color: '#4A148C', fontWeight: '700', fontSize: 14 }}>ดูรายการทั้งหมด</Text>
@@ -523,8 +598,8 @@ export default function TripSessionScreen() {
                       style={{ backgroundColor: '#F5F5F5', borderRadius: 12, padding: 12, fontSize: 14, color: '#333', textAlign: 'center' }} />
                   </View>
                 </View>
-                {/* Quick Unit Chips */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 12 }}>
+                {/* Quick Unit Chips — wrap View แทน ScrollView กัน jump เมื่อ keyboard ขึ้น */}
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
                   {['ชิ้น', 'ถุง', 'กก.', 'กำ', 'แพ็ก', 'กล่อง', 'ขวด', 'ลัง', 'โหล', 'กิโล'].map((u) => (
                     <Pressable key={u} onPress={() => setNewItemUnit(u)}
                       style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
@@ -533,11 +608,14 @@ export default function TripSessionScreen() {
                       <Text style={{ fontSize: 13, fontWeight: '600', color: newItemUnit === u ? '#fff' : '#7B1FA2' }}>{u}</Text>
                     </Pressable>
                   ))}
-                </ScrollView>
+                </View>
 
                 <Pressable onPress={handleAddItem} disabled={addingItem}
                   style={{ backgroundColor: addingItem ? '#CE93D8' : '#7B1FA2', borderRadius: 14, paddingVertical: 14, alignItems: 'center' }}>
-                  {addingItem ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>เพิ่มรายการ</Text>}
+                  {addingItem ? <ActivityIndicator color="#fff" />
+                    : <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>
+                        {editingItemId ? 'บันทึกการแก้ไข ✓' : 'เพิ่มรายการ'}
+                      </Text>}
                 </Pressable>
               </>
             )}

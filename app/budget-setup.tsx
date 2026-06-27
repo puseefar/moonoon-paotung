@@ -17,7 +17,8 @@ interface BudgetItem {
   categoryId: string | null;
   categoryName: string;
   categoryIcon: string;
-  allocatedAmount: number;
+  allocatedAmount: number;  // ค่าที่ผู้ใช้กำหนด (committed) — เริ่มที่ 0 เสมอ
+  suggestedAmount: number;  // ค่าแนะนำจาก persona — แสดงเป็น ghost text ไม่นับจนกว่าจะกด "ใช้ค่าแนะนำ"
 }
 
 const ALLOCATION_RULES: { id: AllocationRule; label: string; desc: string }[] = [
@@ -83,6 +84,7 @@ export default function BudgetSetupScreen() {
           categoryName: bc.categoryName,
           categoryIcon: bc.categoryId ? (iconMap[bc.categoryId] ?? '📦') : '📦',
           allocatedAmount: bc.allocatedAmount ?? 0,
+          suggestedAmount: 0,
         })));
         setStep('categories');
       } else {
@@ -91,6 +93,7 @@ export default function BudgetSetupScreen() {
           categoryName: c.name,
           categoryIcon: c.icon,
           allocatedAmount: 0,
+          suggestedAmount: 0,
         })));
       }
       setLoadingExisting(false);
@@ -102,24 +105,31 @@ export default function BudgetSetupScreen() {
   const isCustomPersona = selectedPersonaId === CUSTOM_PERSONA_ID;
   const selectedPersona = PERSONAS.find((p) => p.id === selectedPersonaId) ?? PERSONAS[4]; // fallback general
 
-  function applyPersonaTemplate(persona: PersonaTemplate) {
-    if (income <= 0) return;
+  // คำนวณ "ค่าแนะนำ" จาก persona แล้วเก็บไว้ใน suggestedAmount (ไม่แตะ allocatedAmount)
+  // คีย์ template ตรงกับชื่อหมวดจริงแล้ว จึงจับคู่เข้าหมวดเดิม ไม่สร้างแถวซ้ำ
+  function computeSuggestions(persona: PersonaTemplate) {
+    if (income <= 0) {
+      setItems((prev) => prev.map((item) => ({ ...item, suggestedAmount: 0 })));
+      return;
+    }
     const template = budgetService.generatePersonaTemplate(persona, income);
-    const updated = items.map((item) => {
-      const match = template.find(
-        (t) => item.categoryName.includes(t.categoryName) || t.categoryName.includes(item.categoryName)
-      );
-      return { ...item, allocatedAmount: match?.allocatedAmount ?? item.allocatedAmount };
-    });
-    const customItems = template
-      .filter((t) => !updated.some((u) => u.categoryName.includes(t.categoryName) || t.categoryName.includes(u.categoryName)))
-      .map((t) => ({
-        categoryId: null,
-        categoryName: t.categoryName,
-        categoryIcon: '📦',
-        allocatedAmount: t.allocatedAmount,
-      }));
-    setItems([...updated, ...customItems]);
+    setItems((prev) => prev.map((item) => {
+      const match = template.find((t) => t.categoryName === item.categoryName)
+        ?? template.find((t) => item.categoryName.includes(t.categoryName) || t.categoryName.includes(item.categoryName));
+      return { ...item, suggestedAmount: match?.allocatedAmount ?? 0 };
+    }));
+  }
+
+  // ผู้ใช้เลือกเอง: เติมค่าแนะนำลงทุกช่อง (เฉพาะหมวดที่มีค่าแนะนำ)
+  function applySuggestions() {
+    setItems((prev) => prev.map((item) =>
+      item.suggestedAmount > 0 ? { ...item, allocatedAmount: item.suggestedAmount } : item
+    ));
+  }
+
+  // ล้างค่าทั้งหมดกลับไปเริ่มจากศูนย์
+  function clearAllAmounts() {
+    setItems((prev) => prev.map((item) => ({ ...item, allocatedAmount: 0 })));
   }
 
   function updateItemAmount(idx: number, val: string) {
@@ -148,8 +158,10 @@ export default function BudgetSetupScreen() {
       return;
     }
     setIncomeError('');
+    // เตรียม "ค่าแนะนำ" ไว้ให้ (แสดงเป็น ghost text) แต่ไม่กรอกให้อัตโนมัติ
+    // ผู้ใช้เป็นคนตัดสินใจเองว่าจะใช้ค่าแนะนำหรือกรอกเอง
     if (!isCustomPersona) {
-      applyPersonaTemplate(selectedPersona);
+      computeSuggestions(selectedPersona);
     }
     setStep('categories');
   }
@@ -180,6 +192,11 @@ export default function BudgetSetupScreen() {
   }
 
   const totalAllocated = items.reduce((s, i) => s + i.allocatedAmount, 0);
+  const totalSuggested = items.reduce((s, i) => s + i.suggestedAmount, 0);
+  const hasSuggestions = totalSuggested > 0;
+  // ค่าแนะนำถูกเติมครบแล้วหรือยัง (เทียบเฉพาะหมวดที่มีค่าแนะนำ)
+  const suggestionsApplied = hasSuggestions &&
+    items.every((i) => i.suggestedAmount === 0 || i.allocatedAmount === i.suggestedAmount);
 
   if (loadingExisting) {
     return (
@@ -388,6 +405,7 @@ export default function BudgetSetupScreen() {
                 value={incomeText}
                 onChangeText={(v) => { setIncomeText(v); setIncomeError(''); }}
                 keyboardType="numeric"
+                selectTextOnFocus
                 placeholder="ระบุจำนวนรายรับ เช่น 25000"
                 placeholderTextColor="#FF8F00"
                 style={{
@@ -494,6 +512,42 @@ export default function BudgetSetupScreen() {
               </View>
             )}
 
+            {/* แถบค่าแนะนำ — ผู้ใช้เลือกเองว่าจะเริ่มจากค่าแนะนำหรือกรอกเอง */}
+            {hasSuggestions && (
+              <View style={{ backgroundColor: '#F3E8FF', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#D9C2F0' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                  <Text style={{ fontSize: 14, marginRight: 6 }}>💡</Text>
+                  <Text style={{ flex: 1, fontSize: 13, fontWeight: '700', color: '#7C3AED' }}>
+                    ค่าแนะนำตามแบบ "{PERSONAS.find((p) => p.id === selectedPersonaId)?.name ?? ''}"
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 12, color: '#7A5BA0', lineHeight: 18, marginBottom: 12 }}>
+                  ช่องด้านล่างเว้นว่างไว้ให้คุณกำหนดเอง — ตัวเลขจางๆ คือค่าที่เราแนะนำ (รวม {formatCurrency(totalSuggested)})
+                  จะแตะปุ่มเติมให้ครบ หรือพิมพ์เองทีละหมวดก็ได้
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Pressable
+                    onPress={applySuggestions}
+                    disabled={suggestionsApplied}
+                    style={{
+                      flex: 1, backgroundColor: suggestionsApplied ? '#E0D4F0' : '#7C3AED',
+                      borderRadius: 12, paddingVertical: 11, alignItems: 'center',
+                    }}>
+                    <Text style={{ color: suggestionsApplied ? '#9B86B8' : '#fff', fontWeight: '700', fontSize: 13 }}>
+                      {suggestionsApplied ? '✓ ใช้ค่าแนะนำแล้ว' : '📥 ใช้ค่าแนะนำทั้งหมด'}
+                    </Text>
+                  </Pressable>
+                  {totalAllocated > 0 && (
+                    <Pressable
+                      onPress={clearAllAmounts}
+                      style={{ backgroundColor: '#fff', borderRadius: 12, paddingVertical: 11, paddingHorizontal: 16, alignItems: 'center', borderWidth: 1, borderColor: '#D9C2F0' }}>
+                      <Text style={{ color: '#7C3AED', fontWeight: '700', fontSize: 13 }}>🔄 ล้างค่า</Text>
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+            )}
+
             <View style={{
               backgroundColor: '#fff', borderRadius: 16, padding: 16,
               elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8,
@@ -512,10 +566,11 @@ export default function BudgetSetupScreen() {
                     value={item.allocatedAmount > 0 ? String(item.allocatedAmount) : ''}
                     onChangeText={(v) => updateItemAmount(idx, v)}
                     keyboardType="numeric"
-                    placeholder="0"
-                    placeholderTextColor="#CCC"
+                    selectTextOnFocus
+                    placeholder={item.suggestedAmount > 0 ? `แนะนำ ${formatCurrency(item.suggestedAmount)}` : '0'}
+                    placeholderTextColor={item.suggestedAmount > 0 ? '#B79AD4' : '#CCC'}
                     style={{
-                      width: 96, textAlign: 'right', fontSize: 15, fontWeight: '700',
+                      width: 120, textAlign: 'right', fontSize: 15, fontWeight: '700',
                       color: '#333', borderBottomWidth: 1.5,
                       borderBottomColor: item.allocatedAmount > 0 ? '#7C3AED' : '#DDD',
                       paddingBottom: 4,

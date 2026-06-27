@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, Pressable, TextInput, Alert, Modal, Switch,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Stack } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -174,13 +175,14 @@ export default function RecurringScreen() {
 
       {/* Add Modal */}
       <Modal visible={showModal} animationType="slide" transparent>
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <View style={{ backgroundColor: colors.cardBackground, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '85%' }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)' }} onPress={() => setShowModal(false)} />
+          <View style={{ backgroundColor: colors.cardBackground, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '90%' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>เพิ่มรายจ่ายประจำ</Text>
               <Pressable onPress={() => setShowModal(false)}><FontAwesome name="times" size={22} color={colors.textSecondary} /></Pressable>
             </View>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled">
               {/* Type Toggle */}
               <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
                 {(['expense', 'income'] as const).map((t) => (
@@ -192,7 +194,7 @@ export default function RecurringScreen() {
 
               {/* Amount */}
               <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 }}>จำนวนเงิน</Text>
-              <TextInput value={amount} onChangeText={setAmount} placeholder="0.00" keyboardType="decimal-pad" placeholderTextColor={colors.textSecondary} style={{ backgroundColor: colors.background, borderRadius: 12, padding: 14, fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 16, borderWidth: 1, borderColor: colors.border }} />
+              <TextInput value={amount} onChangeText={setAmount} placeholder="0.00" keyboardType="decimal-pad" selectTextOnFocus placeholderTextColor={colors.textSecondary} style={{ backgroundColor: colors.background, borderRadius: 12, padding: 14, fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 16, borderWidth: 1, borderColor: colors.border }} />
 
               {/* Frequency */}
               <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 }}>ความถี่</Text>
@@ -207,7 +209,7 @@ export default function RecurringScreen() {
               {frequency === 'monthly' && (
                 <>
                   <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 }}>วันที่ของเดือน</Text>
-                  <TextInput value={dayOfMonth} onChangeText={setDayOfMonth} keyboardType="number-pad" placeholderTextColor={colors.textSecondary} style={{ backgroundColor: colors.background, borderRadius: 12, padding: 14, fontSize: 15, color: colors.text, marginBottom: 16, borderWidth: 1, borderColor: colors.border }} />
+                  <TextInput value={dayOfMonth} onChangeText={setDayOfMonth} keyboardType="number-pad" selectTextOnFocus placeholderTextColor={colors.textSecondary} style={{ backgroundColor: colors.background, borderRadius: 12, padding: 14, fontSize: 15, color: colors.text, marginBottom: 16, borderWidth: 1, borderColor: colors.border }} />
                 </>
               )}
 
@@ -241,7 +243,7 @@ export default function RecurringScreen() {
               <View style={{ height: 30 }} />
             </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

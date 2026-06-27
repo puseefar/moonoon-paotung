@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Stack, useRouter } from 'expo-router';
 import { useSnackbar } from '@/components/ui/SnackbarProvider';
@@ -30,7 +30,7 @@ export default function WalletManageScreen() {
   const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);
   const [walletName, setWalletName] = useState('');
   const [walletIcon, setWalletIcon] = useState('💵');
-  const [walletBalance, setWalletBalance] = useState('0');
+  const [walletBalance, setWalletBalance] = useState('');
 
   useEffect(() => {
     loadWallets();
@@ -40,7 +40,7 @@ export default function WalletManageScreen() {
     setEditingWallet(null);
     setWalletName('');
     setWalletIcon('💵');
-    setWalletBalance('0');
+    setWalletBalance('');
   };
 
   const openAddModal = () => {
@@ -213,19 +213,19 @@ export default function WalletManageScreen() {
       </ScrollView>
 
       <Modal visible={showModal} animationType="slide" transparent>
-        <View
-          style={{
-            flex: 1,
-            justifyContent: 'flex-end',
-            backgroundColor: 'rgba(0,0,0,0.45)',
-          }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <Pressable
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)' }}
+            onPress={() => setShowModal(false)} />
           <View
             style={{
               backgroundColor: colors.cardBackground,
               borderTopLeftRadius: 24,
               borderTopRightRadius: 24,
               padding: 24,
-              maxHeight: '88%',
+              maxHeight: '90%',
             }}>
             <View
               style={{
@@ -358,9 +358,10 @@ export default function WalletManageScreen() {
                   <TextInput
                     value={walletBalance}
                     onChangeText={setWalletBalance}
-                    placeholder="0"
+                    placeholder="0.00"
                     placeholderTextColor={colors.textSecondary}
                     keyboardType="decimal-pad"
+                    selectTextOnFocus
                     style={{
                       backgroundColor: colors.background,
                       borderRadius: 12,
@@ -390,7 +391,7 @@ export default function WalletManageScreen() {
               <View style={{ height: 24 }} />
             </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

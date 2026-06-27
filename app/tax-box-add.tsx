@@ -145,6 +145,7 @@ export default function TaxBoxAddScreen() {
                 value={amountText}
                 onChangeText={(v) => { setAmountText(v); setAmountError(''); }}
                 keyboardType="numeric"
+                selectTextOnFocus
                 placeholder="ระบุจำนวนเงิน เช่น 12000"
                 placeholderTextColor="#FF8F00"
                 style={{

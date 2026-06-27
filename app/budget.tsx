@@ -52,11 +52,12 @@ function CategoryRow({ item }: { item: BudgetCategoryProgress }) {
         </Text>
         {item.isOverBudget ? (
           <Text style={{ fontSize: 11, color: '#E53935', fontWeight: '600' }}>
-            เกินงบ {formatCurrency(Math.abs(item.remainingAmount))}
+            เกินงบ {formatCurrency(Math.abs(item.remainingAmount))} (+{(item.percentUsed - 100).toFixed(0)}%)
           </Text>
         ) : (
           <Text style={{ fontSize: 11, color: '#4CAF50' }}>
             เหลือ {formatCurrency(item.remainingAmount)}
+            {item.percentUsed > 0 ? ` (ต่ำกว่างบ ${(100 - item.percentUsed).toFixed(0)}%)` : ''}
           </Text>
         )}
       </View>
@@ -182,34 +183,34 @@ export default function BudgetScreen() {
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   <View style={{ flex: 1, backgroundColor: '#F3E8FF', borderRadius: 12, padding: 12, alignItems: 'center' }}>
                     <Text style={{ fontSize: 11, color: '#7C3AED', fontWeight: '600', marginBottom: 4 }}>รายรับที่วางแผน</Text>
-                    <Text style={{ fontSize: 16, fontWeight: '800', color: '#7C3AED' }}>{formatCurrency(progress.totalPlannedIncome)}</Text>
+                    <Text style={{ fontSize: 16, fontWeight: '800', color: '#7C3AED' }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{formatCurrency(progress.totalPlannedIncome)}</Text>
                   </View>
                   <View style={{ flex: 1, backgroundColor: '#FFF3E0', borderRadius: 12, padding: 12, alignItems: 'center' }}>
                     <Text style={{ fontSize: 11, color: '#E65100', fontWeight: '600', marginBottom: 4 }}>ใช้จ่ายแล้ว</Text>
-                    <Text style={{ fontSize: 16, fontWeight: '800', color: '#E53935' }}>{formatCurrency(progress.totalSpent)}</Text>
+                    <Text style={{ fontSize: 16, fontWeight: '800', color: '#E53935' }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{formatCurrency(progress.totalSpent)}</Text>
                   </View>
                   <View style={{
                     flex: 1, borderRadius: 12, padding: 12, alignItems: 'center',
                     backgroundColor: progress.totalRemaining >= 0 ? '#E8F5E9' : '#FFEBEE',
                   }}>
                     <Text style={{ fontSize: 11, fontWeight: '600', marginBottom: 4, color: progress.totalRemaining >= 0 ? '#2E7D32' : '#C62828' }}>
-                      คงเหลือ
+                      เหลือจากรายรับ
                     </Text>
-                    <Text style={{ fontSize: 16, fontWeight: '800', color: progress.totalRemaining >= 0 ? '#2E7D32' : '#C62828' }}>
+                    <Text style={{ fontSize: 16, fontWeight: '800', color: progress.totalRemaining >= 0 ? '#2E7D32' : '#C62828' }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
                       {formatCurrency(Math.abs(progress.totalRemaining))}
                     </Text>
                   </View>
                 </View>
 
-                {/* Overall Progress Bar */}
+                {/* Overall Progress Bar (vs budget, not vs income) */}
                 {progress.totalAllocated > 0 && (
                   <View style={{ marginTop: 14 }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
                       <Text style={{ fontSize: 12, color: '#666' }}>งบรวมที่ตั้ง {formatCurrency(progress.totalAllocated)}</Text>
-                      <Text style={{ fontSize: 12, color: '#666' }}>
+                      <Text style={{ fontSize: 12, color: progress.totalSpent > progress.totalAllocated ? '#E53935' : '#666' }}>
                         {progress.totalAllocated > 0
                           ? ((progress.totalSpent / progress.totalAllocated) * 100).toFixed(0)
-                          : 0}% ใช้ไป
+                          : 0}% ใช้ไป (เทียบงบ)
                       </Text>
                     </View>
                     <ProgressBar
@@ -217,6 +218,11 @@ export default function BudgetScreen() {
                       isOver={progress.totalSpent > progress.totalAllocated}
                       isWarn={(progress.totalSpent / progress.totalAllocated) >= 0.8}
                     />
+                    {progress.unbudgetedSpent > 0 && (
+                      <Text style={{ fontSize: 11, color: '#888', marginTop: 5 }}>
+                        ⚠️ รายจ่ายนอกงบ {formatCurrency(progress.unbudgetedSpent)} บาท ไม่ได้อยู่ในหมวดที่ตั้งงบไว้
+                      </Text>
+                    )}
                   </View>
                 )}
               </View>
@@ -254,6 +260,9 @@ export default function BudgetScreen() {
                   <Text style={{ fontSize: 11, color: '#999', marginTop: 8 }}>
                     ผ่านมา {progress.forecast.daysElapsed} วัน · เหลืออีก {progress.forecast.daysRemaining} วัน
                   </Text>
+                  <Text style={{ fontSize: 10, color: '#BDBDBD', marginTop: 4, lineHeight: 15 }}>
+                    * คำนวณจากอัตราใช้จ่ายเฉลี่ยตลอด {progress.forecast.daysElapsed} วันที่ผ่านมา หากมีรายจ่ายก้อนใหญ่ในช่วงต้นเดือน ตัวเลขนี้อาจสูงกว่าความเป็นจริง
+                  </Text>
                 </View>
               )}
 
@@ -268,25 +277,51 @@ export default function BudgetScreen() {
                     .map((cat) => (
                       <CategoryRow key={cat.id} item={cat} />
                     ))}
+                  {progress.unbudgetedSpent > 0 && (
+                    <View style={{ paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#F0F0F0', marginTop: 4 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={{ fontSize: 18, marginRight: 8 }}>📋</Text>
+                        <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: '#888' }}>
+                          รายจ่ายนอกงบ
+                        </Text>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: '#888' }}>
+                            {formatCurrency(progress.unbudgetedSpent)}
+                          </Text>
+                          <Text style={{ fontSize: 11, color: '#BBB' }}>ไม่ได้จัดหมวดในงบ</Text>
+                        </View>
+                      </View>
+                    </View>
+                  )}
                 </View>
               )}
 
-              {/* Warnings */}
+              {/* Warnings — split into overbudget vs near-full */}
               {progress.categories.some((c) => c.isOverBudget || c.isWarning) && (
                 <View style={{ backgroundColor: '#FFF8E1', borderRadius: 16, padding: 16, borderLeftWidth: 4, borderLeftColor: '#FF8F00' }}>
                   <Text style={{ fontSize: 13, fontWeight: '700', color: '#E65100', marginBottom: 8 }}>
                     ⚠️ แจ้งเตือน
                   </Text>
-                  {progress.categories.filter((c) => c.isOverBudget).map((c) => (
-                    <Text key={c.id} style={{ fontSize: 13, color: '#B71C1C', marginBottom: 4 }}>
-                      • {c.categoryIcon} {c.categoryName} — เกินงบ {formatCurrency(Math.abs(c.remainingAmount))}
-                    </Text>
-                  ))}
-                  {progress.categories.filter((c) => c.isWarning).map((c) => (
-                    <Text key={c.id} style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>
-                      • {c.categoryIcon} {c.categoryName} — ใช้ไปแล้ว {c.percentUsed.toFixed(0)}%
-                    </Text>
-                  ))}
+                  {progress.categories.some((c) => c.isOverBudget) && (
+                    <>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#B71C1C', marginBottom: 4 }}>เกินงบแล้ว</Text>
+                      {progress.categories.filter((c) => c.isOverBudget).map((c) => (
+                        <Text key={c.id} style={{ fontSize: 13, color: '#B71C1C', marginBottom: 4 }}>
+                          • {c.categoryIcon} {c.categoryName} — เกินงบ {formatCurrency(Math.abs(c.remainingAmount))}
+                        </Text>
+                      ))}
+                    </>
+                  )}
+                  {progress.categories.some((c) => c.isWarning) && (
+                    <>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#E65100', marginTop: progress.categories.some((c) => c.isOverBudget) ? 8 : 0, marginBottom: 4 }}>ใกล้เต็มงบ</Text>
+                      {progress.categories.filter((c) => c.isWarning).map((c) => (
+                        <Text key={c.id} style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>
+                          • {c.categoryIcon} {c.categoryName} — ใช้ไปแล้ว {c.percentUsed.toFixed(0)}%
+                        </Text>
+                      ))}
+                    </>
+                  )}
                 </View>
               )}
             </>

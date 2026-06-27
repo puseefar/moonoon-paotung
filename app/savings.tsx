@@ -424,7 +424,7 @@ export default function SavingsScreen() {
             <TextInput value={name} onChangeText={setName} placeholder="เช่น เที่ยวญี่ปุ่น, ซื้อรถ..." placeholderTextColor="#FF8F00" style={{ backgroundColor: '#FFF8F0', borderRadius: 12, padding: 14, fontSize: 15, color: '#333', marginBottom: 14, borderWidth: 1.5, borderColor: '#FFB74D' }} />
 
             <Text style={{ fontSize: 12, fontWeight: '700', color: '#888', marginBottom: 6 }}>ยอดเป้าหมาย (บาท) <Text style={{ color: '#E53935' }}>*</Text></Text>
-            <TextInput value={targetAmount} onChangeText={setTargetAmount} placeholder="เช่น 50000" keyboardType="decimal-pad" placeholderTextColor="#FF8F00" style={{ backgroundColor: '#FFF8F0', borderRadius: 12, padding: 14, fontSize: 20, fontWeight: '800', color: '#333', marginBottom: 14, borderWidth: 1.5, borderColor: '#FFB74D' }} />
+            <TextInput value={targetAmount} onChangeText={setTargetAmount} placeholder="เช่น 50000" keyboardType="decimal-pad" selectTextOnFocus placeholderTextColor="#FF8F00" style={{ backgroundColor: '#FFF8F0', borderRadius: 12, padding: 14, fontSize: 20, fontWeight: '800', color: '#333', marginBottom: 14, borderWidth: 1.5, borderColor: '#FFB74D' }} />
 
             <Pressable onPress={() => setShowDatePicker(true)} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF8F0', borderRadius: 12, padding: 14, marginBottom: 20, borderWidth: 1, borderColor: '#FFB74D', gap: 10 }}>
               <Text style={{ fontSize: 16 }}>📅</Text>
@@ -461,7 +461,7 @@ export default function SavingsScreen() {
               {contributeGoal?.icon} {contributeGoal?.name}
             </Text>
             <Text style={{ fontSize: 12, fontWeight: '700', color: '#888', marginBottom: 6 }}>จำนวนเงิน (บาท) <Text style={{ color: '#E53935' }}>*</Text></Text>
-            <TextInput value={contributeAmount} onChangeText={setContributeAmount} placeholder="0.00" keyboardType="decimal-pad" placeholderTextColor="#FF8F00" style={{ backgroundColor: '#FFF8F0', borderRadius: 12, padding: 14, fontSize: 22, fontWeight: '800', color: '#333', marginBottom: 12, borderWidth: 1.5, borderColor: '#FFB74D', textAlign: 'center' }} autoFocus />
+            <TextInput value={contributeAmount} onChangeText={setContributeAmount} placeholder="0.00" keyboardType="decimal-pad" selectTextOnFocus placeholderTextColor="#FF8F00" style={{ backgroundColor: '#FFF8F0', borderRadius: 12, padding: 14, fontSize: 22, fontWeight: '800', color: '#333', marginBottom: 12, borderWidth: 1.5, borderColor: '#FFB74D', textAlign: 'center' }} autoFocus />
             <TextInput value={contributeNote} onChangeText={setContributeNote} placeholder="โน้ต เช่น ออมจากเงินเดือน (ไม่บังคับ)" placeholderTextColor="#BBB" style={{ backgroundColor: '#F5F5F5', borderRadius: 12, padding: 12, fontSize: 14, color: '#333', marginBottom: 16 }} />
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <Pressable onPress={() => { setContributeGoal(null); setContributeAmount(''); setContributeNote(''); }} style={{ flex: 1, paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: '#DDD', alignItems: 'center' }}>

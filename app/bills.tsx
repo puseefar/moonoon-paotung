@@ -500,6 +500,7 @@ export default function BillsScreen() {
                 onChangeText={(v) => { setBillAmount(v); if (billAmountError) setBillAmountError(''); }}
                 placeholder="ระบุจำนวนเงิน เช่น 1500"
                 keyboardType="decimal-pad"
+                selectTextOnFocus
                 placeholderTextColor="#00ACC120"
                 style={{ backgroundColor: '#F0FDFE', borderRadius: 12, padding: 14, fontSize: 20, fontWeight: '800', color: '#333', marginBottom: billAmountError ? 4 : 14, borderWidth: 1.5, borderColor: billAmountError ? '#E53935' : '#B2EBF2' }}
               />
@@ -541,7 +542,7 @@ export default function BillsScreen() {
               <Text style={{ fontSize: 14, color: '#888', marginBottom: 16 }}>🗂️ {payBill?.name}</Text>
 
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#888', marginBottom: 6 }}>ยอดที่จ่าย (บาท)</Text>
-              <TextInput value={payAmount} onChangeText={setPayAmount} keyboardType="decimal-pad" placeholder={String(payBill?.amount ?? '0')} placeholderTextColor="#CCC" style={{ backgroundColor: '#F0FDFE', borderRadius: 12, padding: 14, fontSize: 22, fontWeight: '800', color: '#333', marginBottom: 14, borderWidth: 1, borderColor: '#B2EBF2', textAlign: 'center' }} autoFocus />
+              <TextInput value={payAmount} onChangeText={setPayAmount} keyboardType="decimal-pad" selectTextOnFocus placeholder={String(payBill?.amount ?? '0')} placeholderTextColor="#CCC" style={{ backgroundColor: '#F0FDFE', borderRadius: 12, padding: 14, fontSize: 22, fontWeight: '800', color: '#333', marginBottom: 14, borderWidth: 1, borderColor: '#B2EBF2', textAlign: 'center' }} autoFocus />
 
               {/* Create Transaction Toggle */}
               <Pressable onPress={() => setCreateTx(!createTx)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14, paddingVertical: 8 }}>

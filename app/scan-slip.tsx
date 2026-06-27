@@ -22,6 +22,26 @@ import { slipService, type SlipData } from '@/services/slipService';
 import { ocrService } from '@/services/ocrService';
 import type { Category, Wallet } from '@/db/schema';
 
+// วันที่วันนี้ตามเวลาไทย (UTC+7) ในรูปแบบ "YYYY-MM-DD"
+function getThaiTodayDateStr(): string {
+  const now = new Date();
+  const thai = new Date(now.getTime() + 7 * 3_600_000);
+  const y = thai.getUTCFullYear();
+  const m = String(thai.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(thai.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+// แปลง "YYYY-MM-DD" → วันที่เวลาเที่ยงวันไทย (05:00 UTC = 12:00 UTC+7)
+// ป้องกัน UTC midnight ตกไปเป็นวันก่อนหน้าสำหรับ query ช่วงเวลาไทย
+function parseSlipDateToThaiNoon(dateStr: string): Date {
+  const parts = dateStr.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return new Date();
+  const [year, month, day] = parts;
+  // เที่ยงวันไทย (UTC+7) = 05:00 UTC
+  return new Date(Date.UTC(year, month - 1, day, 5, 0, 0));
+}
+
 type ScanMode = 'menu' | 'camera' | 'preview' | 'confirm';
 
 type ProcessingStage = 'scanning' | 'ocr' | 'checking' | 'ready';
@@ -250,7 +270,7 @@ export default function ScanSlipScreen() {
             const slipFromOCR: SlipData = {
               amount: ocrResult.amount,
               bankName: ocrResult.bankName,
-              transferDate: ocrResult.transferDate || new Date().toISOString().split('T')[0],
+              transferDate: ocrResult.transferDate || getThaiTodayDateStr(),
               senderName: ocrResult.senderName,
               receiverName: ocrResult.receiverName,
               refCode: ocrResult.refCode ?? null,
@@ -350,13 +370,22 @@ export default function ScanSlipScreen() {
       );
 
       // 2. Create transaction
+      // parseSlipDate: แปลง "YYYY-MM-DD" → Thai noon (05:00 UTC) เพื่อให้ตรงกับ Thai day range เสมอ
+      // ไม่ใช้ UTC midnight เพราะถ้าสแกนก่อน 07:00 ไทย date จะตกวันก่อนหน้า
+      const txDate = slipData.transferDate
+        ? parseSlipDateToThaiNoon(slipData.transferDate)
+        : new Date();
+      const selectedWallet = wallets.find((w) => w.id === selectedWalletId);
       const txId = await addTransaction({
         amount: finalAmount,
         type: txType,
         categoryId: selectedCategoryId,
         walletId: selectedWalletId,
+        walletNameSnapshot: selectedWallet?.name ?? null,
+        sourceType: 'scan_slip',
+        sourceRef: slipData.refCode ?? null,
         note: buildTransactionNote(),
-        date: slipData.transferDate ? new Date(slipData.transferDate) : new Date(),
+        date: txDate,
       });
 
       // 3. Link slip to transaction
@@ -818,6 +847,7 @@ export default function ScanSlipScreen() {
                   placeholder="กรอกจำนวนเงิน เช่น 1500.00"
                   placeholderTextColor={colors.textSecondary}
                   keyboardType="decimal-pad"
+                  selectTextOnFocus
                   style={{
                     fontSize: 24, fontWeight: '800', textAlign: 'center',
                     color: colors.text, borderWidth: 2, borderColor: '#FF9800',

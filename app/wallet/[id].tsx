@@ -35,6 +35,7 @@ function formatDateTime(date: Date) {
 function getActivityTitle(activity: WalletActivityItem) {
   if (activity.actionType === 'income') return 'เงินเข้า';
   if (activity.actionType === 'expense') return 'รายจ่าย';
+  if (activity.actionType === 'opening') return 'ยอดตั้งต้น';
   if (activity.actionType === 'transfer_in') return `รับโอนจาก ${activity.counterpartyWalletName ?? 'อีกกระเป๋า'}`;
   if (activity.actionType === 'transfer_out') return `โอนไป ${activity.counterpartyWalletName ?? 'อีกกระเป๋า'}`;
   if (activity.transactionType === 'transfer') return 'ลบรายการโอน';
@@ -45,6 +46,7 @@ function getActivityTitle(activity: WalletActivityItem) {
 function getActivityIcon(activity: WalletActivityItem) {
   if (activity.actionType === 'income') return 'arrow-down';
   if (activity.actionType === 'expense') return 'arrow-up';
+  if (activity.actionType === 'opening') return 'flag';
   if (activity.actionType === 'transfer_in' || activity.actionType === 'transfer_out') return 'exchange';
   return 'trash';
 }
@@ -292,7 +294,7 @@ export default function WalletDetailScreen() {
                         <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 3 }}>
                           {activity.categoryName
                             ? `${activity.categoryIcon ?? ''} ${activity.categoryName}`
-                            : 'ไม่มีหมวดหมู่'}
+                            : 'อื่นๆ'}
                         </Text>
                       </View>
                       <Text style={{ fontSize: 16, fontWeight: '800', color: amountColor }}>
