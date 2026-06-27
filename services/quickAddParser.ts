@@ -1,11 +1,58 @@
 import type { Category } from '@/db/schema';
 
+export type AmountSource = 'explicit' | 'sole' | 'computed' | 'inferred' | 'ambiguous' | 'none';
+export type AmountModifier =
+  | 'commission'
+  | 'profit'
+  | 'discount'      // ลด N / ลด X%
+  | 'addition'      // บวกค่าส่ง N
+  | 'change'        // จ่าย P ทอน C → P − C
+  | null;
+
+// Phase 2 — Clarifying Question (ตีความได้หลายแบบ → ถามกลับ ไม่เดา)
+export type ClarifyOption = {
+  label: string;
+  amount: number;
+  type: 'income' | 'expense';
+  // บันทึกคู่ (double-entry) — สร้าง 2 รายการพร้อมกัน เช่น ขาย+ต้นทุน
+  pair?: { incomeAmount: number; expenseAmount: number } | null;
+};
+export type ClarifyResult = {
+  // dual_entry = ตรวจพบ 2 รายการชัดเจน (ซื้อ+ขาย) → มั่นใจ บันทึกคู่ได้เลย
+  // ambiguous  = ตีความได้หลายแบบจริง (เช่น ยืม+ดอกเบี้ย) → ต้องถามเลือก
+  kind: 'dual_entry' | 'ambiguous';
+  question: string;
+  summary?: string; // สรุปที่มา เช่น "รายจ่าย 1,200 + รายรับ 3,900 → กำไร 2,700"
+  options: ClarifyOption[];
+};
+export type SmartAction = 'auto_save' | 'review' | 'ask';
+
 export type QuickAddResult = {
   amount: number | null;
   type: 'income' | 'expense';
   category: Category | null;
   note: string;
   confidence: 'high' | 'medium' | 'low';
+  action?: SmartAction;
+  clarify?: ClarifyResult | null;
+  // Smart parser (money-aware) — แยกปริมาณสินค้าออกจากจำนวนเงิน
+  quantity?: number | null;
+  unit?: string | null;
+  unitPrice?: number | null;
+  priceUnit?: string | null; // หน่วยของราคาต่อหน่วย เช่น "กิโลกรัม" จาก "กิโลกรัมละ 80"
+  amountSource?: AmountSource;
+  // Modifier (เปอร์เซ็นต์) — เช่น ค่านายหน้า/กำไร X% ของยอดธุรกรรม
+  baseAmount?: number | null; // มูลค่าธุรกรรมก่อนคิด % (เช่น ราคารถ 850,000)
+  percent?: number | null;
+  modifier?: AmountModifier;
+  breakdown?: string | null; // ที่มาของยอด เช่น "850,000 × 3% = 25,500"
+  tradeSet?: {
+    kind: 'dual_entry';
+    cost: { amount: number; type: 'expense'; category: Category | null };
+    revenue: { amount: number; type: 'income'; category: Category | null };
+    // ตอนนี้ยังใช้หมวด income เป็น activity ที่ผู้ใช้เห็น; data model แยก activity จริงค่อยเป็น phase ถัดไป
+    businessActivity: Category | null;
+  } | null;
 };
 
 export type QuickAddLearningRuleInput = {
@@ -65,7 +112,19 @@ type IntentCategoryRule = {
   triggers: string[];
   preferredHints: string[];
   fallbackHints?: string[];
+  // ถ้าระบุ — rule นี้จะทำงานเฉพาะเมื่อ flag เปิด (มติทีม: เปิด/ปิด rule ใหม่ได้โดยไม่ rollback build)
+  flag?: keyof typeof QUICK_ADD_FLAGS;
 };
+
+// ── Feature flags (มติทีม 8 มิ.ย.) — คุมความเสี่ยง: เพิ่มความแม่นแบบแคบก่อน ไม่เปิดความฉลาดกว้าง ──
+//   ENABLE_MARKET_SELLING_INTENT — rule เฉพาะบริบท "ซื้อมา-ทำ-ขาย" → ขายของในตลาด (deterministic + guard)
+//   ENABLE_PHRASE_LEARNING — phrase learning แบบ generalize (ยังไม่ทำ เสี่ยง learnedRule hijack) = ปิดไว้
+//   ENABLE_USER_OVERRIDE_SUGGESTION — learning จากผู้ใช้แก้เอง ใช้เป็น suggestion (ของเดิม) = เปิด
+export const QUICK_ADD_FLAGS = {
+  ENABLE_MARKET_SELLING_INTENT: true,
+  ENABLE_PHRASE_LEARNING: false,
+  ENABLE_USER_OVERRIDE_SUGGESTION: true,
+} as const;
 
 type TypeScoreSummary = {
   total: number;
@@ -96,6 +155,15 @@ const DEBT_REPAYMENT_PATTERNS = DEBT_REPAYMENT_SUBJECTS.flatMap((subject) => [
   `${subject}จ่ายหนี้`,
   `${subject}ใช้หนี้`,
   `${subject}คืนหนี้`,
+]);
+
+// โอน/คืนเงินให้คนรู้จัก (เงินไหลออกระหว่างบุคคล ไม่ใช่ค่าใช้จ่ายจริง)
+//   จงใจไม่รวม "ลูกค้า" — คืนเงินลูกค้าเป็นค่าใช้จ่ายธุรกิจ (มีกฎแยกอยู่แล้ว)
+const PERSONAL_TRANSFER_SUBJECTS = ['แม่', 'พ่อ', 'เพื่อน', 'น้อง', 'พี่', 'แฟน', 'ลูก', 'หลาน'];
+
+const PERSONAL_TRANSFER_PATTERNS = PERSONAL_TRANSFER_SUBJECTS.flatMap((subject) => [
+  `โอนเงินให้${subject}`,
+  `คืนเงินให้${subject}`,
 ]);
 
 const GENERAL_WAGE_EXPENSE_PATTERNS = ['ค่าจ้าง', 'ค่าแรง'];
@@ -712,7 +780,7 @@ const CATEGORY_RULE_ENGINE: CategoryRule[] = [
   },
   {
     name: 'market-sales-income',
-    keywords: ['ขายของตลาด', 'ขายของในตลาด', 'ขายตลาด', 'ขายผักตลาด', 'ขายผลไม้ตลาด'],
+    keywords: ['ขายของตลาด', 'ขายของในตลาด', 'ขายในตลาด', 'ขายที่ตลาด', 'ขายตลาด', 'ขายผักตลาด', 'ขายผลไม้ตลาด'],
     categoryHints: ['ขายของในตลาด', 'ตลาด'],
   },
   {
@@ -799,6 +867,19 @@ const INTENT_CATEGORY_RULES: IntentCategoryRule[] = [
     triggers: ['ค่าจ้างคนงานสวน', 'ค่าแรงคนงานสวน', 'คนงานสวน', 'ค่าแรงเกษตร'],
     preferredHints: ['ค่าแรงเกษตร'],
     fallbackHints: ['ค่าใช้จ่ายการเกษตร', 'อื่นๆ'],
+  },
+  {
+    // กิจกรรมการเกษตร (ไถ/ดำ/เกี่ยว/ฟาง/ปุ๋ย) — intent layer ทับ object keyword
+    // กันเคส "ค่าคนงานเก็บฟางข้าว" รั่วไปหมวดอาหารเพราะ keyword "ข้าว" (structural leak)
+    name: 'agriculture-activity-expense',
+    type: 'expense',
+    triggers: [
+      'ฟางข้าว', 'เก็บฟาง', 'เก็บเกี่ยว', 'เกี่ยวข้าว', 'ไถนา', 'ดำนา', 'หว่านข้าว',
+      'ใส่ปุ๋ย', 'ปุ๋ย', 'ยาฆ่าหญ้า', 'ยาฆ่าแมลง', 'เมล็ดพันธุ์', 'พันธุ์ข้าว',
+      'ค่าไถ', 'ค่าเกี่ยว', 'ค่ารถเกี่ยว',
+    ],
+    preferredHints: ['กิจกรรมการเกษตร', 'ค่าใช้จ่ายการเกษตร'],
+    fallbackHints: ['ค่าแรงเกษตร', 'ปุ๋ย/ยาเกษตร', 'ประกอบธุรกิจ', 'อื่นๆ'],
   },
   {
     name: 'staff-expense',
@@ -935,9 +1016,23 @@ const INTENT_CATEGORY_RULES: IntentCategoryRule[] = [
   {
     name: 'market-sales',
     type: 'income',
-    triggers: ['ขายของตลาด', 'ขายของในตลาด', 'ขายตลาด', 'ยอดขายตลาด'],
+    triggers: ['ขายของตลาด', 'ขายของในตลาด', 'ขายในตลาด', 'ขายที่ตลาด', 'ขายตลาด', 'ยอดขายตลาด'],
     preferredHints: ['ขายของในตลาด', 'เกษตรกร'],
     fallbackHints: ['ธุรกิจส่วนตัว'],
+  },
+  {
+    // Market Selling Intent (มติทีม 8 มิ.ย.) — บริบท "ซื้อมา-ปรุง/แปรรูป-เอาไปขาย" = แม่ค้าตลาด
+    //   triggers ทุกตัวมีคำว่า "ขาย" อยู่แล้ว → การันตี commerce-context ในตัว (กันคำว่า "ตลาด" เดี่ยว ๆ
+    //   พาไปผิดหมวด เช่น "ไปตลาดซื้อผัก"/"ค่ารถไปตลาด"/"ค่าเช่าแผงตลาด" ไม่ match เพราะไม่มี "...ขาย")
+    name: 'market-selling-vendor',
+    type: 'income',
+    triggers: [
+      'ย่างขาย', 'ทอดขาย', 'ปิ้งขาย', 'นึ่งขาย', 'ต้มขาย', 'ผัดขาย', 'ทำขาย',
+      'เอาไปขาย', 'ไปขายตลาด', 'ไปขายในตลาด', 'ของไปขาย', 'หาบเร่',
+    ],
+    preferredHints: ['ขายของในตลาด'],
+    fallbackHints: ['ร้านอาหาร', 'ธุรกิจส่วนตัว', 'ยอดขาย', 'ขาย', 'รายได้เสริม'],
+    flag: 'ENABLE_MARKET_SELLING_INTENT',
   },
   {
     name: 'online-sales',
@@ -973,6 +1068,47 @@ const INTENT_CATEGORY_RULES: IntentCategoryRule[] = [
     triggers: ['ขาย', 'ยอดขาย', 'กำไร'],
     preferredHints: ['ธุรกิจส่วนตัว', 'ขายของในตลาด', 'แม่ค้าออนไลน์', 'เกษตรกร', 'ร้านอาหาร', 'ยอดขาย', 'ขาย'],
     fallbackHints: ['รายได้เสริม', 'รายได้พิเศษ', 'ฟรีแลนซ์', 'ค่าสินค้า'],
+  },
+  // ── Catch-all whitelist (มติทีม): เคสที่ "รู้เจตนาชัด แต่ไม่เข้าหมวดเฉพาะ" → route "อื่นๆ" อย่างมีเหตุผล ──
+  //   กู้เฉพาะ whitelist ที่ intent ชัดเท่านั้น (ไม่กู้ทั้ง 30 เคสแบบกว้าง — กัน false confidence กลับมา)
+  //   ปลอดภัย 2 ชั้น: (1) preferredHints=['อื่นๆ'] → โปรไฟล์ที่ไม่มีหมวด "อื่นๆ" จะ abstain เอง
+  //   (2) parse() cap ความมั่นใจของผล "อื่นๆ" ไว้สูงสุด medium → โผล่เป็น "แนะนำ" ไม่ auto-save เงียบ
+  {
+    name: 'lottery-windfall-income',
+    type: 'income',
+    triggers: ['ถูกหวย', 'ถูกล็อตเตอรี่', 'ถูกลอตเตอรี่', 'ถูกสลาก', 'ถูกรางวัล'],
+    preferredHints: ['อื่นๆ'],
+  },
+  {
+    // เงินคืน/หนี้คืนระหว่างบุคคล (ไม่ใช่ธุรกิจ) + ฝากเงินเข้าบัญชี → "อื่นๆ"
+    name: 'personal-refund-income',
+    type: 'income',
+    triggers: [
+      'เพื่อนคืนเงิน',
+      'เพื่อนโอนคืน',
+      'ได้เงินคืน',
+      'รับคืนเงิน',
+      'คืนเงินประกัน',
+      'เงินคืน',
+      'หารค่าอาหาร',
+      'ฝากเงิน',
+      ...DEBT_REPAYMENT_PATTERNS,
+    ],
+    preferredHints: ['อื่นๆ'],
+  },
+  {
+    // ให้ยืม/เพื่อนยืม → เงินไหลออกระหว่างบุคคล (ไม่ใช่ค่าใช้จ่ายจริง) → "อื่นๆ"
+    name: 'personal-lending-expense',
+    type: 'expense',
+    triggers: ['เพื่อนยืม', 'ให้เพื่อนยืม', 'ให้ยืม'],
+    preferredHints: ['อื่นๆ'],
+  },
+  {
+    // คนรู้จักขอเงิน + โอน/คืนเงินให้คนรู้จัก + ถอนเงินสด → "อื่นๆ"
+    name: 'personal-transfer-expense',
+    type: 'expense',
+    triggers: [...MONEY_REQUEST_PATTERNS, ...PERSONAL_TRANSFER_PATTERNS, 'ถอนเงิน'],
+    preferredHints: ['อื่นๆ'],
   },
 ];
 
@@ -1026,6 +1162,38 @@ const THAI_SCALED_AMOUNT_REGEX = new RegExp(
   `((?:(?:${THAI_NUMBER_TOKEN_PATTERN})?\\s*(?:${THAI_SCALE_WORD_PATTERN})\\s*)+(?:(?:${THAI_NUMBER_TOKEN_PATTERN})\\s*)?(?:บาท|฿)?)`,
   'g'
 );
+
+function stripLearningScaledAmount(input: string) {
+  const matches = [...input.matchAll(THAI_SCALED_AMOUNT_REGEX)]
+    .map((match) => ({
+      index: match.index ?? -1,
+      value: match[0],
+    }))
+    .filter(
+      (match) =>
+        match.index >= 0 &&
+        (/บาท|฿/.test(match.value) ||
+          /\d|[๐-๙]/.test(match.value) ||
+          /ร้อย|พัน|หมื่น|แสน|ล้าน/.test(match.value))
+    )
+    .sort((a, b) => b.index - a.index);
+
+  let stripped = input;
+  for (const match of matches) {
+    stripped = `${stripped.slice(0, match.index)} ${stripped.slice(match.index + match.value.length)}`;
+  }
+
+  return stripped;
+}
+
+function normalizeForLearning(input: string) {
+  return compact(
+    stripLearningScaledAmount(normalize(input))
+      .replace(/(?:฿|บาท)?\s*(\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?\s*(?:บาท|฿)?/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  );
+}
 
 function convertThaiDigitsToArabic(input: string) {
   return input.replace(/[๐-๙]/g, (digit) => THAI_DIGIT_CHAR_VALUES[digit] ?? digit);
@@ -1168,6 +1336,315 @@ function extractAmount(input: string) {
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Smart Money-Aware Parser (tag-by-unit) — แยก "จำนวนเงิน" ออกจาก "ปริมาณสินค้า"
+//   หลักการ (ตามทีมสุดท้าย): ดู "หน่วยที่ตามหลังเลข" เป็นตัวตัดสิน ไม่ใช่ขนาดของเลข
+//     เลข + บาท/฿        → เงิน (แข็งสุด)
+//     เลข + ตัน/กก./ฟอง.. → ปริมาณ (ตัดออกจากเงิน)
+//     "หน่วยละ N"         → ราคาต่อหน่วย → เงินรวม = ปริมาณ × N
+// ─────────────────────────────────────────────────────────────────────────────
+
+// หน่วยนับสินค้า (เรียงยาว→สั้น เพื่อ match ตัวที่จำเพาะกว่าก่อน)
+const QUANTITY_UNITS = [
+  'กิโลกรัม', 'กิโลเมตร', 'กิโล', 'กรัม', 'กก.', 'กก', 'โล', 'ขีด', 'ตัน',
+  'มิลลิลิตร', 'ซีซี', 'ลิตร',
+  'ลูก', 'ฟอง', 'ใบ', 'ตัว', 'ชิ้น', 'อัน', 'คู่', 'โหล', 'แผง', 'ขวด', 'กระป๋อง',
+  'ห่อ', 'มัด', 'กำ', 'หัว', 'ดอก', 'ถุง', 'กระสอบ', 'ลัง', 'กล่อง',
+  'แพ็กเกจ', 'แพ็ค', 'แพ็ก', 'แพค', 'ไร่', 'งาน', 'เมตร',
+  'จาน', 'ที่', 'คน', 'เครื่อง', 'คัน', 'หลัง', 'ต้น', 'เข่ง', 'เม็ด',
+];
+const QUANTITY_UNITS_SORTED = [...QUANTITY_UNITS].sort((a, b) => b.length - a.length);
+
+const MONEY_TRAILING = ['บาทถ้วน', 'บาท', '฿', 'บ.'];
+const MONEY_LEADING_KEYWORDS = [
+  'ได้เงิน', 'ได้มา', 'ได้รับเงิน', 'ได้รับ', 'รับเงิน', 'ขายได้', 'รายได้',
+  'เป็นเงิน', 'จำนวนเงิน', 'คิดเงิน', 'รวมเป็น', 'ราคา', 'มูลค่า', 'ยอด', 'รวม',
+];
+
+// เลข: เรียงให้ match "ยาวสุด" ก่อน — ตัวเลข+คำหลักไทย (4 แสน / หมื่นห้า) ต้องมาก่อนเลขเดี่ยว
+//   1) scaled: เลข/คำ + คำหลัก (สิบ/ร้อย/พัน/หมื่น/แสน/ล้าน) → "4 แสน"=400000, "หมื่นห้า"=15000
+//   2) อารบิกมี comma | อารบิก | เลขไทย | คำเลขเดี่ยว (ห้า)
+const SCALED_NUMBER_SUBPATTERN =
+  `(?:${THAI_NUMBER_TOKEN_PATTERN}?\\s*(?:${THAI_SCALE_WORD_PATTERN})\\s*)+(?:${THAI_NUMBER_TOKEN_PATTERN})?`;
+const NUMERIC_TOKEN_REGEX = new RegExp(
+  `${SCALED_NUMBER_SUBPATTERN}|\\d{1,3}(?:,\\d{3})+|\\d+(?:\\.\\d+)?|[๐-๙]+|(?:${THAI_NUMBER_WORD_PATTERN})`,
+  'g'
+);
+
+// ตารางแปลงหน่วยชั่งตวง (มวล base=กรัม, ปริมาตร base=มิลลิลิตร) สำหรับเคสข้ามหน่วย
+//   เช่น "ตัวละ 700 กรัม กิโลกรัมละ 75" → ต้องแปลง กรัม→กิโลกรัม ก่อนคูณราคา
+const UNIT_DIMENSION: Record<string, { dim: string; factor: number }> = {
+  // มวล (base = กรัม)
+  กรัม: { dim: 'mass', factor: 1 },
+  ขีด: { dim: 'mass', factor: 100 },
+  กิโลกรัม: { dim: 'mass', factor: 1000 },
+  กิโล: { dim: 'mass', factor: 1000 },
+  'กก.': { dim: 'mass', factor: 1000 },
+  กก: { dim: 'mass', factor: 1000 },
+  โล: { dim: 'mass', factor: 1000 },
+  ตัน: { dim: 'mass', factor: 1_000_000 },
+  // ปริมาตร (base = มิลลิลิตร)
+  มิลลิลิตร: { dim: 'volume', factor: 1 },
+  ซีซี: { dim: 'volume', factor: 1 },
+  ลิตร: { dim: 'volume', factor: 1000 },
+};
+
+/** ตัวคูณแปลง fromUnit → toUnit (มิติเดียวกัน); null ถ้าแปลงไม่ได้/คนละมิติ */
+function unitConvertFactor(fromUnit: string | null, toUnit: string | null): number | null {
+  if (!fromUnit || !toUnit) return null;
+  const f = UNIT_DIMENSION[fromUnit];
+  const t = UNIT_DIMENSION[toUnit];
+  if (!f || !t || f.dim !== t.dim) return null;
+  return f.factor / t.factor;
+}
+
+function matchLeadingUnit(afterText: string): string | null {
+  const s = afterText.replace(/^\s+/, '');
+  for (const unit of QUANTITY_UNITS_SORTED) {
+    if (s.startsWith(unit)) return unit;
+  }
+  return null;
+}
+
+type NumberToken = {
+  raw: string;
+  value: number;
+  start: number;
+  end: number;
+  trailingBaht: boolean;
+  leadingMoney: boolean;
+  perUnit: boolean; // นำหน้าด้วย "ละ" → ราคา/อัตราต่อหน่วย
+  perUnitName: string | null; // หน่วยก่อน "ละ" เช่น "กิโลกรัม" จาก "กิโลกรัมละ"
+  unit: string | null; // ตามด้วยหน่วยสินค้า → ปริมาณ
+  percent: boolean; // ตามด้วย % / เปอร์เซ็นต์
+  before: string; // ข้อความก่อนหน้า (ใช้ตรวจ modifier: ทอน/ลด/บวก/จ่าย)
+};
+
+export type MoneyQuantityResult = {
+  amount: number | null;
+  amountText: string;
+  quantity: number | null;
+  unit: string | null;
+  unitPrice: number | null;
+  priceUnit: string | null;
+  source: AmountSource;
+  baseAmount: number | null;
+  percent: number | null;
+  modifier: AmountModifier;
+  breakdown: string | null;
+};
+
+const PERCENT_AFTER_REGEX = /^\s*(?:%|เปอร์เซ็น|เปอร์เซน|เพอร์เซ็น|พอร์เซ็น|เปอเซ็น)/;
+
+// จับหน่วยก่อนคำว่า "ละ" เช่น "กิโลกรัมละ" → "กิโลกรัม", "ตัวตัวละ" → "ตัว"
+const PER_UNIT_NAME_REGEX = /([฀-๿a-z.]+)ละ\s*$/;
+function extractPerUnitName(before: string): string | null {
+  const m = before.match(PER_UNIT_NAME_REGEX);
+  if (!m) return null;
+  const chunk = m[1];
+  for (const u of QUANTITY_UNITS_SORTED) {
+    if (chunk.endsWith(u)) return u;
+  }
+  return chunk;
+}
+
+function extractMoneyAndQuantity(text: string): MoneyQuantityResult {
+  const tokens: NumberToken[] = [];
+
+  for (const m of text.matchAll(NUMERIC_TOKEN_REGEX)) {
+    const raw = m[0].trim();
+    if (!raw) continue;
+    const value = parseThaiScaledAmount(raw);
+    if (value === null || !Number.isFinite(value) || value <= 0) continue;
+
+    const start = m.index ?? 0;
+    const end = start + m[0].length;
+    // หน้าต่างกว้างพอจับหน่วยยาว เช่น "กิโลกรัมละ" (กัน extractPerUnitName ตัดคำเหลือ "กรัม")
+    const before = text.slice(Math.max(0, start - 24), start);
+    const after = text.slice(end, end + 24);
+    const afterTrimmed = after.replace(/^\s+/, '');
+
+    tokens.push({
+      raw,
+      value,
+      start,
+      end,
+      trailingBaht: MONEY_TRAILING.some((w) => afterTrimmed.startsWith(w)),
+      leadingMoney: MONEY_LEADING_KEYWORDS.some((k) => before.replace(/\s+$/, '').endsWith(k)),
+      perUnit: /ละ\s*$/.test(before),
+      perUnitName: extractPerUnitName(before),
+      unit: matchLeadingUnit(after),
+      percent: PERCENT_AFTER_REGEX.test(after),
+      before,
+    });
+  }
+
+  const empty: MoneyQuantityResult = {
+    amount: null,
+    amountText: '',
+    quantity: null,
+    unit: null,
+    unitPrice: null,
+    priceUnit: null,
+    source: 'none',
+    baseAmount: null,
+    percent: null,
+    modifier: null,
+    breakdown: null,
+  };
+  if (tokens.length === 0) return empty;
+
+  // ── Modifier เปอร์เซ็นต์ (ค่านายหน้า/คอมมิชชั่น/กำไร X%) ────────────────────────
+  //   "ขายรถ 850,000 บาท ได้ค่านายหน้า 3%" → รายรับจริง = 850,000 × 3% = 25,500
+  //   (เคส Toyota: ระบบเดิมบันทึก 850,000 มั่นใจสูง = อันตราย — ต้องคิด % + ลด confidence)
+  const percentToken = tokens.find((t) => t.percent) ?? null;
+  if (percentToken) {
+    const isProfit = /กำไร|ดอกเบี้ย|ดอกเบีย/.test(text);
+    const isCommission = /ค่านายหน้า|นายหน้า|คอมมิชชั่น|คอมมิชชัน|ค่าคอม/.test(text);
+    const isDiscount = /ลด|ส่วนลด/.test(text);
+    if (isProfit || isCommission || isDiscount) {
+      const baseCands = tokens.filter((t) => t !== percentToken && !t.unit && !t.perUnit && !t.percent);
+      const baseToken =
+        baseCands.find((t) => t.trailingBaht) ??
+        [...baseCands].sort((a, b) => b.value - a.value)[0] ??
+        null;
+      if (baseToken) {
+        // discount % = ฐาน × (1 − X%); commission/profit = ฐาน × X%
+        const recorded = isDiscount
+          ? Math.round((baseToken.value * (1 - percentToken.value / 100)) * 100) / 100
+          : Math.round((baseToken.value * percentToken.value) / 100 * 100) / 100;
+        return {
+          ...empty,
+          amount: recorded,
+          baseAmount: baseToken.value,
+          percent: percentToken.value,
+          modifier: isDiscount ? 'discount' : isProfit ? 'profit' : 'commission',
+          source: 'computed',
+        };
+      }
+    }
+  }
+
+  // ── Fixed-amount modifiers (deterministic local rule — ทีม 3) ──────────────────
+  //   ทอน:  "จ่าย 200 ทอน 80"     → ยอดจ่ายจริง = 200 − 80 = 120
+  //   ลด:   "ขายได้ 500 ลดให้ 50"  → 450
+  //   บวก:  "ค่าอาหาร 800 บวกค่าส่ง 40" → 840
+  const changeTok = tokens.find((t) => /(?:เงินทอน|ได้ทอน|ทอนเงิน|ทอน)\s*$/.test(t.before)) ?? null;
+  const discountTok = tokens.find(
+    (t) => !t.percent && /(?:ลดให้|ส่วนลด|ลดราคา|ลด)\s*$/.test(t.before)
+  ) ?? null;
+  const additionTok = tokens.find((t) => /(?:บวกค่าส่ง|บวกค่า|รวมค่าส่ง|บวก)\s*$/.test(t.before)) ?? null;
+
+  if (changeTok || discountTok || additionTok) {
+    const modTok = (changeTok ?? discountTok ?? additionTok)!;
+    const baseCands = tokens.filter(
+      (t) =>
+        t !== changeTok &&
+        t !== discountTok &&
+        t !== additionTok &&
+        !t.unit &&
+        !t.perUnit &&
+        !t.percent
+    );
+    // ฐาน = ตัวที่ทำเครื่องหมาย "จ่าย" ก่อน แล้วค่อยตัวใหญ่สุด
+    const baseToken =
+      baseCands.find((t) => /จ่าย\s*$/.test(t.before)) ??
+      [...baseCands].sort((a, b) => b.value - a.value)[0] ??
+      null;
+    if (baseToken) {
+      let recorded = baseToken.value;
+      let modifier: AmountModifier = 'change';
+      if (changeTok) {
+        recorded = baseToken.value - changeTok.value;
+        modifier = 'change';
+      } else if (discountTok) {
+        recorded = baseToken.value - discountTok.value;
+        modifier = 'discount';
+      } else if (additionTok) {
+        recorded = baseToken.value + additionTok.value;
+        modifier = 'addition';
+      }
+      if (recorded > 0) {
+        return {
+          ...empty,
+          amount: Math.round(recorded * 100) / 100,
+          baseAmount: baseToken.value,
+          modifier,
+          source: 'computed',
+        };
+      }
+    }
+  }
+
+  // ปริมาณ = token แรกที่ตามด้วยหน่วยสินค้า (และไม่ใช่ราคาต่อหน่วย)
+  const quantityToken = tokens.find((t) => t.unit && !t.perUnit) ?? null;
+  // ราคา/อัตราต่อหน่วย = ทุก token ที่นำหน้าด้วย "ละ" (อาจมีหลายชั้น เช่น ตัวละ..กก.ละ..)
+  const perUnitTokens = tokens.filter((t) => t.perUnit);
+
+  const quantity = quantityToken?.value ?? null;
+  const unit = quantityToken?.unit ?? null;
+
+  // กรณีมี "ละ" → ยอดรวม = ปริมาณ × (อัตราชั้นกลาง) × แปลงหน่วย × ราคา
+  //   "80 ตัว ตัวละ 700 กรัม กิโลกรัมละ 75" = 80 × 700(ก.) → 56000 ก. → 56 กก. × 75 = 4,200
+  //   ราคา = ชั้นสุดท้ายที่เป็นเงิน (ตามด้วยบาท); ชั้นกลางคือการแปลง/อัตราหน่วย
+  if (perUnitTokens.length > 0) {
+    const priceToken =
+      [...perUnitTokens].reverse().find((t) => t.trailingBaht) ?? perUnitTokens[perUnitTokens.length - 1];
+    const intermediates = perUnitTokens.filter((t) => t !== priceToken);
+    const intermediateProduct = intermediates.reduce((p, t) => p * t.value, 1);
+
+    // หน่วยของสินค้าที่จะนำไปคูณราคา = หน่วยของชั้นกลางตัวสุดท้าย หรือหน่วยของปริมาณ
+    const goodsUnit = intermediates.length > 0 ? intermediates[intermediates.length - 1].unit : unit;
+    const convFactor = unitConvertFactor(goodsUnit, priceToken.perUnitName);
+    const converted = convFactor ?? 1; // แปลงหน่วยได้ → ใช้, ไม่ได้ → ถือว่าหน่วยเดียวกัน
+
+    const baseQty = quantityToken ? quantityToken.value : 1;
+    const amount = baseQty * intermediateProduct * converted * priceToken.value;
+
+    // หลายชั้น/มีแปลงหน่วย = สมมติฐานซับซ้อน → ให้ผู้ใช้ตรวจก่อน (ไม่ขึ้น high)
+    const nested = intermediates.length > 0;
+    const roundedAmount = Math.round(amount * 100) / 100;
+    return {
+      ...empty,
+      amount: roundedAmount,
+      amountText: priceToken.raw,
+      quantity,
+      unit,
+      unitPrice: priceToken.value,
+      priceUnit: priceToken.perUnitName,
+      source: nested ? 'ambiguous' : 'computed',
+    };
+  }
+
+  // ผู้สมัครเป็น "เงิน" = ทุก token ยกเว้นปริมาณ และไม่ใช่ %
+  const moneyCandidates = tokens.filter((t) => t !== quantityToken && !t.percent);
+  const baht = moneyCandidates.filter((t) => t.trailingBaht);
+  const keyword = moneyCandidates.filter((t) => t.leadingMoney);
+
+  const pick = (t: NumberToken, source: AmountSource): MoneyQuantityResult => ({
+    ...empty,
+    amount: t.value,
+    amountText: t.trailingBaht ? `${t.raw} บาท` : t.raw,
+    quantity,
+    unit,
+    source,
+  });
+
+  // ถ้ายังมี % ค้าง (เช่น "ลด 10%") ที่ระบบยังไม่ได้คิด → ห้ามขึ้น high (ทีม 3 P1)
+  const adj = (s: AmountSource): AmountSource => (percentToken ? 'ambiguous' : s);
+
+  if (baht.length === 1) return pick(baht[0], adj('explicit'));
+  if (baht.length > 1) return pick(baht[baht.length - 1], 'ambiguous');
+  if (keyword.length >= 1) return pick(keyword[keyword.length - 1], adj('explicit'));
+  if (moneyCandidates.length === 1) {
+    // เลขเดียวล้วน (ไม่มีปริมาณอื่น) = ปลอดภัย, ถ้ามีปริมาณด้วย = ควรเหลือบดู
+    return pick(moneyCandidates[0], adj(tokens.length === 1 ? 'sole' : 'inferred'));
+  }
+  if (moneyCandidates.length > 1) return pick(moneyCandidates[moneyCandidates.length - 1], 'ambiguous');
+
+  return { ...empty, quantity, unit, source: 'none' };
+}
+
 function hasPattern(text: string, pattern: string) {
   return text.includes(compact(pattern));
 }
@@ -1246,32 +1723,57 @@ function inferType(
   return preferredType ?? 'expense';
 }
 
+const CONFIDENCE_RANK: Record<QuickAddResult['confidence'], number> = { low: 0, medium: 1, high: 2 };
+function capConfidence(
+  conf: QuickAddResult['confidence'],
+  max: QuickAddResult['confidence']
+): QuickAddResult['confidence'] {
+  return CONFIDENCE_RANK[conf] <= CONFIDENCE_RANK[max] ? conf : max;
+}
+
 function inferConfidence(params: {
   learnedRule: QuickAddLearningRuleInput | null;
   starterProfileMatched: boolean;
   category: Category | null;
-  amountResult: ReturnType<typeof extractAmount> | null;
+  hasAmount: boolean;
+  amountSource: AmountSource;
   incomeScore: TypeScoreSummary;
   expenseScore: TypeScoreSummary;
 }): QuickAddResult['confidence'] {
-  const { learnedRule, starterProfileMatched, category, amountResult, incomeScore, expenseScore } = params;
+  const { learnedRule, starterProfileMatched, category, hasAmount, amountSource, incomeScore, expenseScore } =
+    params;
 
-  if (learnedRule) return 'high';
-  if (starterProfileMatched && category && amountResult) return 'high';
+  // เพดานความมั่นใจตาม "ที่มาของจำนวนเงิน" (กันเงินผิดเงียบ ๆ — finance app)
+  //   explicit/sole = ชัดเจน → ขึ้น high ได้
+  //   computed (qty×ราคาต่อหน่วย) / inferred (เดาจากเลขที่เหลือ) → สูงสุด medium ต้องเหลือบดู
+  //   ambiguous (หลายเลข ไม่มีสัญญาณ) → สูงสุด low ต้องตรวจก่อนยืนยัน
+  const amountCap: QuickAddResult['confidence'] =
+    amountSource === 'computed' || amountSource === 'inferred'
+      ? 'medium'
+      : amountSource === 'ambiguous'
+        ? 'low'
+        : 'high';
 
-  const winningScore = Math.max(incomeScore.total, expenseScore.total);
-  const losingScore = Math.min(incomeScore.total, expenseScore.total);
-  const scoreGap = winningScore - losingScore;
+  let base: QuickAddResult['confidence'];
+  if (learnedRule) {
+    base = 'high';
+  } else if (starterProfileMatched && category && hasAmount) {
+    base = 'high';
+  } else {
+    const winningScore = Math.max(incomeScore.total, expenseScore.total);
+    const losingScore = Math.min(incomeScore.total, expenseScore.total);
+    const scoreGap = winningScore - losingScore;
 
-  if (category && amountResult && winningScore >= 16 && scoreGap >= 8) {
-    return 'high';
+    if (category && hasAmount && winningScore >= 16 && scoreGap >= 8) {
+      base = 'high';
+    } else if ((category && hasAmount) || winningScore >= 8) {
+      base = 'medium';
+    } else {
+      base = category ? 'medium' : 'low';
+    }
   }
 
-  if ((category && amountResult) || winningScore >= 8) {
-    return 'medium';
-  }
-
-  return category ? 'medium' : 'low';
+  return capConfidence(base, amountCap);
 }
 
 function scorePatternMatches(text: string, patterns: string[]) {
@@ -1355,6 +1857,7 @@ function findIntentCategory(text: string, categories: Category[], type: Transact
 
   for (const rule of INTENT_CATEGORY_RULES) {
     if (rule.type !== type) continue;
+    if (rule.flag && !QUICK_ADD_FLAGS[rule.flag]) continue;
 
     const triggerScore = scorePatternMatches(text, rule.triggers);
     if (!triggerScore.score) continue;
@@ -1448,16 +1951,20 @@ function findCategory(
   const bestCategory = pickBestCategory(candidates);
   if (bestCategory) return bestCategory;
 
-  return categories.find((category) => compact(category.name).includes('อื่น')) ?? null;
+  // no-match จริง (ไม่มี starter/intent/keyword rule ใดยิงเลย) → คืน null ไม่ fallback "อื่นๆ"
+  //   เพื่อให้ inferConfidence ตกเป็น 'low' → UI abstain (ปุ่ม "เลือกหมวดหมู่")
+  //   เหตุผล: เดา "อื่นๆ" แบบมั่นใจ = confidently-wrong (calibration). ปล่อยให้ผู้ใช้เลือก/เรียนรู้ดีกว่า
+  //   หมายเหตุ: intent rule ที่มี fallbackHints='อื่นๆ' ยังคืน อื่นๆ ได้ (เพราะ "รู้บริบทแล้วแต่ลงล็อกไม่ได้")
+  return null;
 }
 
-function findLearningRule(text: string, rules: QuickAddLearningRuleInput[] = []) {
+function findLearningRule(text: string, learningText: string, rules: QuickAddLearningRuleInput[] = []) {
   const matches = rules
     .map((rule) => {
       const keyword = rule.normalizedKeyword ? compact(rule.normalizedKeyword) : compact(rule.keyword);
       return { rule, keyword };
     })
-    .filter(({ keyword }) => keyword.length >= 2 && text.includes(keyword))
+    .filter(({ keyword }) => keyword.length >= 2 && (text.includes(keyword) || learningText.includes(keyword)))
     .sort((a, b) => {
       const confidenceDiff = (b.rule.confidence ?? 1) - (a.rule.confidence ?? 1);
       if (confidenceDiff !== 0) return confidenceDiff;
@@ -1467,14 +1974,164 @@ function findLearningRule(text: string, rules: QuickAddLearningRuleInput[] = [])
   return matches[0]?.rule ?? null;
 }
 
+// ── Phase 2: ตรวจความกำกวมเชิงเจตนา (interpretation-ambiguous) → ถามกลับ ─────────
+const AMBIGUITY_AMOUNT_REGEX = /\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?/g;
+const TRADE_COST_LEG_REGEX = /ซื้อ|รับซื้อ|รับของมา|รับมา|ต้นทุน|ลงทุน|จ่ายไป|จ่ายเงินไป/;
+const SALE_INFLOW_LEG_REGEX = /ขาย(?!ไม่ได้)[\s\S]{0,40}(?:ได้เงิน|ได้)/;
+
+function scanAmounts(text: string): { value: number; index: number }[] {
+  return [...text.matchAll(AMBIGUITY_AMOUNT_REGEX)]
+    .map((m) => ({ value: Number(m[0].replace(/,/g, '')), index: m.index ?? 0 }))
+    .filter((a) => Number.isFinite(a.value) && a.value > 0);
+}
+
+function firstAmountAfter(
+  text: string,
+  kw: RegExp,
+  amounts: { value: number; index: number }[]
+): number | null {
+  const m = text.match(kw);
+  if (!m || m.index == null) return null;
+  const after = amounts.filter((a) => a.index > m.index!).sort((a, b) => a.index - b.index)[0];
+  return after?.value ?? null;
+}
+
+function hasSaleInflowSignal(text: string) {
+  return firstAmountAfter(text, SALE_INFLOW_LEG_REGEX, scanAmounts(text)) !== null;
+}
+
+/** ตรวจเคสที่ "เลขถูกได้หลายแบบ" → คืน choices ให้ผู้ใช้เลือก (ห้าม auto-save) */
+function detectAmbiguity(text: string): ClarifyResult | null {
+  const amounts = scanAmounts(text);
+
+  // (A) ยืมเงิน + ดอกเบี้ย X% → เงินต้น (ให้ยืม) vs ดอกเบี้ยรับ
+  const pctMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:%|เปอร์เซ็น|เปอร์เซน)/);
+  if (/ยืม/.test(text) && /ดอกเบี้ย|ดอกเบีย/.test(text) && pctMatch && amounts.length >= 1) {
+    const pct = Number(pctMatch[1]);
+    const principal = Math.max(...amounts.map((a) => a.value));
+    const interest = Math.round((principal * pct) / 100 * 100) / 100;
+    const isReceive = /รับ|ได้|กลับมา|กลับคืน/.test(text);
+    return {
+      question: 'รายการนี้บันทึกแบบไหนคะ?',
+      options: [
+        { label: `ดอกเบี้ย${isReceive ? 'รับ' : ''} ${pct}%`, amount: interest, type: 'income' },
+        { label: 'เงินต้นที่ให้ยืม', amount: principal, type: 'expense' },
+      ],
+      kind: 'ambiguous',
+    };
+  }
+
+  // (B) ซื้อ/รับซื้อ/จ่ายไป ... ขาย ... (≥2 ยอด) → รายรับขาย vs กำไร vs ต้นทุน
+  // ใช้ structural outflow signal เช่น "จ่ายไป + จำนวน" แทนการเหมารวมคำว่า "รับ" เป็นซื้อ
+  const hasBuy = TRADE_COST_LEG_REGEX.test(text);
+  const hasSell = /ขาย/.test(text);
+  if (hasBuy && hasSell && amounts.length >= 2) {
+    const buy = firstAmountAfter(text, TRADE_COST_LEG_REGEX, amounts);
+    const sell = firstAmountAfter(text, /ขาย/, amounts);
+    if (buy != null && sell != null && sell > 0 && buy !== sell) {
+      const profit = Math.round((sell - buy) * 100) / 100;
+      // canonical 2-transaction pattern → บันทึกคู่เป็นค่าหลัก
+      //   กำไร = derived value เท่านั้น (ห้ามมีตัวเลือก "เฉพาะกำไร" — กับดักบัญชี/ภาษี)
+      //   เก็บเฉพาะ atomic legs: ยอดขาย gross + ต้นทุน — กำไร derive ที่ report
+      const options: ClarifyOption[] = [
+        {
+          label: 'บันทึกทั้ง 2 รายการ',
+          amount: sell,
+          type: 'income',
+          pair: { incomeAmount: sell, expenseAmount: buy },
+        },
+        { label: 'เฉพาะรายรับยอดขาย', amount: sell, type: 'income' },
+        { label: 'เฉพาะต้นทุน (รายจ่าย)', amount: buy, type: 'expense' },
+      ];
+      return {
+        kind: 'dual_entry',
+        question: 'บันทึกแยกแต่พร้อมกันแบบนี้ไหมคะ?',
+        summary: `รายจ่าย ${buy.toLocaleString()} (ต้นทุน) + รายรับ ${sell.toLocaleString()} (ขาย) → กำไร ${profit.toLocaleString()} (คำนวณให้ ไม่นับซ้ำ)`,
+        options,
+      };
+    }
+  }
+
+  return null;
+}
+
+// คีย์เวิร์ดที่ระบุ "หมวดฝั่งขาย" ชัดเจน → trade set มั่นใจหมวดได้ (ไม่ใช่แค่จับโครงสร้างซื้อ-ขาย)
+//   เคสนี้ผู้ใช้พิมพ์เจตนาท้ายประโยคชัด เช่น "...ขายในตลาด" → ควรเป็น "มั่นใจสูง" ไม่ใช่ปานกลาง
+//   ถ้าไม่มี marker (เช่น "ซื้อของมา 300 ขายได้ 500") = กำกวมว่าขายแบบไหน → คง medium ให้ตรวจก่อน
+const DECISIVE_SALE_CATEGORY_MARKERS = [
+  'ขายในตลาด', 'ขายตลาด', 'ขายของตลาด', 'ขายที่ตลาด', 'ขายของในตลาด', 'ตลาดนัด',
+  'ขายออนไลน์', 'ไลฟ์ขาย', 'ไลฟ์สด', 'shopee', 'lazada', 'tiktok', 'ติ๊กต็อก', 'ขายเพจ',
+  'ขายข้าว', 'ขายผัก', 'ขายผลไม้', 'ขายผลผลิต', 'ขายไข่',
+  'ขายอาหาร', 'หน้าร้าน', 'โต๊ะจีน',
+].map((marker) => compact(marker));
+
+// vendor cooking/reselling phrases — เปิดตาม ENABLE_MARKET_SELLING_INTENT (สอดคล้องกับ rule routing)
+const VENDOR_SALE_CATEGORY_MARKERS = [
+  'ย่างขาย', 'ทอดขาย', 'ปิ้งขาย', 'นึ่งขาย', 'ต้มขาย', 'ผัดขาย', 'ทำขาย',
+  'เอาไปขาย', 'ไปขายตลาด', 'ไปขายในตลาด', 'ของไปขาย', 'หาบเร่',
+].map((marker) => compact(marker));
+
+function hasDecisiveSaleCategory(compactText: string): boolean {
+  if (DECISIVE_SALE_CATEGORY_MARKERS.some((marker) => compactText.includes(marker))) return true;
+  if (
+    QUICK_ADD_FLAGS.ENABLE_MARKET_SELLING_INTENT &&
+    VENDOR_SALE_CATEGORY_MARKERS.some((marker) => compactText.includes(marker))
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function findCategoryByHints(categories: Category[], hints: string[]) {
+  return findBestCategoryByHints(categories, hints)?.category ?? null;
+}
+
+function buildTradeSetResult(
+  text: string,
+  categories: Category[],
+  clarify: ClarifyResult | null,
+  learnedRule: QuickAddLearningRuleInput | null,
+  starterProfile?: QuickAddStarterProfile | null
+): QuickAddResult['tradeSet'] {
+  if (!clarify || clarify.kind !== 'dual_entry') return null;
+
+  const pair = clarify.options.find((option) => option.pair)?.pair;
+  if (!pair) return null;
+
+  const expenseCategories = categories.filter((category) => category.type === 'expense');
+  const incomeCategories = categories.filter((category) => category.type === 'income');
+  const learnedIncomeCategory =
+    learnedRule?.type === 'income' && learnedRule.categoryId
+      ? incomeCategories.find((category) => category.id === learnedRule.categoryId) ?? null
+      : null;
+
+  const costCategory =
+    findCategoryByHints(expenseCategories, ['ต้นทุนขาย', 'ต้นทุน']) ??
+    findCategoryByHints(expenseCategories, ['ประกอบธุรกิจ', 'ธุรกิจ']) ??
+    null;
+  const revenueCategory =
+    learnedIncomeCategory ??
+    findCategory(text, incomeCategories, 'income', starterProfile) ??
+    findCategoryByHints(incomeCategories, ['ยอดขาย', 'ขายของในตลาด', 'ขาย', 'ธุรกิจส่วนตัว', 'รายได้เสริม']) ??
+    null;
+
+  return {
+    kind: 'dual_entry',
+    cost: { amount: pair.expenseAmount, type: 'expense', category: costCategory },
+    revenue: { amount: pair.incomeAmount, type: 'income', category: revenueCategory },
+    businessActivity: revenueCategory,
+  };
+}
+
 export const quickAddParser = {
   parse(input: string, categories: Category[], options: ParseOptions = {}): QuickAddResult | null {
     const normalizedText = normalize(input);
     const compactText = compact(input);
     if (!compactText) return null;
 
-    const amountResult = extractAmount(normalizedText);
-    const learnedRule = findLearningRule(compactText, options.learningRules);
+    const amountResult = extractMoneyAndQuantity(normalizedText);
+    const learningText = normalizeForLearning(input);
+    const learnedRule = findLearningRule(compactText, learningText, options.learningRules);
     const incomeScore = mergeTypeScoreSummaries(
       scoreType(compactText, 'income'),
       scoreStarterProfileType(compactText, 'income', options.starterProfile)
@@ -1483,7 +2140,9 @@ export const quickAddParser = {
       scoreType(compactText, 'expense'),
       scoreStarterProfileType(compactText, 'expense', options.starterProfile)
     );
+    const signType: TransactionType | null = hasSaleInflowSignal(normalizedText) ? 'income' : null;
     const type = learnedRule?.type
+      ?? signType
       ?? inferType(incomeScore, expenseScore, options.preferredType);
     const availableCategories = categories.filter((category) => category.type === type);
     const learnedCategory = learnedRule?.categoryId
@@ -1495,23 +2154,71 @@ export const quickAddParser = {
     const category = learnedCategory
       ?? starterProfileCategory
       ?? findCategory(compactText, availableCategories, type, options.starterProfile);
-    const note = amountResult
-      ? normalizedText.replace(amountResult.amountText.trim().toLowerCase(), '').trim() || input.trim()
-      : input.trim();
+    // note: เก็บประโยคต้นฉบับไว้เมื่อมีโครงสร้าง (ปริมาณ/ราคาต่อหน่วย) — กันบั๊ก "เลขกลางประโยคหาย"
+    //   เช่น "ขายปลา 5 ตัวตัวละ 60 บาท" ถ้า strip "60" จะเหลือ "...ตัวละ บาท" → ผิด
+    //   กรณีปกติ (ยอดเงินอยู่ท้ายประโยค) ตัด amountText ออกให้โน้ตสั้นสะอาดเหมือนเดิม
+    const hasStructured =
+      amountResult.quantity !== null ||
+      amountResult.unitPrice !== null ||
+      amountResult.modifier !== null;
+    const note = hasStructured
+      ? input.trim()
+      : amountResult.amountText
+        ? normalizedText.replace(amountResult.amountText.trim().toLowerCase(), '').trim() || input.trim()
+        : input.trim();
+
+    // Phase 2 — ตรวจความกำกวมก่อน: ถ้าตีความได้หลายแบบ → ถามกลับ (ห้าม auto-save)
+    const clarify = detectAmbiguity(normalizedText);
+    const tradeSet = buildTradeSetResult(compactText, categories, clarify, learnedRule, options.starterProfile);
+    const resultCategory = tradeSet?.revenue.category ?? category;
+
+    const baseConfidence = inferConfidence({
+      learnedRule,
+      starterProfileMatched: Boolean(starterProfileCategory),
+      category: resultCategory,
+      hasAmount: amountResult.amount !== null,
+      amountSource: amountResult.source,
+      incomeScore,
+      expenseScore,
+    });
+    // dual_entry = จับโครงสร้างซื้อ-ขายชัด → high ถ้าหมวดฝั่งขายชัดด้วย (เช่น "ขายในตลาด"),
+    //   ไม่งั้น medium (กำกวมว่าขายแบบไหน ให้ตรวจก่อน); ambiguous = ไม่มั่นใจจริง (low)
+    const rawConfidence: QuickAddResult['confidence'] = clarify
+      ? clarify.kind === 'dual_entry'
+        ? hasDecisiveSaleCategory(compactText)
+          ? 'high'
+          : 'medium'
+        : 'low'
+      : baseConfidence;
+    // Catch-all "อื่นๆ" = "รู้เจตนาแต่ไม่เข้าหมวดเฉพาะ" → ห้าม auto-save (กัน false confidence)
+    //   คุมเพดานไว้ที่ medium เสมอ ให้โผล่เป็น "แนะนำ" ที่ผู้ใช้ยืนยัน/แก้ได้ ไม่บันทึกเงียบ ๆ
+    const confidence: QuickAddResult['confidence'] =
+      resultCategory?.name === 'อื่นๆ' ? capConfidence(rawConfidence, 'medium') : rawConfidence;
+    const action: SmartAction = clarify
+      ? 'ask'
+      : confidence === 'high'
+        ? 'auto_save'
+        : 'review';
 
     return {
-      amount: amountResult?.amount ?? null,
-      type,
-      category,
+      // เคสกำกวม: ตั้ง default = ตัวเลือกแรก แต่ action='ask' ให้ UI ถามก่อน
+      amount: clarify ? clarify.options[0].amount : amountResult.amount,
+      type: clarify ? clarify.options[0].type : type,
+      category: resultCategory,
       note,
-      confidence: inferConfidence({
-        learnedRule,
-        starterProfileMatched: Boolean(starterProfileCategory),
-        category,
-        amountResult,
-        incomeScore,
-        expenseScore,
-      }),
+      confidence,
+      action,
+      clarify,
+      tradeSet,
+      quantity: amountResult.quantity,
+      unit: amountResult.unit,
+      unitPrice: amountResult.unitPrice,
+      priceUnit: amountResult.priceUnit,
+      amountSource: amountResult.source,
+      baseAmount: amountResult.baseAmount,
+      percent: amountResult.percent,
+      modifier: amountResult.modifier,
+      breakdown: amountResult.breakdown,
     };
   },
 };

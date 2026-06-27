@@ -149,12 +149,15 @@ export const billService = {
     let txId: string | null = null;
     if (options.createTransaction && options.walletId) {
       txId = generateId();
+      const walletRow = await db.select({ name: wallets.name }).from(wallets).where(eq(wallets.id, options.walletId)).limit(1);
       await db.insert(transactions).values({
         id: txId,
         amount: actual,
         type: 'expense',
         categoryId: b.categoryId,
         walletId: options.walletId,
+        walletNameSnapshot: walletRow[0]?.name ?? null,
+        sourceType: 'manual',
         note: `จ่ายบิล: ${b.name}`,
         date: now,
         isRecurring: false,

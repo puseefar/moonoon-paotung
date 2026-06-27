@@ -1,5 +1,65 @@
 export type Daypart = 'morning' | 'day' | 'evening' | 'night';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 0 §2.4 — นิยาม "ช่วงเวลา" กลาง (timezone = Asia/Bangkok เสมอ)
+//   service เป็นคนนิยามช่วงเวลาผ่านฟังก์ชันเหล่านี้ — หน้าจอ "ห้าม" คำนวณเอง
+//   ขอบเขตทุกช่วงคืนค่าเป็น Date (instant จริง) ที่ตรงกับเที่ยงคืน/สิ้นวันตามเวลาไทย
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const THAI_UTC_OFFSET_MS = 7 * 3_600_000; // UTC+7
+
+/** ชื่อเดือนไทยแบบย่อ (index 0-11) — ใช้ร่วมกันทั้งแอป */
+export const THAI_MONTHS_SHORT = [
+  'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+  'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.',
+] as const;
+
+/** ชื่อเดือนไทยแบบเต็ม (index 0-11) */
+export const THAI_MONTHS_FULL = [
+  'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+  'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม',
+] as const;
+
+export type TimeRange = {
+  startDate: Date;
+  endDate: Date;
+};
+
+/** วัน-เดือน-ปี ตามปฏิทินไทย ของ instant ที่กำหนด (month = 0-11) */
+export function getThaiDateParts(date: Date = new Date()): {
+  year: number;
+  month: number;
+  day: number;
+} {
+  const thai = new Date(date.getTime() + THAI_UTC_OFFSET_MS);
+  return {
+    year: thai.getUTCFullYear(),
+    month: thai.getUTCMonth(),
+    day: thai.getUTCDate(),
+  };
+}
+
+/** เดือน/ปีปัจจุบันตามเวลาไทย (month = 0-11) */
+export function getCurrentThaiMonth(): { year: number; month: number } {
+  const { year, month } = getThaiDateParts();
+  return { year, month };
+}
+
+/** ช่วง "วันนี้" 00:00–23:59.999 ตามเวลาไทย */
+export function getTodayRange(now: Date = new Date()): TimeRange {
+  const { year, month, day } = getThaiDateParts(now);
+  const startMs = Date.UTC(year, month, day, 0, 0, 0, 0) - THAI_UTC_OFFSET_MS;
+  const endMs = startMs + 24 * 3_600_000 - 1;
+  return { startDate: new Date(startMs), endDate: new Date(endMs) };
+}
+
+/** ช่วง "เดือนนี้" (เดือนปฏิทินไทย) — month = 0-11 */
+export function getMonthRange(year: number, month: number): TimeRange {
+  const startMs = Date.UTC(year, month, 1, 0, 0, 0, 0) - THAI_UTC_OFFSET_MS;
+  const endMs = Date.UTC(year, month + 1, 1, 0, 0, 0, 0) - THAI_UTC_OFFSET_MS - 1;
+  return { startDate: new Date(startMs), endDate: new Date(endMs) };
+}
+
 // ใช้เวลาประเทศไทย UTC+7 เสมอ ไม่ขึ้นกับ timezone ของเครื่อง
 function getThaiHour(): number {
   const now = new Date();

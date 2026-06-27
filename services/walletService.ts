@@ -22,12 +22,36 @@ export const walletService = {
   async create(data: Omit<NewWallet, 'id' | 'createdAt' | 'updatedAt'>) {
     const now = new Date();
     const id = generateId();
+    const openingBalance = data.balance ?? 0;
+
     await db.insert(wallets).values({
       ...data,
       id,
+      balance: openingBalance,
       createdAt: now,
       updatedAt: now,
     });
+
+    // Phase 0 §2.2 — ยอดตั้งต้นต้องเป็น transaction ชนิด opening เพื่อให้ ledger reconcile
+    // (นับในยอดคงเหลือกระเป๋า แต่ไม่นับเป็นรายรับ/รายจ่าย)
+    if (Math.abs(openingBalance) > 0.005) {
+      await db.insert(transactions).values({
+        id: generateId(),
+        amount: openingBalance,
+        type: 'opening',
+        categoryId: null,
+        walletId: id,
+        toWalletId: null,
+        transferGroupId: null,
+        walletNameSnapshot: data.name,
+        sourceType: 'opening_balance',
+        note: 'ยอดตั้งต้น',
+        date: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
     return id;
   },
 
@@ -85,47 +109,73 @@ export const walletService = {
       .set({ balance: sql`${wallets.balance} + ${amount}`, updatedAt: now })
       .where(eq(wallets.id, toWalletId));
 
-    const id = generateId();
-    await db.insert(transactions).values({
-      id,
-      amount,
-      type: 'transfer',
-      walletId: fromWalletId,
-      toWalletId,
-      date: now,
-      createdAt: now,
-      updatedAt: now,
-    });
+    // Phase 0 §2.3 — โอน = คู่ entry: transfer_out (ต้นทาง) + transfer_in (ปลายทาง)
+    // ผูกด้วย transferGroupId เดียวกัน → net ต่อสินทรัพย์รวม = 0, ไม่เข้ารายรับ/รายจ่าย
+    const groupId = generateId();
+    const outId = generateId();
+    await db.insert(transactions).values([
+      {
+        id: outId,
+        amount,
+        type: 'transfer_out',
+        categoryId: null,
+        walletId: fromWalletId,
+        toWalletId,
+        transferGroupId: groupId,
+        walletNameSnapshot: fromWallet.name,
+        sourceType: 'transfer',
+        sourceRef: groupId,
+        date: now,
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: generateId(),
+        amount,
+        type: 'transfer_in',
+        categoryId: null,
+        walletId: toWalletId,
+        toWalletId: fromWalletId,
+        transferGroupId: groupId,
+        walletNameSnapshot: toWallet.name,
+        sourceType: 'transfer',
+        sourceRef: groupId,
+        date: now,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]);
 
-    return id;
+    return outId;
   },
 
   async recalculateBalance(walletId: string) {
-    const incomeResult = await db
-      .select({ total: sql<number>`COALESCE(SUM(${transactions.amount}), 0)` })
+    // Phase 0 — balance = Σ(ทุก transaction ที่ผูกกับกระเป๋านี้ ตามทิศของ type)
+    //   opening / income / transfer_in = +,  expense / transfer_out = −
+    //   (legacy 'transfer' แถวเดียว: − ที่ walletId, + ที่ toWalletId — รองรับเผื่อยังไม่ migrate)
+    const rows = await db
+      .select({
+        type: transactions.type,
+        amount: transactions.amount,
+        walletId: transactions.walletId,
+        toWalletId: transactions.toWalletId,
+      })
       .from(transactions)
-      .where(sql`${transactions.walletId} = ${walletId} AND ${transactions.type} = 'income'`);
+      .where(or(eq(transactions.walletId, walletId), eq(transactions.toWalletId, walletId)));
 
-    const expenseResult = await db
-      .select({ total: sql<number>`COALESCE(SUM(${transactions.amount}), 0)` })
-      .from(transactions)
-      .where(sql`${transactions.walletId} = ${walletId} AND ${transactions.type} = 'expense'`);
-
-    const transferOutResult = await db
-      .select({ total: sql<number>`COALESCE(SUM(${transactions.amount}), 0)` })
-      .from(transactions)
-      .where(sql`${transactions.walletId} = ${walletId} AND ${transactions.type} = 'transfer'`);
-
-    const transferInResult = await db
-      .select({ total: sql<number>`COALESCE(SUM(${transactions.amount}), 0)` })
-      .from(transactions)
-      .where(sql`${transactions.toWalletId} = ${walletId} AND ${transactions.type} = 'transfer'`);
-
-    const income = incomeResult[0]?.total ?? 0;
-    const expense = expenseResult[0]?.total ?? 0;
-    const transferOut = transferOutResult[0]?.total ?? 0;
-    const transferIn = transferInResult[0]?.total ?? 0;
-    const balance = income - expense - transferOut + transferIn;
+    let balance = 0;
+    for (const r of rows) {
+      if (r.walletId === walletId) {
+        if (r.type === 'opening' || r.type === 'income' || r.type === 'transfer_in') {
+          balance += r.amount;
+        } else if (r.type === 'expense' || r.type === 'transfer_out' || r.type === 'transfer') {
+          balance -= r.amount;
+        }
+      } else if (r.toWalletId === walletId && r.type === 'transfer') {
+        // legacy transfer: ขาเข้าฝั่งปลายทาง
+        balance += r.amount;
+      }
+    }
 
     await db
       .update(wallets)
@@ -133,6 +183,74 @@ export const walletService = {
       .where(eq(wallets.id, walletId));
 
     return balance;
+  },
+
+  /**
+   * Phase 0 / Phase 1 — ตรวจ Invariant: Σ wallet.balance === Σ ledger ทั้งระบบ
+   * คืน diff ต่อกระเป๋า ถ้าไม่ตรงจะ log เตือน (กัน bug เงียบ)
+   */
+  async assertReconciled(): Promise<{
+    ok: boolean;
+    walletTotal: number;
+    ledgerTotal: number;
+    diff: number;
+    perWallet: { walletId: string; name: string; storedBalance: number; ledgerBalance: number; diff: number }[];
+  }> {
+    const [allWallets, rows] = await Promise.all([
+      db.select().from(wallets),
+      db
+        .select({
+          type: transactions.type,
+          amount: transactions.amount,
+          walletId: transactions.walletId,
+          toWalletId: transactions.toWalletId,
+        })
+        .from(transactions),
+    ]);
+
+    const ledgerByWallet = new Map<string, number>();
+    const add = (id: string | null, delta: number) => {
+      if (!id) return;
+      ledgerByWallet.set(id, (ledgerByWallet.get(id) ?? 0) + delta);
+    };
+
+    for (const r of rows) {
+      if (r.type === 'opening' || r.type === 'income' || r.type === 'transfer_in') {
+        add(r.walletId, r.amount);
+      } else if (r.type === 'expense' || r.type === 'transfer_out') {
+        add(r.walletId, -r.amount);
+      } else if (r.type === 'transfer') {
+        // legacy: − ต้นทาง, + ปลายทาง
+        add(r.walletId, -r.amount);
+        add(r.toWalletId, r.amount);
+      }
+    }
+
+    const perWallet = allWallets.map((w) => {
+      const ledgerBalance = ledgerByWallet.get(w.id) ?? 0;
+      const storedBalance = w.balance ?? 0;
+      return {
+        walletId: w.id,
+        name: w.name,
+        storedBalance,
+        ledgerBalance,
+        diff: storedBalance - ledgerBalance,
+      };
+    });
+
+    const walletTotal = perWallet.reduce((s, w) => s + w.storedBalance, 0);
+    const ledgerTotal = perWallet.reduce((s, w) => s + w.ledgerBalance, 0);
+    const diff = walletTotal - ledgerTotal;
+    const ok = Math.abs(diff) < 0.01 && perWallet.every((w) => Math.abs(w.diff) < 0.01);
+
+    if (!ok) {
+      console.warn(
+        `[assertReconciled] ❌ ledger ไม่ reconcile กับยอดกระเป๋า — diff รวม ${diff.toFixed(2)}`,
+        perWallet.filter((w) => Math.abs(w.diff) >= 0.01)
+      );
+    }
+
+    return { ok, walletTotal, ledgerTotal, diff, perWallet };
   },
 
   async getActivityTimeline(walletId: string): Promise<WalletActivityItem[]> {
@@ -183,31 +301,33 @@ export const walletService = {
     ]);
 
     const walletMap = new Map(allWallets.map((item) => [item.id, item]));
-    const orderedTransactions = [...relatedTransactions].sort(
+
+    // Phase 0 — โมเดลใหม่ทุก leg เป็นแถวของตัวเอง (walletId == กระเป๋านี้)
+    // เก็บเฉพาะ leg ที่เป็นของกระเป๋านี้ + รองรับ legacy transfer (แถวเดียว) ที่ปลายทาง
+    const ownedLegs = relatedTransactions.filter(
+      (tx) => tx.walletId === walletId || (tx.type === 'transfer' && tx.toWalletId === walletId)
+    );
+    const orderedTransactions = [...ownedLegs].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
 
-    const totalNetChange = orderedTransactions.reduce((sum, tx) => {
-      if (tx.type === 'income' && tx.walletId === walletId) return sum + tx.amount;
-      if (tx.type === 'expense' && tx.walletId === walletId) return sum - tx.amount;
-      if (tx.type === 'transfer' && tx.walletId === walletId) return sum - tx.amount;
-      if (tx.type === 'transfer' && tx.toWalletId === walletId) return sum + tx.amount;
-      return sum;
-    }, 0);
+    const signedFor = (tx: { type: string; amount: number; walletId: string; toWalletId: string | null }) => {
+      if (tx.walletId === walletId) {
+        if (tx.type === 'income' || tx.type === 'transfer_in' || tx.type === 'opening') return tx.amount;
+        if (tx.type === 'expense' || tx.type === 'transfer_out' || tx.type === 'transfer') return -tx.amount;
+        return 0;
+      }
+      // legacy transfer ฝั่งปลายทาง
+      if (tx.type === 'transfer' && tx.toWalletId === walletId) return tx.amount;
+      return 0;
+    };
+
+    const totalNetChange = orderedTransactions.reduce((sum, tx) => sum + signedFor(tx), 0);
 
     let runningBalance = (wallet.balance ?? 0) - totalNetChange;
 
     const transactionItems: WalletActivityItem[] = orderedTransactions.map((tx) => {
-      const signedAmount =
-        tx.type === 'income' && tx.walletId === walletId
-          ? tx.amount
-          : tx.type === 'expense' && tx.walletId === walletId
-          ? -tx.amount
-          : tx.type === 'transfer' && tx.walletId === walletId
-          ? -tx.amount
-          : tx.type === 'transfer' && tx.toWalletId === walletId
-          ? tx.amount
-          : 0;
+      const signedAmount = signedFor(tx);
 
       const balanceBefore = runningBalance;
       runningBalance += signedAmount;
@@ -220,10 +340,20 @@ export const walletService = {
         actionType = 'expense';
       } else if (tx.type === 'income') {
         actionType = 'income';
+      } else if (tx.type === 'opening') {
+        actionType = 'opening';
+      } else if (tx.type === 'transfer_in') {
+        actionType = 'transfer_in';
+        counterpartyWalletId = tx.toWalletId ?? null;
+      } else if (tx.type === 'transfer_out') {
+        actionType = 'transfer_out';
+        counterpartyWalletId = tx.toWalletId ?? null;
       } else if (tx.walletId === walletId) {
+        // legacy transfer ต้นทาง
         actionType = 'transfer_out';
         counterpartyWalletId = tx.toWalletId ?? null;
       } else {
+        // legacy transfer ปลายทาง
         actionType = 'transfer_in';
         counterpartyWalletId = tx.walletId;
       }

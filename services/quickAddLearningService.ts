@@ -21,7 +21,7 @@ function normalize(input: string) {
 }
 
 function compact(input: string) {
-  return normalize(input).replace(/\s+/g, '');
+  return normalize(input).replace(/[\s\p{P}\p{S}]+/gu, '');
 }
 
 const THAI_NUMBER_WORD_PATTERN =

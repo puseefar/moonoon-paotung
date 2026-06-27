@@ -66,12 +66,27 @@ const STATUS_EVENT_NAME = 'poatungVoiceInputStatus';
 const RESULT_EVENT_NAME = 'poatungVoiceInputResult';
 const ERROR_EVENT_NAME = 'poatungVoiceInputError';
 
-const nativeVoiceInputModule = NativeModules.PoatungVoiceInput as NativeVoiceInputModule | undefined;
+// WraP ด้วย try/catch เพราะ NativeModules.PoatungVoiceInput throw บน Android < API 33
+// (android.speech.RecognitionSupport ต้องการ Android 13+)
+let nativeVoiceInputModule: NativeVoiceInputModule | undefined;
+try {
+  const mod = NativeModules.PoatungVoiceInput;
+  nativeVoiceInputModule = mod as NativeVoiceInputModule | undefined;
+} catch (e) {
+  console.warn('[VoiceInput] Native module unavailable (Android < API 33):', e);
+  nativeVoiceInputModule = undefined;
+}
 
-const nativeEventEmitter =
-  Platform.OS === 'android' && nativeVoiceInputModule
-    ? new NativeEventEmitter(nativeVoiceInputModule)
-    : null;
+let nativeEventEmitter: NativeEventEmitter | null = null;
+try {
+  nativeEventEmitter =
+    Platform.OS === 'android' && nativeVoiceInputModule
+      ? new NativeEventEmitter(nativeVoiceInputModule)
+      : null;
+} catch (e) {
+  console.warn('[VoiceInput] NativeEventEmitter unavailable:', e);
+  nativeEventEmitter = null;
+}
 
 export const DEFAULT_VOICE_INPUT_CAPABILITIES: VoiceInputCapabilities = {
   apiLevel: Platform.OS === 'android' ? null : null,

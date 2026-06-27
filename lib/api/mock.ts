@@ -6,8 +6,9 @@ import type {
   ApiResult, EntitlementResponse, PlanTier, PaymentRequest, SlipVerifyResponse,
   LineConnectUrlResponse, LineConnection, LineNotificationSettings,
   Shop, Product, Order, ShopInput, ProductInput, PaymentRequestInput,
-  SlipVerifyInput, LineNotifUpdateInput,
+  SlipVerifyInput, LineNotifUpdateInput, CreateOrderInput, ShopAnalytics,
 } from './contract';
+import { SEED_SHOP, buildSeedProducts } from '@/features/mini-shop/config/seedData';
 
 function delay(ms = 600): Promise<void> {
   return new Promise(r => setTimeout(r, ms));
@@ -144,8 +145,21 @@ export const mockApi = {
     mockShop = {
       shopId: `shop-${Date.now()}`,
       name: input.name,
+      category: input.category,
       description: input.description,
       phone: input.phone,
+      lineId: input.lineId,
+      facebookPage: input.facebookPage,
+      hasPhysicalLocation: input.hasPhysicalLocation,
+      address: input.address,
+      openHours: input.openHours,
+      paymentMethod: input.paymentMethod,
+      promptPayType: input.promptPayType,
+      promptPayNumber: input.promptPayNumber,
+      accountName: input.accountName,
+      bankName: input.bankName,
+      accountNumber: input.accountNumber,
+      paymentVisibility: input.paymentVisibility,
       isOpen: true,
       productCount: 0,
       createdAt: new Date().toISOString(),
@@ -167,23 +181,47 @@ export const mockApi = {
 
   async addProduct(input: ProductInput): Promise<ApiResult<Product>> {
     await delay(600);
-    if (mockProducts.length >= 5) {
+    if (mockProducts.filter(p => p.status !== 'draft').length >= 5) {
       return err('LIMIT_EXCEEDED', 'ร้านของคุณมีสินค้าครบ 5 ชิ้นแล้ว');
     }
+    // Compute stock: sum variant stocks if hasVariants
+    const totalStock = input.hasVariants && input.variants?.length
+      ? input.variants.flatMap(g => g.values).reduce((s, v) => s + v.stock, 0)
+      : input.stock;
+
     const product: Product = {
       productId: `prod-${Date.now()}`,
       shopId: mockShop?.shopId ?? '',
+      images: input.images,
       name: input.name,
-      price: input.price,
+      category: input.category,
       description: input.description,
-      imageUri: input.imageUri,
-      isActive: true,
+      costPrice: input.costPrice,
+      price: input.price,
+      comparePrice: input.comparePrice,
+      stock: totalStock,
+      lowStockThreshold: input.lowStockThreshold,
+      hideWhenOutOfStock: input.hideWhenOutOfStock,
+      status: input.status,
+      shipping: input.shipping,
+      hasVariants: input.hasVariants,
+      variants: input.variants,
+      saleEndsAt: input.saleEndsAt,
       sortOrder: mockProducts.length,
       createdAt: new Date().toISOString(),
     };
     mockProducts.push(product);
-    if (mockShop) mockShop.productCount = mockProducts.length;
+    if (mockShop) mockShop.productCount = mockProducts.filter(p => p.status === 'active').length;
     return ok(product);
+  },
+
+  async updateProduct(productId: string, input: Partial<ProductInput>): Promise<ApiResult<Product>> {
+    await delay(400);
+    const idx = mockProducts.findIndex(p => p.productId === productId);
+    if (idx === -1) return err('NOT_FOUND', 'ไม่พบสินค้า');
+    mockProducts[idx] = { ...mockProducts[idx], ...input };
+    if (mockShop) mockShop.productCount = mockProducts.filter(p => p.status === 'active').length;
+    return ok(mockProducts[idx]);
   },
 
   async deleteProduct(productId: string): Promise<ApiResult<{ success: boolean }>> {
@@ -198,11 +236,245 @@ export const mockApi = {
     return ok(mockOrders);
   },
 
+  async getOrder(orderId: string): Promise<ApiResult<Order>> {
+    await delay(300);
+    const order = mockOrders.find(o => o.orderId === orderId);
+    if (!order) return err('NOT_FOUND', 'ไม่พบ order');
+    return ok(order);
+  },
+
+  async createOrder(input: CreateOrderInput): Promise<ApiResult<Order>> {
+    await delay(800);
+    if (!mockShop) return err('NOT_FOUND', 'ยังไม่มีร้าน');
+
+    // Build order items from cart + product snapshot
+    const orderItems = input.items.map(ci => {
+      const prod = mockProducts.find(p => p.productId === ci.productId);
+      return {
+        productId: ci.productId,
+        name: ci.name ?? prod?.name ?? 'สินค้า',
+        // ใช้ราคา variant ที่ client ส่งมา (snapshot จากตะกร้า), fallback เป็นราคาฐาน
+        price: typeof ci.unitPrice === 'number' ? ci.unitPrice : (prod?.price ?? 0),
+        qty: ci.qty,
+        image: ci.image ?? prod?.images?.[0],
+        variantId: ci.variantId,
+        variantLabel: ci.variantLabel,
+        unitCost: ci.unitCost,
+      };
+    });
+
+    const subtotal = orderItems.reduce((s, i) => s + i.price * i.qty, 0);
+    const shippingCost = input.deliveryMethod === 'fixed'
+      ? (orderItems[0] ? (mockProducts.find(p => p.productId === orderItems[0].productId)?.shipping.fixedPrice ?? 40) : 40)
+      : 0;
+    const total = subtotal + shippingCost;
+
+    // Create payment request for PromptPay
+    let paymentRequestId: string | undefined;
+    if (input.paymentMethod === 'promptpay') {
+      const pReq = {
+        requestId: `req-${Date.now()}`,
+        amount: total,
+        description: `ออเดอร์ร้าน${mockShop.name}`,
+        qrPayload: `00020101021229370016A000000677010111011300660123456789520499995303764540${total.toFixed(2)}5802TH5910MuuNunShop6304ABCD`,
+        promptPayId: mockShop.promptPayNumber ?? '0812345678',
+        status: 'pending' as const,
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        createdAt: new Date().toISOString(),
+      };
+      mockPayments.push(pReq);
+      paymentRequestId = pReq.requestId;
+    }
+
+    // Generate orderNo: ORDER-YYYYMMDD-XXXX
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+    const seq = String(mockOrders.length + 1).padStart(4, '0');
+    const orderNo = `ORDER-${dateStr}-${seq}`;
+
+    const order: Order = {
+      orderId: `order-${Date.now()}`,
+      orderNo,
+      shopId: mockShop.shopId,
+      customer: input.customer,
+      items: orderItems,
+      subtotal,
+      shippingCost,
+      discount: 0,
+      total,
+      deliveryMethod: input.deliveryMethod,
+      paymentMethod: input.paymentMethod,
+      note: input.note,
+      status: 'PENDING_PAYMENT',
+      paymentRequestId,
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      publicToken: Math.random().toString(36).slice(2) + Date.now().toString(36),
+      createdAt: now.toISOString(),
+    };
+
+    mockOrders.push(order);
+    return ok(order);
+  },
+
+  async updateOrderStatus(orderId: string, status: Order['status']): Promise<ApiResult<Order>> {
+    await delay(400);
+    const order = mockOrders.find(o => o.orderId === orderId);
+    if (!order) return err('NOT_FOUND', 'ไม่พบ order');
+    order.status = status;
+    if (status === 'PAID') order.paidAt = new Date().toISOString();
+    return ok(order);
+  },
+
   async confirmOrder(orderId: string): Promise<ApiResult<Order>> {
     await delay(500);
     const order = mockOrders.find(o => o.orderId === orderId);
     if (!order) return err('NOT_FOUND', 'ไม่พบ order');
-    order.status = 'confirmed';
+    order.status = 'PREPARING';
     return ok(order);
+  },
+
+  async seedShopData(): Promise<ApiResult<{ shop: Shop; products: Product[] }>> {
+    await delay(300);
+
+    // สร้างร้านถ้ายังไม่มี
+    if (!mockShop) {
+      mockShop = {
+        shopId: `shop-seed-${Date.now()}`,
+        ...SEED_SHOP,
+        isOpen: true,
+        productCount: 0,
+        createdAt: new Date().toISOString(),
+      };
+    }
+
+    // เพิ่มสินค้าตัวอย่าง (ล้างของเก่าก่อน)
+    mockProducts = [];
+    const seedInputs = buildSeedProducts();
+    const seeded: Product[] = [];
+    for (const input of seedInputs) {
+      const totalStock = input.hasVariants && input.variants?.length
+        ? input.variants.flatMap(g => g.values).reduce((s, v) => s + v.stock, 0)
+        : input.stock;
+      const prod: Product = {
+        productId: `prod-seed-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        shopId: mockShop.shopId,
+        images: input.images,
+        name: input.name,
+        category: input.category,
+        description: input.description,
+        costPrice: input.costPrice,
+        price: input.price,
+        comparePrice: input.comparePrice,
+        stock: totalStock,
+        lowStockThreshold: input.lowStockThreshold,
+        hideWhenOutOfStock: input.hideWhenOutOfStock,
+        status: input.status,
+        shipping: input.shipping,
+        hasVariants: input.hasVariants,
+        variants: input.variants,
+        saleEndsAt: input.saleEndsAt,
+        sortOrder: seeded.length,
+        createdAt: new Date().toISOString(),
+      };
+      mockProducts.push(prod);
+      seeded.push(prod);
+      await delay(50);
+    }
+
+    mockShop.productCount = mockProducts.filter(p => p.status === 'active').length;
+    return ok({ shop: mockShop, products: seeded });
+  },
+
+  async getAnalytics(period: 'week' | 'month' = 'week'): Promise<ApiResult<ShopAnalytics>> {
+    await delay(600);
+
+    // Build daily sales from real order data
+    const days = period === 'week' ? 7 : 30;
+    const dayNames = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+    const dailySales = Array.from({ length: days }).map((_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (days - 1 - i));
+      const dateStr = d.toDateString();
+      const dayOrders = mockOrders.filter(o =>
+        (o.status === 'PAID' || o.status === 'COMPLETED') &&
+        new Date(o.paidAt ?? o.createdAt).toDateString() === dateStr
+      );
+      const revenue = dayOrders.reduce((s, o) => s + o.total, 0);
+      const profit = dayOrders.reduce((s, o) => {
+        const cogs = o.items.reduce((cs, item) => {
+          const prod = mockProducts.find(p => p.productId === item.productId);
+          return cs + (prod?.costPrice ?? 0) * item.qty;
+        }, 0);
+        return s + o.total - cogs;
+      }, 0);
+
+      return {
+        date: d.toISOString().slice(0, 10),
+        label: period === 'week'
+          ? dayNames[d.getDay()]
+          : String(d.getDate()),
+        revenue,
+        orders: dayOrders.length,
+        profit,
+      };
+    });
+
+    const paidOrders = mockOrders.filter(o =>
+      o.status === 'PAID' || o.status === 'COMPLETED' || o.status === 'SHIPPED' || o.status === 'PREPARING'
+    );
+    const totalRevenue = paidOrders.reduce((s, o) => s + o.total, 0);
+    const totalProfit = paidOrders.reduce((s, o) => {
+      const cogs = o.items.reduce((cs, item) => {
+        const prod = mockProducts.find(p => p.productId === item.productId);
+        return cs + (prod?.costPrice ?? 0) * item.qty;
+      }, 0);
+      return s + o.total - cogs;
+    }, 0);
+
+    // Top products by revenue
+    const productMap: Record<string, { qty: number; revenue: number; profit: number }> = {};
+    paidOrders.forEach(order => {
+      order.items.forEach(item => {
+        if (!productMap[item.productId]) {
+          productMap[item.productId] = { qty: 0, revenue: 0, profit: 0 };
+        }
+        const prod = mockProducts.find(p => p.productId === item.productId);
+        const cogs = (prod?.costPrice ?? 0) * item.qty;
+        productMap[item.productId].qty += item.qty;
+        productMap[item.productId].revenue += item.price * item.qty;
+        productMap[item.productId].profit += item.price * item.qty - cogs;
+      });
+    });
+
+    const topProducts = Object.entries(productMap)
+      .sort((a, b) => b[1].revenue - a[1].revenue)
+      .slice(0, 5)
+      .map(([productId, stats]) => {
+        const prod = mockProducts.find(p => p.productId === productId);
+        return {
+          productId,
+          name: prod?.name ?? 'สินค้า',
+          image: prod?.images?.[0],
+          totalQty: stats.qty,
+          totalRevenue: stats.revenue,
+          totalProfit: stats.profit,
+          profitKnown: true,
+        };
+      });
+
+    return ok({
+      period,
+      totalRevenue,
+      totalOrders: paidOrders.length,
+      totalProfit,
+      avgOrderValue: paidOrders.length ? Math.round(totalRevenue / paidOrders.length) : 0,
+      completedOrders: mockOrders.filter(o => o.status === 'COMPLETED').length,
+      pendingOrders: mockOrders.filter(o => o.status === 'PENDING_PAYMENT' || o.status === 'VERIFYING_SLIP').length,
+      dailySales,
+      topProducts,
+      hasCostData: true,
+      profitComplete: true,
+      revenueWithCost: totalRevenue,
+    });
   },
 };

@@ -3,6 +3,8 @@ import { Pressable, Text, View } from 'react-native';
 import { BrandedLoadingScreen } from '@/components/splash/BrandedLoadingScreen';
 import { expoDb } from './client';
 import { seedDefaultData } from './seed';
+import { runPhase0Migration } from './migrations/phase0';
+import { walletService } from '@/services/walletService';
 
 type DatabaseContextType = {
   isReady: boolean;
@@ -69,6 +71,9 @@ export function DatabaseProvider({ children }: { children: React.ReactNode }) {
               category_id text REFERENCES categories(id),
               wallet_id text NOT NULL REFERENCES wallets(id),
               to_wallet_id text REFERENCES wallets(id),
+              transfer_group_id text,
+              trade_group_id text,
+              trade_role text,
               note text,
               date integer NOT NULL,
               attachment_uri text,
@@ -82,6 +87,8 @@ export function DatabaseProvider({ children }: { children: React.ReactNode }) {
             CREATE INDEX IF NOT EXISTS idx_transactions_wallet ON transactions(wallet_id);
             CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category_id);
             CREATE INDEX IF NOT EXISTS idx_transactions_month_type ON transactions(date, type);
+            -- idx_transactions_transfer_group ถูกสร้างใน runPhase0Migration หลัง ALTER เพิ่มคอลัมน์
+            -- (สร้างที่นี่ไม่ได้ เพราะ DB เก่ายังไม่มีคอลัมน์ transfer_group_id ตอนรัน batch นี้)
 
             CREATE TABLE IF NOT EXISTS wallet_activity_logs (
               id text PRIMARY KEY NOT NULL,
@@ -409,6 +416,21 @@ export function DatabaseProvider({ children }: { children: React.ReactNode }) {
         );
 
         await withTimeout(seedDefaultData(), DB_INIT_TIMEOUT_MS);
+
+        // Phase 0 — รวม ledger ให้ reconcile กับยอดกระเป๋า (idempotent + flag-guarded)
+        await withTimeout(runPhase0Migration(), DB_INIT_TIMEOUT_MS);
+
+        // Phase 0 — ตรวจ Invariant ตอนเปิดแอป (log อย่างเดียว ไม่ block การใช้งาน)
+        try {
+          const reconcile = await walletService.assertReconciled();
+          if (reconcile.ok) {
+            console.log(
+              `[Phase0] ✅ ledger reconciled — ยอดรวม ${reconcile.walletTotal.toFixed(2)}`
+            );
+          }
+        } catch (reconcileError) {
+          console.warn('[Phase0] assertReconciled error:', reconcileError);
+        }
 
         if (!cancelled) {
           setIsReady(true);

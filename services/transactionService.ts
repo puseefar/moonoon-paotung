@@ -4,6 +4,7 @@ import { categories, transactions, walletActivityLogs, wallets } from '@/db/sche
 import type { NewTransaction } from '@/db/schema';
 import type { CategorySummary, DateRange, TransactionWithCategory } from '@/types';
 import { generateId } from '@/lib/uuid';
+import { financeSummaryService } from './financeSummaryService';
 
 export const transactionService = {
   async create(data: Omit<NewTransaction, 'id' | 'createdAt' | 'updatedAt'>) {
@@ -17,12 +18,12 @@ export const transactionService = {
       updatedAt: now,
     });
 
-    if (data.type === 'expense') {
+    if (data.type === 'expense' || data.type === 'transfer_out') {
       await db
         .update(wallets)
         .set({ balance: sql`${wallets.balance} - ${data.amount}`, updatedAt: now })
         .where(eq(wallets.id, data.walletId));
-    } else if (data.type === 'income') {
+    } else if (data.type === 'income' || data.type === 'transfer_in' || data.type === 'opening') {
       await db
         .update(wallets)
         .set({ balance: sql`${wallets.balance} + ${data.amount}`, updatedAt: now })
@@ -59,6 +60,8 @@ export const transactionService = {
         walletId: transactions.walletId,
         walletName: wallets.name,
         toWalletId: transactions.toWalletId,
+        tradeGroupId: transactions.tradeGroupId,
+        tradeRole: transactions.tradeRole,
         note: transactions.note,
         date: transactions.date,
         createdAt: transactions.createdAt,
@@ -85,6 +88,8 @@ export const transactionService = {
         walletId: transactions.walletId,
         walletName: wallets.name,
         toWalletId: transactions.toWalletId,
+        tradeGroupId: transactions.tradeGroupId,
+        tradeRole: transactions.tradeRole,
         note: transactions.note,
         date: transactions.date,
         createdAt: transactions.createdAt,
@@ -106,32 +111,13 @@ export const transactionService = {
       .orderBy(desc(transactions.date));
   },
 
+  // Phase 1 — delegate ไป financeSummaryService (แหล่งความจริงเดียว + เวลาไทย)
   async getMonthlyBalance(year: number, month: number) {
-    const startDate = new Date(year, month, 1);
-    const endDate = new Date(year, month + 1, 0, 23, 59, 59);
-
-    const result = await db
-      .select({
-        type: transactions.type,
-        total: sql<number>`SUM(${transactions.amount})`,
-      })
-      .from(transactions)
-      .where(and(gte(transactions.date, startDate), lte(transactions.date, endDate)))
-      .groupBy(transactions.type);
-
-    let totalIncome = 0;
-    let totalExpense = 0;
-
-    for (const row of result) {
-      if (row.type === 'income') totalIncome = row.total ?? 0;
-      if (row.type === 'expense') totalExpense = row.total ?? 0;
-    }
-
-    return {
-      totalIncome,
-      totalExpense,
-      balance: totalIncome - totalExpense,
-    };
+    const { income, expense, balance } = await financeSummaryService.getMonthlySummary(
+      month,
+      year
+    );
+    return { totalIncome: income, totalExpense: expense, balance };
   },
 
   async getCategorySummary(
@@ -139,37 +125,7 @@ export const transactionService = {
     month: number,
     type: 'income' | 'expense'
   ): Promise<CategorySummary[]> {
-    const startDate = new Date(year, month, 1);
-    const endDate = new Date(year, month + 1, 0, 23, 59, 59);
-
-    const result = await db
-      .select({
-        categoryId: transactions.categoryId,
-        categoryName: categories.name,
-        categoryIcon: categories.icon,
-        categoryColor: categories.color,
-        total: sql<number>`SUM(${transactions.amount})`,
-        count: sql<number>`COUNT(*)`,
-      })
-      .from(transactions)
-      .leftJoin(categories, eq(transactions.categoryId, categories.id))
-      .where(
-        and(gte(transactions.date, startDate), lte(transactions.date, endDate), eq(transactions.type, type))
-      )
-      .groupBy(transactions.categoryId)
-      .orderBy(sql`SUM(${transactions.amount}) DESC`);
-
-    const grandTotal = result.reduce((sum, row) => sum + (row.total ?? 0), 0);
-
-    return result.map((row) => ({
-      categoryId: row.categoryId ?? '',
-      categoryName: row.categoryName ?? 'ไม่มีหมวดหมู่',
-      categoryIcon: row.categoryIcon ?? '🧾',
-      categoryColor: row.categoryColor ?? '#607D8B',
-      total: row.total ?? 0,
-      percentage: grandTotal > 0 ? ((row.total ?? 0) / grandTotal) * 100 : 0,
-      count: row.count ?? 0,
-    }));
+    return financeSummaryService.getCategoryBreakdown(month, year, type);
   },
 
   async update(id: string, data: Partial<Omit<NewTransaction, 'id' | 'createdAt'>>) {
@@ -194,6 +150,73 @@ export const transactionService = {
       ? await db.select().from(wallets).where(eq(wallets.id, tx.toWalletId)).limit(1)
       : [];
     const toWallet = targetWalletResult[0] ?? null;
+
+    // Phase 0 — โอนแบบคู่ entry: ลบทั้ง 2 ขา (ผ่าน transferGroupId) และคืนยอดทั้งสองกระเป๋า
+    if ((tx.type === 'transfer_out' || tx.type === 'transfer_in') && tx.transferGroupId) {
+      const legs = await db
+        .select()
+        .from(transactions)
+        .where(eq(transactions.transferGroupId, tx.transferGroupId));
+
+      for (const leg of legs) {
+        const legWallet = (
+          await db.select().from(wallets).where(eq(wallets.id, leg.walletId)).limit(1)
+        )[0];
+        // transfer_out เคยหัก → คืน +, transfer_in เคยเพิ่ม → คืน −
+        const reverse = leg.type === 'transfer_out' ? leg.amount : -leg.amount;
+        if (legWallet) {
+          await db.insert(walletActivityLogs).values({
+            id: generateId(),
+            walletId: leg.walletId,
+            relatedTransactionId: leg.id,
+            actionType: 'deleted',
+            transactionType: leg.type,
+            categoryId: null,
+            counterpartyWalletId: leg.toWalletId ?? null,
+            amount: leg.amount,
+            balanceBefore: legWallet.balance ?? 0,
+            balanceAfter: (legWallet.balance ?? 0) + reverse,
+            note: leg.note ?? null,
+            createdAt: now,
+          });
+        }
+        await db
+          .update(wallets)
+          .set({ balance: sql`${wallets.balance} + ${reverse}`, updatedAt: now })
+          .where(eq(wallets.id, leg.walletId));
+      }
+
+      await db
+        .delete(transactions)
+        .where(eq(transactions.transferGroupId, tx.transferGroupId));
+      return;
+    }
+
+    // Phase 0 — opening เคยบวกเข้ายอด → ลบแล้วต้องหักกลับ
+    if (tx.type === 'opening') {
+      if (fromWallet) {
+        await db.insert(walletActivityLogs).values({
+          id: generateId(),
+          walletId: tx.walletId,
+          relatedTransactionId: tx.id,
+          actionType: 'deleted',
+          transactionType: tx.type,
+          categoryId: null,
+          counterpartyWalletId: null,
+          amount: tx.amount,
+          balanceBefore: fromWallet.balance ?? 0,
+          balanceAfter: (fromWallet.balance ?? 0) - tx.amount,
+          note: tx.note ?? null,
+          createdAt: now,
+        });
+      }
+      await db
+        .update(wallets)
+        .set({ balance: sql`${wallets.balance} - ${tx.amount}`, updatedAt: now })
+        .where(eq(wallets.id, tx.walletId));
+      await db.delete(transactions).where(eq(transactions.id, id));
+      return;
+    }
 
     if (tx.type === 'expense') {
       if (fromWallet) {
@@ -285,5 +308,43 @@ export const transactionService = {
     }
 
     await db.delete(transactions).where(eq(transactions.id, id));
+  },
+
+  // Compound trade — ลบทั้งชุดในครั้งเดียว (atomic): คืนยอดทุก leg + ลบทุก row (AC2)
+  async deleteTradeGroup(tradeGroupId: string) {
+    const legs = await db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.tradeGroupId, tradeGroupId));
+    if (legs.length === 0) return;
+
+    const now = new Date();
+    for (const leg of legs) {
+      // income เคย + → คืน −, expense เคย − → คืน +
+      const reverse = leg.type === 'income' ? -leg.amount : leg.type === 'expense' ? leg.amount : 0;
+      const w = (await db.select().from(wallets).where(eq(wallets.id, leg.walletId)).limit(1))[0];
+      if (w) {
+        await db.insert(walletActivityLogs).values({
+          id: generateId(),
+          walletId: leg.walletId,
+          relatedTransactionId: leg.id,
+          actionType: 'deleted',
+          transactionType: leg.type === 'income' || leg.type === 'expense' ? leg.type : 'expense',
+          categoryId: leg.categoryId ?? null,
+          counterpartyWalletId: null,
+          amount: leg.amount,
+          balanceBefore: w.balance ?? 0,
+          balanceAfter: (w.balance ?? 0) + reverse,
+          note: leg.note ?? null,
+          createdAt: now,
+        });
+      }
+      await db
+        .update(wallets)
+        .set({ balance: sql`${wallets.balance} + ${reverse}`, updatedAt: now })
+        .where(eq(wallets.id, leg.walletId));
+    }
+
+    await db.delete(transactions).where(eq(transactions.tradeGroupId, tradeGroupId));
   },
 };

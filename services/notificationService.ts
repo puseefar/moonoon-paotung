@@ -118,6 +118,34 @@ export const notificationService = {
     };
   },
 
+  // แจ้งเตือนทันที (ใช้กับ Mini Shop เมื่อมีออเดอร์ชำระเงินสำเร็จ)
+  async sendNow(title: string, body: string): Promise<boolean> {
+    const Notifications = await getNotifications();
+    if (!Notifications) return false;
+
+    const granted = await this.requestPermission();
+    if (!granted) return false;
+
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('shop', {
+        name: 'แจ้งเตือนร้านค้า',
+        importance: Notifications.AndroidImportance.HIGH,
+        sound: 'default',
+        vibrationPattern: [0, 250, 250, 250],
+      });
+    }
+
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title, body, sound: 'default',
+        ...(Platform.OS === 'android' ? { channelId: 'shop' } : {}),
+      },
+      trigger: null,
+    });
+
+    return true;
+  },
+
   async sendTestNotification(): Promise<boolean> {
     const Notifications = await getNotifications();
     if (!Notifications) return false;

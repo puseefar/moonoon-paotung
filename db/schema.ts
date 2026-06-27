@@ -28,10 +28,22 @@ export const categories = sqliteTable('categories', {
 export const transactions = sqliteTable('transactions', {
   id: text('id').primaryKey(),
   amount: real('amount').notNull(),
-  type: text('type', { enum: ['income', 'expense', 'transfer'] }).notNull(),
+  // Phase 0 — Single Ledger: opening = ยอดตั้งต้น, transfer_out/transfer_in = คู่โอน, transfer = legacy
+  type: text('type', {
+    enum: ['income', 'expense', 'transfer', 'transfer_out', 'transfer_in', 'opening'],
+  }).notNull(),
   categoryId: text('category_id').references(() => categories.id),
   walletId: text('wallet_id').references(() => wallets.id).notNull(),
   toWalletId: text('to_wallet_id').references(() => wallets.id),
+  // ผูกคู่ transfer_out/transfer_in เข้าด้วยกัน
+  transferGroupId: text('transfer_group_id'),
+  // ผูก 2 ขาของ trade "ซื้อมาขายไป" (cost+revenue) — กำไร derive จากกลุ่มนี้ (ไม่เก็บเป็น row)
+  tradeGroupId: text('trade_group_id'),
+  tradeRole: text('trade_role', { enum: ['revenue', 'cost', 'standalone'] }),
+  // Phase 2 — Wallet Audit Trail
+  walletNameSnapshot: text('wallet_name_snapshot'),
+  sourceType: text('source_type'),
+  sourceRef: text('source_ref'),
   note: text('note'),
   date: integer('date', { mode: 'timestamp' }).notNull(),
   attachmentUri: text('attachment_uri'),
@@ -44,6 +56,8 @@ export const transactions = sqliteTable('transactions', {
   index('idx_transactions_wallet').on(table.walletId),
   index('idx_transactions_category').on(table.categoryId),
   index('idx_transactions_month_type').on(table.date, table.type),
+  index('idx_transactions_transfer_group').on(table.transferGroupId),
+  index('idx_transactions_trade_group').on(table.tradeGroupId),
 ]);
 
 export const walletActivityLogs = sqliteTable('wallet_activity_logs', {
@@ -51,7 +65,9 @@ export const walletActivityLogs = sqliteTable('wallet_activity_logs', {
   walletId: text('wallet_id').references(() => wallets.id).notNull(),
   relatedTransactionId: text('related_transaction_id'),
   actionType: text('action_type').notNull(),
-  transactionType: text('transaction_type', { enum: ['income', 'expense', 'transfer'] }).notNull(),
+  transactionType: text('transaction_type', {
+    enum: ['income', 'expense', 'transfer', 'transfer_out', 'transfer_in', 'opening'],
+  }).notNull(),
   categoryId: text('category_id').references(() => categories.id),
   counterpartyWalletId: text('counterparty_wallet_id').references(() => wallets.id),
   amount: real('amount').notNull(),

@@ -38,6 +38,8 @@ export interface BudgetProgress {
   totalPlannedIncome: number;
   totalAllocated: number;
   totalSpent: number;
+  totalBudgetedSpent: number; // spent in categories that have a budget entry
+  unbudgetedSpent: number;    // spent in categories/transactions outside the budget plan
   totalRemaining: number;
   allocationRule: AllocationRule;
   categories: BudgetCategoryProgress[];
@@ -55,6 +57,9 @@ export interface MonthEndForecast {
 // ============================================================
 // Persona Templates (rule-based, no AI)
 // ============================================================
+// NOTE: คีย์ของ categoryDistribution ต้อง "ตรง" กับชื่อหมวดรายจ่ายจริงใน DB (ดู db/seed.ts)
+// เพื่อให้ค่าแนะนำไปลงในหมวดที่มีอยู่ ไม่สร้างแถวซ้ำ (orphan)
+// เงินออมไม่ใส่เป็นหมวดที่นี่ — ส่วนที่เหลือ (รายรับ − งบที่ตั้ง) คือเงินออมโดยปริยาย
 export const PERSONAS: PersonaTemplate[] = [
   {
     id: 'office',
@@ -62,13 +67,12 @@ export const PERSONAS: PersonaTemplate[] = [
     icon: '💼',
     description: 'เงินเดือนประจำ รายจ่ายรายเดือนคงที่',
     categoryDistribution: {
-      อาหารและเครื่องดื่ม: 25,
-      เดินทาง: 15,
-      บ้านและที่พัก: 20,
-      ช้อปปิ้ง: 10,
-      บันเทิง: 5,
-      สุขภาพ: 5,
-      ออมและลงทุน: 20,
+      'อาหาร/เครื่องดื่ม': 25,
+      'เดินทาง/น้ำมัน': 15,
+      'ที่อยู่อาศัย/ค่าเช่า': 20,
+      'ช้อปปิ้ง': 10,
+      'บันเทิง': 5,
+      'สุขภาพ/ยา': 5,
     },
   },
   {
@@ -77,13 +81,12 @@ export const PERSONAS: PersonaTemplate[] = [
     icon: '🏛️',
     description: 'เงินเดือนราชการ มีค่าใช้จ่ายเบิกได้',
     categoryDistribution: {
-      อาหารและเครื่องดื่ม: 25,
-      เดินทาง: 10,
-      บ้านและที่พัก: 20,
-      การศึกษา: 10,
-      สุขภาพ: 5,
-      ช้อปปิ้ง: 10,
-      ออมและลงทุน: 20,
+      'อาหาร/เครื่องดื่ม': 25,
+      'เดินทาง/น้ำมัน': 10,
+      'ที่อยู่อาศัย/ค่าเช่า': 20,
+      'การศึกษา': 10,
+      'สุขภาพ/ยา': 5,
+      'ช้อปปิ้ง': 10,
     },
   },
   {
@@ -92,12 +95,12 @@ export const PERSONAS: PersonaTemplate[] = [
     icon: '🏠',
     description: 'ดูแลค่าใช้จ่ายในบ้าน งบจ่ายตลาด',
     categoryDistribution: {
-      อาหารและเครื่องดื่ม: 35,
-      บ้านและที่พัก: 20,
-      ของใช้ประจำวัน: 15,
-      สุขภาพ: 10,
-      เดินทาง: 10,
-      ช้อปปิ้ง: 10,
+      'อาหาร/เครื่องดื่ม': 35,
+      'ที่อยู่อาศัย/ค่าเช่า': 20,
+      'ช้อปปิ้ง': 15,
+      'สุขภาพ/ยา': 10,
+      'เดินทาง/น้ำมัน': 10,
+      'อื่นๆ': 10,
     },
   },
   {
@@ -106,11 +109,10 @@ export const PERSONAS: PersonaTemplate[] = [
     icon: '🛒',
     description: 'ค้าขาย รายได้ไม่แน่นอน มีต้นทุนสินค้า',
     categoryDistribution: {
-      ต้นทุนสินค้า: 40,
-      อาหารและเครื่องดื่ม: 20,
-      เดินทาง: 10,
-      บ้านและที่พัก: 15,
-      ออมและลงทุน: 15,
+      'ประกอบธุรกิจ': 40,
+      'อาหาร/เครื่องดื่ม': 20,
+      'เดินทาง/น้ำมัน': 10,
+      'ที่อยู่อาศัย/ค่าเช่า': 15,
     },
   },
   {
@@ -119,12 +121,11 @@ export const PERSONAS: PersonaTemplate[] = [
     icon: '😊',
     description: 'ไม่มีหมวดที่ตายตัว ตั้งเองทั้งหมด',
     categoryDistribution: {
-      อาหารและเครื่องดื่ม: 30,
-      เดินทาง: 15,
-      บ้านและที่พัก: 20,
-      บันเทิง: 10,
-      ช้อปปิ้ง: 10,
-      ออมและลงทุน: 15,
+      'อาหาร/เครื่องดื่ม': 30,
+      'เดินทาง/น้ำมัน': 15,
+      'ที่อยู่อาศัย/ค่าเช่า': 20,
+      'บันเทิง': 10,
+      'ช้อปปิ้ง': 10,
     },
   },
 ];
@@ -295,6 +296,8 @@ export const budgetService = {
         totalPlannedIncome: 0,
         totalAllocated: 0,
         totalSpent,
+        totalBudgetedSpent: 0,
+        unbudgetedSpent: totalSpent,
         totalRemaining: -totalSpent,
         allocationRule: 'custom',
         categories: [],
@@ -335,6 +338,8 @@ export const budgetService = {
     });
 
     const totalAllocated = catProgress.reduce((s, c) => s + c.allocatedAmount, 0);
+    const totalBudgetedSpent = catProgress.reduce((s, c) => s + c.spentAmount, 0);
+    const unbudgetedSpent = Math.max(totalSpent - totalBudgetedSpent, 0);
     const income = budget.totalPlannedIncome ?? 0;
 
     return {
@@ -343,6 +348,8 @@ export const budgetService = {
       totalPlannedIncome: income,
       totalAllocated,
       totalSpent,
+      totalBudgetedSpent,
+      unbudgetedSpent,
       totalRemaining: income - totalSpent,
       allocationRule: (budget.allocationRule as AllocationRule) ?? 'custom',
       categories: catProgress,

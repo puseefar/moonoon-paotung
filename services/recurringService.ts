@@ -77,6 +77,8 @@ export const recurringService = {
     let created = 0;
     for (const rule of dueRules) {
       const txId = generateId();
+      const walletRow = await db.select({ name: wallets.name }).from(wallets).where(eq(wallets.id, rule.walletId)).limit(1);
+      const walletName = walletRow[0]?.name ?? null;
       // Create transaction
       await db.insert(transactions).values({
         id: txId,
@@ -84,8 +86,11 @@ export const recurringService = {
         type: rule.type,
         categoryId: rule.categoryId,
         walletId: rule.walletId,
+        walletNameSnapshot: walletName,
+        sourceType: 'recurring',
+        sourceRef: rule.id,
         note: rule.note,
-        date: rule.nextDate,
+        date: now,             // ใช้วันที่ประมวลผลจริง ไม่ใช่ rule.nextDate (กัน transaction ลงวันผิด)
         isRecurring: true,
         recurringId: rule.id,
         createdAt: now,

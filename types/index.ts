@@ -1,4 +1,14 @@
-export type TransactionType = 'income' | 'expense' | 'transfer';
+// Phase 0 — Single Ledger:
+//  - 'opening'      = ยอดตั้งต้นของกระเป๋า (นับในยอดคงเหลือ แต่ไม่นับเป็นรายรับ/รายจ่าย)
+//  - 'transfer_out' / 'transfer_in' = คู่ entry ของการโอน ผูกด้วย transferGroupId
+//  - 'transfer'     = legacy (แถวเดียว) — เก็บไว้อ่านข้อมูลเก่าก่อน migrate
+export type TransactionType =
+  | 'income'
+  | 'expense'
+  | 'transfer'
+  | 'transfer_out'
+  | 'transfer_in'
+  | 'opening';
 export type FrequencyType = 'daily' | 'weekly' | 'monthly' | 'yearly';
 export type SyncAction = 'backup' | 'restore';
 export type SyncStatus = 'success' | 'failed';
@@ -40,6 +50,8 @@ export type TransactionWithCategory = {
   walletId: string;
   walletName: string;
   toWalletId?: string | null;
+  tradeGroupId?: string | null;
+  tradeRole?: 'revenue' | 'cost' | 'standalone' | null;
   note: string | null;
   date: Date;
   createdAt: Date;
@@ -50,6 +62,7 @@ export type WalletActivityAction =
   | 'expense'
   | 'transfer_in'
   | 'transfer_out'
+  | 'opening'
   | 'deleted';
 
 export type WalletActivityItem = {

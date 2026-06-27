@@ -34,6 +34,8 @@ const DEFAULT_EXPENSE_CATEGORIES: DefaultCategorySeed[] = [
   { name: 'ทำบุญ/การกุศล', icon: '🙏', color: '#F59E0B', sortOrder: 15, type: 'expense' },
   { name: 'ประกอบธุรกิจ', icon: '🏢', color: '#3F51B5', sortOrder: 16, type: 'expense' },
   { name: 'กิจกรรมการเกษตร', icon: '🌱', color: '#4CAF50', sortOrder: 17, type: 'expense' },
+  // ต้นทุนขาย (COGS) — ใช้กับ cost leg ของชุดซื้อ-ขาย เพื่อแยกออกจากรายได้ขาย (ภ.ง.ด./cash-basis)
+  { name: 'ต้นทุนขาย', icon: '🧾', color: '#EF6C00', sortOrder: 18, type: 'expense' },
 ];
 
 const DEFAULT_INCOME_CATEGORIES: DefaultCategorySeed[] = [

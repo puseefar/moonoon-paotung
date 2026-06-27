@@ -227,9 +227,48 @@ function extractTransferDate(text: string): string | null {
     return `${year}-${month}-${day}`;
   }
 
-  // Pattern 4 (OCR misread fallback): "15 W.A. 2569 - 09:12"
-  // ML Kit misread อักษรไทย เช่น "พ.ค." → "W.A." ทำให้ตรงกับ pattern เดิมไม่ได้
-  // ดึง day + Buddhist year ได้ → ใช้เดือนปัจจุบัน (สลิปส่วนใหญ่สแกนใกล้วันที่โอน)
+  // Pattern 4a (Ref code date): ดึงวันที่จาก ref code ที่มี YYYYMMDD ฝังอยู่
+  // เช่น "202605188Z5veFuTwgX08AGes" → 2026-05-18
+  // ต้องทำก่อน Pattern 4 เพราะแม่นกว่าการเดาเดือนปัจจุบัน
+  const refDateMatch = normalized.match(/\b(202[0-9])([01][0-9])([0-3][0-9])[A-Z0-9]{4,}/);
+  if (refDateMatch) {
+    const refYear = refDateMatch[1];
+    const refMonth = refDateMatch[2];
+    const refDay = refDateMatch[3];
+    const monthNum = parseInt(refMonth, 10);
+    const dayNum = parseInt(refDay, 10);
+    if (monthNum >= 1 && monthNum <= 12 && dayNum >= 1 && dayNum <= 31) {
+      return `${refYear}-${refMonth}-${refDay}`;
+    }
+  }
+
+  // Pattern 4b (OCR misread correction): แก้คำที่ ML Kit อ่านผิดบ่อย
+  // "พ.ค." → "W.A." / "ม.ค." → "u.n." / "มิ.ย." → "un.v." ฯลฯ
+  const ocrMonthCorrections: Record<string, string> = {
+    'w.a': 'พ.ค.', 'wa': 'พ.ค.',       // พฤษภาคม (May)
+    'u.n': 'ม.ค.', 'un': 'ม.ค.',       // มกราคม (Jan)
+    'n.w': 'ก.พ.', 'nw': 'ก.พ.',       // กุมภาพันธ์ (Feb)
+    'uu.n': 'มี.ค.', 'uun': 'มี.ค.',   // มีนาคม (Mar)
+    'un.v': 'มิ.ย.', 'unv': 'มิ.ย.',   // มิถุนายน (Jun)
+    'w.v': 'พ.ย.', 'wv': 'พ.ย.',       // พฤศจิกายน (Nov)
+    'w.n': 'ธ.ค.', 'wn': 'ธ.ค.',       // ธันวาคม (Dec)
+  };
+  const correctedText = normalized.replace(
+    /\b(\d{1,2})\s+([A-Za-z]{1,3})\.?([A-Za-z]{0,3})\.?\s*(25\d{2})/g,
+    (match, day, p1, p2, year) => {
+      const key = (p1 + (p2 ? '.' + p2 : '')).toLowerCase().replace(/\./g, '');
+      const fullKey = p1.toLowerCase() + (p2 ? '.' + p2.toLowerCase() : '');
+      const corrected = ocrMonthCorrections[key] || ocrMonthCorrections[fullKey];
+      return corrected ? `${day} ${corrected} ${year}` : match;
+    },
+  );
+  if (correctedText !== normalized) {
+    const retryDate = extractTransferDate(correctedText);
+    if (retryDate) return retryDate;
+  }
+
+  // Pattern 4c (OCR misread fallback สุดท้าย): ใช้เดือนปัจจุบัน
+  // เตือน: อาจผิดถ้าสลิปเป็นเดือนก่อน — ใช้เฉพาะเมื่อ fallback อื่นไม่ได้
   const ocrFallback = normalized.match(/(\d{1,2})\s+[A-Za-zก-๙]{1,4}\.?\s*[A-Za-zก-๙]{0,4}\.?\s*(25\d{2}|[6-9]\d)\s*[-–\s]\s*\d{1,2}:\d{2}/);
   if (ocrFallback) {
     const day = ocrFallback[1].padStart(2, '0');
@@ -237,6 +276,7 @@ function extractTransferDate(text: string): string | null {
     if (year > 2400) year -= 543;
     else if (year < 100) year = year + 2500 - 543;
     const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+    console.warn('[OCR] Date fallback: using current month', currentMonth, '— may be incorrect for old slips');
     return `${year}-${currentMonth}-${day}`;
   }
 

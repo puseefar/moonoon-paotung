@@ -1,6 +1,9 @@
 import { and, asc, eq, gte, lte, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { categories, recurringRules, transactions } from '@/db/schema';
+import { financeSummaryService, formatHealthMessage } from './financeSummaryService';
+import type { FinancialHealth } from './financeSummaryService';
+import { getMonthRange, getThaiDateParts, getTodayRange } from '@/lib/time';
 
 export type DailySnapshot = {
   todayIncome: number;
@@ -22,17 +25,17 @@ export type DailySnapshot = {
     nextDate: Date;
   } | null;
   insight: string;
+  // Phase 2 — การเล่าเรื่อง (§4.2 / §4.3 / §5.1)
+  health: FinancialHealth;
+  healthMessage: string;
+  monthNarrative: string;
+  uncategorizedCount: number;
+  uncategorizedTotal: number;
 };
 
-function startOfDay(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
+type InsightInput = Pick<DailySnapshot, 'todayExpense' | 'monthBalance' | 'topExpenseCategory'>;
 
-function endOfDay(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
-}
-
-function buildInsight(snapshot: Omit<DailySnapshot, 'insight'>): string {
+function buildInsight(snapshot: InsightInput): string {
   if (snapshot.todayExpense === 0) {
     return 'วันนี้ยังไม่มีรายจ่าย เริ่มต้นวันได้สบาย ๆ';
   }
@@ -47,38 +50,38 @@ function buildInsight(snapshot: Omit<DailySnapshot, 'insight'>): string {
 
 export const dailySnapshotService = {
   async getTodaySnapshot(date: Date = new Date()): Promise<DailySnapshot> {
-    const todayStart = startOfDay(date);
-    const todayEnd = endOfDay(date);
-    const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
-    const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
-    const upcomingEnd = new Date(date);
-    upcomingEnd.setDate(upcomingEnd.getDate() + 7);
-    upcomingEnd.setHours(23, 59, 59, 999);
+    // Phase 1 — ใช้ขอบเขตเวลาไทยกลาง + ดึง cashflow จาก financeSummaryService
+    const { startDate: todayStart, endDate: todayEnd } = getTodayRange(date);
+    const { month: thaiMonth, year: thaiYear, day: thaiDay } = getThaiDateParts(date);
+    const { startDate: monthStart, endDate: monthEnd } = getMonthRange(thaiYear, thaiMonth);
+    const upcomingEnd = new Date(todayStart.getTime() + 8 * 24 * 3_600_000 - 1); // +7 วันเต็ม
 
     const [
-      todayResult,
-      monthResult,
+      today,
+      month,
+      health,
+      monthNarrative,
+      uncategorized,
+      todayCountResult,
       topCategoryResult,
       upcomingResult,
     ] = await Promise.all([
-      // รวมทั้ง income + expense วันนี้ เพื่อให้แสดงยอดรับ/จ่ายวันนี้ได้
+      financeSummaryService.getTodaySummary(date),
+      financeSummaryService.getMonthlySummary(thaiMonth, thaiYear),
+      financeSummaryService.getFinancialHealth(thaiMonth, thaiYear),
+      financeSummaryService.getMonthNarrative(thaiMonth, thaiYear),
+      financeSummaryService.getUncategorizedSummary(thaiMonth, thaiYear),
+      // นับ "กิจกรรม" วันนี้ = เฉพาะ income/expense (ไม่รวม opening/transfer)
       db
-        .select({
-          type: transactions.type,
-          total: sql<number>`COALESCE(SUM(${transactions.amount}), 0)`,
-          count: sql<number>`COUNT(*)`,
-        })
+        .select({ count: sql<number>`COUNT(*)` })
         .from(transactions)
-        .where(and(gte(transactions.date, todayStart), lte(transactions.date, todayEnd)))
-        .groupBy(transactions.type),
-      db
-        .select({
-          type: transactions.type,
-          total: sql<number>`COALESCE(SUM(${transactions.amount}), 0)`,
-        })
-        .from(transactions)
-        .where(and(gte(transactions.date, monthStart), lte(transactions.date, monthEnd)))
-        .groupBy(transactions.type),
+        .where(
+          and(
+            gte(transactions.date, todayStart),
+            lte(transactions.date, todayEnd),
+            sql`${transactions.type} IN ('income','expense')`
+          )
+        ),
       db
         .select({
           categoryName: categories.name,
@@ -116,21 +119,13 @@ export const dailySnapshotService = {
         .limit(1),
     ]);
 
-    let todayIncome = 0, todayExpense = 0, transactionCountToday = 0;
-    for (const row of todayResult) {
-      if (row.type === 'income') todayIncome = Number(row.total ?? 0);
-      if (row.type === 'expense') todayExpense = Number(row.total ?? 0);
-      transactionCountToday += Number(row.count ?? 0);
-    }
+    const todayIncome = today.income;
+    const todayExpense = today.expense;
+    const transactionCountToday = Number(todayCountResult[0]?.count ?? 0);
+    const monthIncome = month.income;
+    const monthExpense = month.expense;
 
-    let monthIncome = 0;
-    let monthExpense = 0;
-    for (const row of monthResult) {
-      if (row.type === 'income') monthIncome = row.total ?? 0;
-      if (row.type === 'expense') monthExpense = row.total ?? 0;
-    }
-
-    const daysPassed = date.getDate();
+    const daysPassed = thaiDay;
     const snapshotWithoutInsight = {
       todayIncome,
       todayExpense,
@@ -141,7 +136,7 @@ export const dailySnapshotService = {
       transactionCountToday,
       topExpenseCategory: topCategoryResult[0]
         ? {
-            name: topCategoryResult[0].categoryName ?? 'อื่น ๆ',
+            name: topCategoryResult[0].categoryName ?? 'อื่นๆ',
             icon: topCategoryResult[0].categoryIcon ?? '📦',
             amount: topCategoryResult[0].total ?? 0,
           }
@@ -152,6 +147,11 @@ export const dailySnapshotService = {
     return {
       ...snapshotWithoutInsight,
       insight: buildInsight(snapshotWithoutInsight),
+      health,
+      healthMessage: formatHealthMessage(health),
+      monthNarrative,
+      uncategorizedCount: uncategorized.count,
+      uncategorizedTotal: uncategorized.total,
     };
   },
 };

@@ -123,6 +123,20 @@ export const tripEstimatorService = {
     }
   },
 
+  async deletePriceMemory(itemName: string) {
+    const key = normalizeItemKey(itemName);
+    await db.delete(priceMemory).where(eq(priceMemory.itemKey, key));
+  },
+
+  async updatePriceMemory(itemName: string, newPrice: number) {
+    if (newPrice <= 0) return;
+    const key = normalizeItemKey(itemName);
+    const now = new Date();
+    await db.update(priceMemory)
+      .set({ lastPrice: newPrice, avgPrice: newPrice, updatedAt: now })
+      .where(eq(priceMemory.itemKey, key));
+  },
+
   async searchPriceMemory(query: string) {
     if (!query.trim()) return [];
     const key = normalizeItemKey(query);
@@ -338,10 +352,13 @@ export const tripEstimatorService = {
     const spent = session.actualSpent ?? 0;
     if (options?.createExpense && options.walletId && spent > 0) {
       const txId = generateId();
+      const walletRow = await db.select({ name: wallets.name }).from(wallets).where(eq(wallets.id, options.walletId)).limit(1);
       await db.insert(transactions).values({
         id: txId, amount: spent, type: 'expense',
         categoryId: options.categoryId ?? null,
         walletId: options.walletId,
+        walletNameSnapshot: walletRow[0]?.name ?? null,
+        sourceType: 'manual',
         note: `ทริป: ${session.name}`,
         date: now, isRecurring: false, createdAt: now, updatedAt: now,
       });

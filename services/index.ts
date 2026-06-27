@@ -4,6 +4,16 @@ export { walletService } from './walletService';
 export { reportService } from './reportService';
 export { dailySnapshotService } from './dailySnapshotService';
 export type { DailySnapshot } from './dailySnapshotService';
+export { financeSummaryService, UNCATEGORIZED_NAME } from './financeSummaryService';
+export type {
+  PeriodSummary,
+  WalletSummary,
+  WalletSummaryItem,
+  FinancialHealth,
+  FinancialHealthStatus,
+  CashflowPoint,
+  NetWorthPoint,
+} from './financeSummaryService';
 export { appSettingsService } from './appSettingsService';
 export { quickAddParser } from './quickAddParser';
 export type {

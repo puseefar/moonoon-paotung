@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { transactionService } from '@/services/transactionService';
+import { getCurrentThaiMonth } from '@/lib/time';
 import type { MonthlyBalance, CategorySummary, MonthYear } from '@/types';
 
 type SummaryStore = {
@@ -17,8 +18,8 @@ type SummaryStore = {
 };
 
 function getCurrentMonth(): MonthYear {
-  const now = new Date();
-  return { month: now.getMonth(), year: now.getFullYear() };
+  // ใช้เดือนตามเวลาไทย (สอดคล้องกับ financeSummaryService)
+  return getCurrentThaiMonth();
 }
 
 export const useSummaryStore = create<SummaryStore>((set, get) => ({

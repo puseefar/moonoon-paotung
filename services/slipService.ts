@@ -168,9 +168,14 @@ export function parseQRPayload(payload: string): SlipData {
       }
     }
 
-    // ตั้ง transferDate เป็นวันนี้ถ้าไม่มีใน QR
+    // ตั้ง transferDate เป็นวันนี้ตามเวลาไทย (UTC+7) ถ้าไม่มีใน QR
     if (!result.transferDate) {
-      result.transferDate = new Date().toISOString().split('T')[0];
+      const now = new Date();
+      const thai = new Date(now.getTime() + 7 * 3_600_000);
+      const y = thai.getUTCFullYear();
+      const m = String(thai.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(thai.getUTCDate()).padStart(2, '0');
+      result.transferDate = `${y}-${m}-${d}`;
     }
   } catch (e) {
     console.warn('QR Parse error:', e);
