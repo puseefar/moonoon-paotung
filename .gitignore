@@ -9,6 +9,10 @@ dist/
 web-build/
 expo-env.d.ts
 
+# Local build artifacts (local APK builds via build-local.ps1 — ~200MB each)
+build-output/
+*.apk
+
 # Native
 .kotlin/
 *.orig.*
