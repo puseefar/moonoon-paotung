@@ -1,10 +1,12 @@
 # แผนพัฒนา App หมูนุ่น + เป๋าตุง
 ### Development Plan from Feature Inventory & Strategic Roadmap
 
-**ปรับปรุงล่าสุด:** 18 พฤษภาคม 2569  
+**ปรับปรุงล่าสุด:** 9 มิถุนายน 2569  
 **จัดทำโดย:** SEVENDOG DEV Team  
 **แหล่งอ้างอิง:** `FEATURE-INVENTORY.md`, `STRATEGIC-FEATURE-ROADMAP.md`, `IMPLEMENTATION-QUEUE.md`  
 **หลักการพัฒนา:** ทำทีละ phase, จบเป็น milestone, บันทึกความก้าวหน้าใน `PROGRESS-LOG.md`
+
+**สถานะล่าสุด 9 มิถุนายน 2569:** ปิดรอบ **Pro Core / Daily Snapshot / Smart Entry / Trade Set** หลังทดสอบเครื่องจริงผ่าน และ handoff ไปสู่การประชุมทีมเพื่อสรุป **Road Map Premium Version AI** รายละเอียดอยู่ใน `PREMIUM-AI-HANDOFF.md`
 
 ---
 
