@@ -12,10 +12,19 @@
     "test:quick-add": "node ./tests/quick-add/run-quick-add-regression.cjs",
     "test:quick-add:adversarial": "node ./tests/quick-add/run-quick-add-regression.cjs --suite adversarial",
     "test:quick-add:all": "node ./tests/quick-add/run-quick-add-regression.cjs --suite all",
+    "test:phase0": "node ./tests/phase0/reconcile.test.cjs",
+    "test:phase1": "node ./tests/phase1/periods.test.cjs",
+    "test:phase2": "node ./tests/phase2/health.test.cjs",
+    "test:smart-parser": "node ./tests/smart-parser/money-quantity.test.cjs",
+    "test:golden": "node ./tests/golden-set/run-golden-set.cjs",
+    "test:golden:baseline": "node ./tests/golden-set/run-golden-set.cjs --save-baseline",
+    "test:golden:check": "node ./tests/golden-set/run-golden-set.cjs --check-baseline",
+    "test:market-intent": "node ./tests/market-intent/run-market-intent.cjs",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@expo-google-fonts/mali": "^0.4.1",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-community/datetimepicker": "8.4.4",
     "@react-native-google-signin/google-signin": "^16.1.2",
@@ -64,6 +73,7 @@
     "react-native-web": "~0.21.0",
     "react-native-worklets": "0.5.1",
     "tailwindcss": "^3.4.17",
+    "thai-data": "^3.0.2",
     "uuid": "^13.0.0",
     "zustand": "^5.0.12"
   },
